@@ -11,6 +11,4 @@ displayer = PySimpleGUIDisplay(settingLayout)
 displayer.DisplaySettings()
 
 while (True):
-    displayer.Update()
-
-communicator.SendSettingsUpdate(settingLayout.GetSettingList())
+    communicator.SendSettingsUpdate(displayer.Update())

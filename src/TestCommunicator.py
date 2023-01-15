@@ -7,8 +7,9 @@ class TCommunicator(ICommunicator):
     def GetSettingLayout(self) -> Type[SettingLayout]:
         layout = SettingLayout()
         layout.AddSetting(Setting(0, "Slider1", SettingType.SLIDER, 42))
-        layout.AddSetting(Setting(0, "Trigger1", SettingType.TRIGGER))
-        layout.AddSetting(Setting(0, "Switch1", SettingType.SWITCH, 0))
+        layout.AddSetting(Setting(1, "Trigger1", SettingType.TRIGGER))
+        layout.AddSetting(Setting(2, "Switch1", SettingType.SWITCH, 0))
+        layout.AddSetting(Setting(3, "Trigger2", SettingType.TRIGGER))
         return layout
 
     def SendSettingsUpdate(self, settingList: SettingList) -> None:

@@ -8,7 +8,7 @@ class SettingType(Enum):
     SWITCH = 3
 
 class Setting():
-    def __init__(self, ref:int, name:str, type:int, value:int = 0) -> None:
+    def __init__(self, ref:int, name:str = '', type:int = 0, value:int = 0) -> None:
         self.__ref = ref
         self.__name = name
         self.__type = type
