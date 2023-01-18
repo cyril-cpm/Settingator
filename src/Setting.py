@@ -39,6 +39,15 @@ class SettingList():
     def GetSetting(self, index:int) -> Setting:
         return self.__settings[index]
 
+    def GetSettingByRef(self, ref:int) -> Setting:
+        index = 0
+        size = self.GetSize()
+
+        while (index < size):
+            if (self.__settings[index].GetRef() == ref):
+                return self.__settings[index]
+            index += 1
+
     def GetSize(self) -> int:
         return self.__settings.__len__()
 
@@ -48,6 +57,9 @@ class SettingLayout():
 
     def AddSetting(self, setting:Setting) -> None:
         self.__settingList.AddSetting(setting)
+
+    def SetSettingList(self, settingList:SettingList) -> None:
+        self.__settingList = settingList
 
     def GetSettingList(self) -> SettingList:
         return self.__settingList

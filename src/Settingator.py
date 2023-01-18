@@ -1,6 +1,9 @@
 from Setting import *
 from TestCommunicator import *
 from PySimpleGUIDisplay import *
+from PySerialCommunicator import *
+
+GetPortList()
 
 communicator = TCommunicator()
 
@@ -10,5 +13,7 @@ displayer = PySimpleGUIDisplay(settingLayout)
 
 displayer.DisplaySettings()
 
+communicator2 = PySerialCommunicator("COM3")
+
 while (True):
-    communicator.SendSettingsUpdate(displayer.Update())
+    communicator2.SendSettingsUpdate(displayer.Update())

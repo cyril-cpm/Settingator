@@ -1,16 +1,22 @@
 from abc import ABC, abstractmethod
 from typing import Type
 from Setting import *
+from Message
 
 class ICommunicator(ABC):
-    @abstractmethod
     def __init__(self) -> None:
         pass
 
-    @abstractmethod
     def GetSettingLayout(self) -> Type[SettingLayout]:
         pass
 
-    @abstractmethod
-    def SendSettingsUpdate(self, settingList:SettingList) -> None:
-        pass
+    def SendSettingsUpdate(self, settingList: SettingList) -> None:
+        size = settingList.GetSize()
+
+        i = 0
+        while (i != size):
+            self.__SendSettingUpdate(settingList.GetSetting(i))
+            i += 1
+
+    def __SendSettingUpdate(self, setting:Setting) -> None:
+        message = Message(setting)

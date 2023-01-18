@@ -16,14 +16,14 @@ class PySimpleGUIDisplay(IDisplay):
             settingType = setting.GetType()
             element:sg.Element
 
-            if (settingType == SettingType.SLIDER):
+            if (settingType == SettingType.SLIDER.value):
                 element=sg.Column([[sg.Slider(range=(0,255), default_value=setting.GetValue(), key=setting.GetRef(), change_submits=True)],
                         [sg.Text(setting.GetName())]])
             
-            elif (settingType == SettingType.TRIGGER):
+            elif (settingType == SettingType.TRIGGER.value):
                 element=sg.Button(button_text=setting.GetName(), key=setting.GetRef())
 
-            elif (settingType == SettingType.SWITCH):
+            elif (settingType == SettingType.SWITCH.value):
                 element=sg.Checkbox(text=setting.GetName(), key=setting.GetRef(), change_submits=True)
 
             self.__PSGLayout[0].append(element)
@@ -41,9 +41,9 @@ class PySimpleGUIDisplay(IDisplay):
         if (event == sg.WIN_CLOSED):
             quit()
 
-        setting = self.GetSettingLayout().GetSettingList().GetSetting(event)
+        setting = self.GetSettingLayout().GetSettingList().GetSettingByRef(event)
 
-        if (setting.GetType() != SettingType.TRIGGER):
+        if (setting.GetType() != SettingType.TRIGGER.value):
             setting.SetValue(int(values[event]))
 
         settingList.AddSetting(setting)
