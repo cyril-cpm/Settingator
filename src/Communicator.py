@@ -1,12 +1,15 @@
 from abc import ABC, abstractmethod
 from typing import Type
 from Setting import *
-from Message
+from Message import *
 
 class ICommunicator(ABC):
     def __init__(self) -> None:
         pass
 
+    def SendInitRequest(self,param:int) -> None:
+        pass
+    
     def GetSettingLayout(self) -> Type[SettingLayout]:
         pass
 

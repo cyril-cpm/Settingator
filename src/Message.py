@@ -1,5 +1,28 @@
 from Setting import *
 
+def GetBytes(byteArray:bytearray, index:int):
+    arraySize = byteArray[index]
+
+    retArray = byteArray[index+1:index+1+arraySize]
+
+    return retArray
+
+def GetString(byteArray:bytearray, msgIndex:int):
+    strBytes = GetBytes(byteArray, msgIndex)
+
+    string = str()
+
+    strLen = strBytes.__len__()
+
+    index = 0
+
+    while(index != strLen):
+        string += chr(strBytes[index])
+        index += 1
+
+    msgIndex += index
+    return string
+
 class MessageTpye(Enum):
     SETTING_UPDATE:int = 0x11
     INIT_REQUEST:int = 0x12
@@ -13,17 +36,31 @@ class Message():
     def __init__(self, type:int) -> None:
         self.__type = type
 
-
-    def FromSetting(self, setting:Setting) -> None:
-        self.__setting = setting
-        self.__type = MessageTpye.SETTING_UPDATE
+    def SetInitRequest(self, param:int) -> None:
+        self.__type = MessageTpye.INIT_REQUEST.value
         self.__byteArray = bytearray()
         self.__byteArray.append(MessageControlFrame.START.value)
         self.__byteArray.append(0x00)
         self.__byteArray.append(0x00)
-        self.__byteArray.append(self.__type.value)
+        self.__byteArray.append(self.__type)
+        self.__byteArray.append(param)
+        self.__byteArray.append(MessageControlFrame.END.value)
+        size = self.__byteArray.__len__()
+        self.__byteArray[1] = size >> 8
+        self.__byteArray[2] = size
+        self.__isValid = True
+
+    def FromSetting(self, setting:Setting) -> None:
+        self.__setting = setting
+        self.__type = MessageTpye.SETTING_UPDATE.value
+        self.__byteArray = bytearray()
+        self.__byteArray.append(MessageControlFrame.START.value)
+        self.__byteArray.append(0x00)
+        self.__byteArray.append(0x00)
+        self.__byteArray.append(self.__type)
         self.__byteArray.append(setting.GetRef())
         self.__byteArray.append(setting.GetValue())
+        self.__byteArray.append(MessageControlFrame.END.value)
         size = self.__byteArray.__len__()
         self.__byteArray[1] = size >> 8
         self.__byteArray[2] = size
@@ -43,7 +80,7 @@ class Message():
             pass
         elif (msgType == MessageTpye.SETTING_INIT.value):
             self.__isValid = self.__ParseSettingInit(byteArray)
-        elif (msgType == MessageTpye.SETTING_INIT.value):
+        elif (msgType == MessageTpye.SETTING_UPDATE.value):
             pass
         else:
             self.__isValid = False
@@ -123,31 +160,24 @@ class Message():
         if (msgIndex >= msgSize):
             return -1
 
-        value = byteArray[msgIndex]
+        valueLen = byteArray[msgIndex]
+        value = GetBytes(byteArray, msgIndex)
+
+        msgIndex += valueLen + 1
         
-        msgIndex += 1  
         if (msgIndex >= msgSize):
             return -1
 
         nameLen = byteArray[msgIndex]
 
-        msgIndex += 1  
-        if (msgIndex >= msgSize):
+        if ((msgIndex + nameLen) >= msgSize):
             return -1
 
-        nameStartIndex = msgIndex
-
-        if ((nameStartIndex + nameLen) >= msgSize):
-            return -1
-
-        name = str()
-
-        index = 0
-        while (index != nameLen):
-            name += chr(byteArray[nameStartIndex + index])
-            index += 1
+        name = GetString(byteArray, msgIndex)
 
         self.__settingList.AddSetting(Setting(ref, name, settingType, value))
 
-        return nameStartIndex + index
+        msgIndex += nameLen + 1
+
+        return msgIndex
 

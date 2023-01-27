@@ -7,12 +7,48 @@ class SettingType(Enum):
     TRIGGER = 2
     SWITCH = 3
 
+def IsNumericalTypeValue(settingType:int) -> bool:
+    if (settingType == SettingType.SLIDER.value):
+        return True
+    
+    if (settingType == SettingType.TRIGGER.value):
+        return True
+    
+    if (settingType == SettingType.SWITCH.value):
+        return True
+
+def GetNumericalValue(value:bytearray) -> int:
+    valueLen = value.__len__()
+
+    retValue = 0
+    index = 0
+    while (index != valueLen):        
+        retValue = retValue << 8
+        retValue = value[index]
+        index += 1
+    
+    return retValue
+
+def GetStringValue(value:bytearray) -> str:
+    string = str()
+    strLen = value.__len__()
+    index = 0
+    while(index != strLen):
+        string += chr(value[index])
+        index += 1
+
+    return string
+
 class Setting():
-    def __init__(self, ref:int, name:str = '', type:int = 0, value:int = 0) -> None:
+    def __init__(self, ref:int, name:str = '', type:int = 0, value:bytearray = 0) -> None:
         self.__ref = ref
         self.__name = name
         self.__type = type
-        self.__value = value
+
+        if (IsNumericalTypeValue(type)):
+            self.__value = GetNumericalValue(value)
+        else:
+            self.__value = GetStringValue(value)
 
     def GetName(self):
         return self.__name
