@@ -3,15 +3,33 @@ from typing import Type
 from Setting import *
 from Message import *
 
-class ICommunicator(ABC):
-    def __init__(self) -> None:
+class ISerial():
+    def read(self) -> bytearray:
         pass
 
-    def SendInitRequest(self,param:int) -> None:
+    def write(self, data:bytearray) -> None:
         pass
+
+    def available(self) -> bool:
+        pass
+
+class Communicator(ABC):
+    def __init__(self, serial:ISerial) -> None:
+        self.__serial = serial
+
+    def SendInitRequest(self,param:int) -> None:
+        initRequest = Message(MessageType.INIT_REQUEST.value)
+        initRequest.SetInitRequest(param)
+        self.__serial.write(initRequest.GetByteArray())
     
     def GetSettingLayout(self) -> Type[SettingLayout]:
-        pass
+        while (not(self.__serial.available())):
+            pass
+
+        message = Message(MessageType.SETTING_INIT.value)
+        message.FromByteArray(self.__serial.read())
+
+        return SettingLayout(message.GetSettingList())
 
     def SendSettingsUpdate(self, settingList: SettingList) -> None:
         size = settingList.GetSize()
@@ -22,4 +40,5 @@ class ICommunicator(ABC):
             i += 1
 
     def __SendSettingUpdate(self, setting:Setting) -> None:
-        message = Message(setting)
+        message = Message(MessageType.SETTING_UPDATE.value)
+        self.__serial.write(message.GetByteArray())

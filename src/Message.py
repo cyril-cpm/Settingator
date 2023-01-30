@@ -23,7 +23,7 @@ def GetString(byteArray:bytearray, msgIndex:int):
     msgIndex += index
     return string
 
-class MessageTpye(Enum):
+class MessageType(Enum):
     SETTING_UPDATE:int = 0x11
     INIT_REQUEST:int = 0x12
     SETTING_INIT:int = 0x13
@@ -37,7 +37,7 @@ class Message():
         self.__type = type
 
     def SetInitRequest(self, param:int) -> None:
-        self.__type = MessageTpye.INIT_REQUEST.value
+        self.__type = MessageType.INIT_REQUEST.value
         self.__byteArray = bytearray()
         self.__byteArray.append(MessageControlFrame.START.value)
         self.__byteArray.append(0x00)
@@ -52,7 +52,7 @@ class Message():
 
     def FromSetting(self, setting:Setting) -> None:
         self.__setting = setting
-        self.__type = MessageTpye.SETTING_UPDATE.value
+        self.__type = MessageType.SETTING_UPDATE.value
         self.__byteArray = bytearray()
         self.__byteArray.append(MessageControlFrame.START.value)
         self.__byteArray.append(0x00)
@@ -76,11 +76,11 @@ class Message():
             return
 
         msgType = byteArray[3]
-        if (msgType == MessageTpye.INIT_REQUEST.value):
+        if (msgType == MessageType.INIT_REQUEST.value):
             pass
-        elif (msgType == MessageTpye.SETTING_INIT.value):
+        elif (msgType == MessageType.SETTING_INIT.value):
             self.__isValid = self.__ParseSettingInit(byteArray)
-        elif (msgType == MessageTpye.SETTING_UPDATE.value):
+        elif (msgType == MessageType.SETTING_UPDATE.value):
             pass
         else:
             self.__isValid = False
@@ -120,6 +120,10 @@ class Message():
     def __ParseSettingInit(self, byteArray:bytearray) -> bool:
         isValid = True
 
+        if (byteArray[3] != self.__type):
+            isValid = False
+            return isValid
+
         nbSetting = byteArray[4]
 
         self.__settingList = SettingList()
@@ -140,6 +144,8 @@ class Message():
         if (msgIndex != (byteArray.__len__() - 1) and byteArray[msgIndex] != MessageControlFrame.END.value):
             isValid = False
         
+        self.__isValid = isValid
+
         return isValid
 
     def __ParseSetting(self, byteArray:bytearray, msgIndex:int) -> int:

@@ -5,7 +5,7 @@ class TCommunicator(ICommunicator):
         super().__init__()
 
     def SendInitRequest(self) -> None:
-        msg = Message(MessageTpye.INIT_REQUEST.value)
+        msg = Message(MessageType.INIT_REQUEST.value)
 
         msg.SetInitRequest(0)
 

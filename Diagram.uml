@@ -1,0 +1,20 @@
+@startuml
+class ICommunicator {
+    +GetSettingLayout():ISettingLayout
+    +SendSetting(setting:ISetting)
+}
+
+class ISettingLayout {
+    -settingList:ISetting[]
+    +Display()
+    +AddSetting(ISetting)
+}
+
+class ISetting {
+    -name:string
+    -value:unsigned char
+    +GetName():string
+    +GetValue():unsigned char
+    +SetValue():unsigned char
+}
+@enduml
