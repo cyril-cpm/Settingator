@@ -1,6 +1,6 @@
 from Communicator import *
 
-class TCommunicator(ICommunicator):
+class TCommunicator(Communicator):
     def __init__(self) -> None:
         super().__init__()
 

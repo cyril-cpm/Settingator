@@ -5,15 +5,22 @@ from PySerialCommunicator import *
 
 GetPortList()
 
-communicator = TCommunicator()
-communicator.SendInitRequest()
-settingLayout = communicator.GetSettingLayout()
+#communicator = TCommunicator()
+#communicator.SendInitRequest()
+#settingLayout = communicator.GetSettingLayout()
+
+
+mySerial = PySerial("COM3")
+
+communicator2 = Communicator(mySerial)
+
+communicator2.SendInitRequest(0)
+settingLayout = communicator2.GetSettingLayout()
+
 
 displayer = PySimpleGUIDisplay(settingLayout)
 
 displayer.DisplaySettings()
 
-communicator2 = PySerialCommunicator("COM3")
-
 while (True):
-    communicator.SendSettingsUpdate(displayer.Update())
+    communicator2.SendSettingsUpdate(displayer.Update())

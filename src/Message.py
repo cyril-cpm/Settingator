@@ -32,6 +32,21 @@ class MessageControlFrame(Enum):
     START:int = 0xFF
     END:int = 0x00
 
+def GetFrameMessage(byteArray: bytearray) -> bytearray:
+    size = byteArray[2]
+    size += byteArray[1] << 8
+
+    if (size == 0):
+        return bytearray()
+    
+    if (byteArray[0] != MessageControlFrame.START.value):
+        return bytearray()
+    
+    if (byteArray[size - 1] != MessageControlFrame.END.value):
+        return bytearray()
+    
+    return byteArray[0:size-1]
+
 class Message():
     def __init__(self, type:int) -> None:
         self.__type = type

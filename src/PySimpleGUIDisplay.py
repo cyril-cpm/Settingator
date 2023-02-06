@@ -29,7 +29,7 @@ class PySimpleGUIDisplay(IDisplay):
             self.__PSGLayout[0].append(element)
             i += 1
 
-        self.__PSGWindow = sg.Window('Clotilde Mon Amoureuse', self.__PSGLayout, element_justification='c').finalize()
+        self.__PSGWindow = sg.Window('Settingator', self.__PSGLayout, element_justification='c').finalize()
 
     def DisplaySettings(self) -> None:
         pass
