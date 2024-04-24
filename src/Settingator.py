@@ -3,19 +3,21 @@ from TestCommunicator import *
 from PySimpleGUIDisplay import *
 from PySerialCommunicator import *
 
-GetPortList()
+#GetPortList()
 
 #communicator = TCommunicator()
 #communicator.SendInitRequest()
 #settingLayout = communicator.GetSettingLayout()
 
+mySerial = PySerial("COM4")
 
-mySerial = PySerial("COM3")
+communicator = Communicator(mySerial)
 
-communicator2 = Communicator(mySerial)
+communicator.SendInitRequest(0)
 
-communicator2.SendInitRequest(0)
-settingLayout = communicator2.GetSettingLayout()
+settingLayout = None
+while (settingLayout == None):
+    settingLayout = communicator.GetSettingLayout()
 
 
 displayer = PySimpleGUIDisplay(settingLayout)
@@ -23,4 +25,4 @@ displayer = PySimpleGUIDisplay(settingLayout)
 displayer.DisplaySettings()
 
 while (True):
-    communicator2.SendSettingsUpdate(displayer.Update())
+    communicator.SendSettingsUpdate(displayer.Update())

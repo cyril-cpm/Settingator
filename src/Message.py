@@ -45,7 +45,7 @@ def GetFrameMessage(byteArray: bytearray) -> bytearray:
     if (byteArray[size - 1] != MessageControlFrame.END.value):
         return bytearray()
     
-    return byteArray[0:size-1]
+    return byteArray[0:size]
 
 class Message():
     def __init__(self, type:int) -> None:
@@ -74,6 +74,7 @@ class Message():
         self.__byteArray.append(0x00)
         self.__byteArray.append(self.__type)
         self.__byteArray.append(setting.GetRef())
+        self.__byteArray.append(0x01)
         self.__byteArray.append(setting.GetValue())
         self.__byteArray.append(MessageControlFrame.END.value)
         size = self.__byteArray.__len__()

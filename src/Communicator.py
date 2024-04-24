@@ -29,7 +29,12 @@ class Communicator(ABC):
         message = Message(MessageType.SETTING_INIT.value)
         message.FromByteArray(self.__serial.read())
 
-        return SettingLayout(message.GetSettingList())
+        if (message.IsValid()):
+            layout =  SettingLayout()
+            layout.SetSettingList(message.GetSettingList())
+            return layout
+        else:
+            return None
 
     def SendSettingsUpdate(self, settingList: SettingList) -> None:
         size = settingList.GetSize()
@@ -38,7 +43,9 @@ class Communicator(ABC):
         while (i != size):
             self.__SendSettingUpdate(settingList.GetSetting(i))
             i += 1
+        self.__serial.available()
 
     def __SendSettingUpdate(self, setting:Setting) -> None:
         message = Message(MessageType.SETTING_UPDATE.value)
+        message.FromSetting(setting)
         self.__serial.write(message.GetByteArray())
