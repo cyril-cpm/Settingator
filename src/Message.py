@@ -24,9 +24,11 @@ def GetString(byteArray:bytearray, msgIndex:int):
     return string
 
 class MessageType(Enum):
+    UNINITIALISED:int = 0x01
     SETTING_UPDATE:int = 0x11
     INIT_REQUEST:int = 0x12
     SETTING_INIT:int = 0x13
+    ESP_NOW_INIT_WITH_SSID:int = 0x54
 
 class MessageControlFrame(Enum):
     START:int = 0xFF
@@ -48,15 +50,47 @@ def GetFrameMessage(byteArray: bytearray) -> bytearray:
     return byteArray[0:size]
 
 class Message():
-    def __init__(self, type:int) -> None:
-        self.__type = type
+    def __init__(self, buffer:bytearray=None) -> None:
+        
+        if buffer == None:
+            self.__type = MessageType.UNINITIALISED.value
+            self.__slaveID = 0
+            self.__setting = None
+            self.__byteArray = None
+        else:
+            self.__type = buffer[4]
+            self.__slaveID = buffer[3]
+            self.__len = buffer.__len__()
+            self.__byteArray = buffer
+            self.__setting = None
 
-    def SetInitRequest(self, param:int) -> None:
+    def GetLength(self) -> int:
+        return self.__len
+    
+    def GetType(self) -> int:
+        return self.__type
+    
+    def GetSlaveID(self) -> int:
+        return self.__slaveID
+    
+    def ExtractSettingUpdate(self) -> tuple:
+        ref = 0
+        newValue = bytearray()
+
+        if self.GetType() == MessageType.SETTING_UPDATE.value:
+            ref = self.__buffer[5]
+            newValueLen = self.__buffer[6]
+            newValue = self.__buffer[7:7+newValueLen]
+
+        return (ref, newValue, self.GetSlaveID())
+
+    def SetInitRequest(self, slaveID:int, param:int) -> None:
         self.__type = MessageType.INIT_REQUEST.value
         self.__byteArray = bytearray()
         self.__byteArray.append(MessageControlFrame.START.value)
         self.__byteArray.append(0x00)
         self.__byteArray.append(0x00)
+        self.__byteArray.append(slaveID)
         self.__byteArray.append(self.__type)
         self.__byteArray.append(param)
         self.__byteArray.append(MessageControlFrame.END.value)
@@ -65,6 +99,9 @@ class Message():
         self.__byteArray[2] = size
         self.__isValid = True
 
+    def SetBridgeInit(self, slaveID:int, slaveName:bytearray) -> None:
+        pass
+
     def FromSetting(self, setting:Setting) -> None:
         self.__setting = setting
         self.__type = MessageType.SETTING_UPDATE.value
@@ -72,6 +109,7 @@ class Message():
         self.__byteArray.append(MessageControlFrame.START.value)
         self.__byteArray.append(0x00)
         self.__byteArray.append(0x00)
+        self.__byteArray.append(setting.GetSlaveID())
         self.__byteArray.append(self.__type)
         self.__byteArray.append(setting.GetRef())
         self.__byteArray.append(0x01)
@@ -82,7 +120,6 @@ class Message():
         self.__byteArray[2] = size
         self.__isValid = True
 
-
     def FromByteArray(self, byteArray:bytearray) -> None:
         self.__byteArray = byteArray
         self.__isValid = True
@@ -91,7 +128,8 @@ class Message():
         if (not(self.__isValid)):
             return
 
-        msgType = byteArray[3]
+        self.__slaveID = byteArray[3]
+        msgType = byteArray[4]
         if (msgType == MessageType.INIT_REQUEST.value):
             pass
         elif (msgType == MessageType.SETTING_INIT.value):
@@ -136,15 +174,15 @@ class Message():
     def __ParseSettingInit(self, byteArray:bytearray) -> bool:
         isValid = True
 
-        if (byteArray[3] != self.__type):
+        if (byteArray[4] != self.__type):
             isValid = False
             return isValid
 
-        nbSetting = byteArray[4]
+        nbSetting = byteArray[5]
 
         self.__settingList = SettingList()
 
-        msgIndex = 5
+        msgIndex = 6
         loopIndex = 0
 
         while((loopIndex < nbSetting) and isValid):
@@ -197,7 +235,7 @@ class Message():
 
         name = GetString(byteArray, msgIndex)
 
-        self.__settingList.AddSetting(Setting(ref, name, settingType, value))
+        self.__settingList.AddSetting(Setting(ref, self.__slaveID, name, settingType, value))
 
         msgIndex += nameLen + 1
 

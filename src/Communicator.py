@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Type
 from Setting import *
 from Message import *
+from collections import deque
 
 class ISerial():
     def read(self) -> bytearray:
@@ -10,7 +11,7 @@ class ISerial():
     def write(self, data:bytearray) -> None:
         pass
 
-    def available(self) -> bool:
+    def available(self) -> int:
         pass
 
 class Communicator(ABC):
@@ -22,6 +23,8 @@ class Communicator(ABC):
         initRequest.SetInitRequest(param)
         self.__serial.write(initRequest.GetByteArray())
     
+    
+
     def GetSettingLayout(self) -> Type[SettingLayout]:
         while (not(self.__serial.available())):
             pass
@@ -45,7 +48,49 @@ class Communicator(ABC):
             i += 1
         self.__serial.available()
 
+    def Available(self) -> bool:
+
+
+
+        return False
+
+    def Update(self) -> None:
+        pass
+
     def __SendSettingUpdate(self, setting:Setting) -> None:
+
         message = Message(MessageType.SETTING_UPDATE.value)
         message.FromSetting(setting)
         self.__serial.write(message.GetByteArray())
+
+class ICTR(ABC):
+    def __init__(self) -> None:
+        self.__receivedMessage = deque()
+
+    def Available(self) -> bool:
+        self.Update()
+        return self.__receivedMessage.__len__()
+    
+    def Write(self, message:Message) -> int:
+        pass
+
+    def Read(self) -> Message:
+        return self.__receivedMessage[0]
+    
+    def Flush(self) -> None:
+        self.__receivedMessage.popleft()
+        return
+    
+    def Update(self) -> None:
+        pass
+
+    def GetBoxSize(self) -> int:
+        return self.__receivedMessage.__len__()
+    
+    def _receive(self, message:Message) -> None:
+        self.__receivedMessage.append(message)
+        
+        print("**")
+        print(message.GetByteArray())
+        print("**")
+        return

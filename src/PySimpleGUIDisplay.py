@@ -26,26 +26,29 @@ class PySimpleGUIDisplay(IDisplay):
             elif (settingType == SettingType.SWITCH.value):
                 element=sg.Checkbox(text=setting.GetName(), key=setting.GetRef(), change_submits=True)
 
+            else:
+                element=sg.Text("Not Supported Setting")
             self.__PSGLayout[0].append(element)
             i += 1
 
+        print(self.__PSGLayout)
         self.__PSGWindow = sg.Window('Settingator', self.__PSGLayout, element_justification='c').finalize()
 
     def DisplaySettings(self) -> None:
         pass
 
     def Update(self) -> SettingList:
-        event, values = self.__PSGWindow.read()
+        event, values = self.__PSGWindow.read(0)
         settingList = SettingList()
+        if event != sg.TIMEOUT_KEY:
+            if (event == sg.WIN_CLOSED):
+                quit()
 
-        if (event == sg.WIN_CLOSED):
-            quit()
+            setting = self.GetSettingLayout().GetSettingList().GetSettingByRef(event)
 
-        setting = self.GetSettingLayout().GetSettingList().GetSettingByRef(event)
+            if (setting.GetType() != SettingType.TRIGGER.value):
+                setting.SetValue(int(values[event]))
 
-        if (setting.GetType() != SettingType.TRIGGER.value):
-            setting.SetValue(int(values[event]))
-
-        settingList.AddSetting(setting)
+            settingList.AddSetting(setting)
 
         return settingList

@@ -15,32 +15,58 @@ class PySerial(ISerial):
         self.__port = port
         self.__serial = serial.Serial(port=port, baudrate=9600)
         self.__readBuffer = bytearray()
-        self.__nextMessageFrame = None
 
     def read(self) -> bytearray:
-        messageFrame = self.__nextMessageFrame
-        self.__nextMessageFrame = None
-        return messageFrame
+        ret = self.__readBuffer
+        self.__readBuffer = bytearray()
+        return ret
 
     def write(self, data: bytearray) -> None:
         self.__serial.write(data)
-        #print(data)
+        print("->")
+        print(data)
 
-    def available(self) -> bool:
-        self.__readBuffer.extend(self.__serial.read_all())
+    def available(self) -> int:
+        self.__readBuffer = self.__serial.read_all()
+        
+        if (self.__readBuffer.__len__() > 0):
+            print("<-")
+            print(self.__readBuffer)
 
-        startFrameIndex = self.__readBuffer.find(MessageControlFrame.START.value)
-        if (startFrameIndex <= 0):
-            self.__readBuffer = self.__readBuffer[startFrameIndex:]
+        return self.__readBuffer.__len__()
 
-        if (self.__readBuffer.__len__() >= 5):
-            msgSize = (self.__readBuffer[1] << 8) + self.__readBuffer[2]
+class SerialCTR(ICTR):
+    def __init__(self, port:str) -> None:
+        super().__init__()
+        self.__port = port
+        self.__serialBuffer = bytearray()
+        self.__serialBufferSize = 0
+        self.__serial = PySerial(port)
 
-            if (self.__readBuffer.__len__() >= msgSize):
-                if (self.__readBuffer[msgSize - 1] == MessageControlFrame.END.value):
-                    self.__nextMessageFrame = self.__readBuffer[0: msgSize]
-                    self.__readBuffer = self.__readBuffer[msgSize:]
+    def Write(self, message:Message) -> int:
+        self.__serial.write(message.GetByteArray())
+        return 0
+    
+    def Update(self) -> None:
+        n:int = 0
 
-        if (self.__nextMessageFrame != None):
-            return True
-        return False
+        n = self.__serial.available()
+
+        if n:
+            self.__serialBuffer.extend(self.__serial.read())
+            self.__serialBufferSize = self.__serialBuffer.__len__()
+        
+        startFrameIndex = self.__serialBuffer.find(MessageControlFrame.START.value)
+        
+        if (startFrameIndex >= 0):
+            self.__serialBuffer = self.__serialBuffer[startFrameIndex:]
+
+        if (self.__serialBuffer.__len__() >= 5):
+            msgSize = (self.__serialBuffer[1] << 8) + self.__serialBuffer[2]
+
+            if (self.__serialBuffer.__len__() >= msgSize):
+                if (self.__serialBuffer[msgSize - 1] == MessageControlFrame.END.value):
+                    self._receive(Message(self.__serialBuffer[:msgSize]))
+                    self.__serialBuffer = self.__serialBuffer[msgSize:]
+        return
+    

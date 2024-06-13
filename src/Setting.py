@@ -40,10 +40,11 @@ def GetStringValue(value:bytearray) -> str:
     return string
 
 class Setting():
-    def __init__(self, ref:int, name:str = '', type:int = 0, value:bytearray = 0) -> None:
+    def __init__(self, ref:int, slaveID:int = 0, name:str = '', type:int = 0, value:bytearray = 0) -> None:
         self.__ref = ref
         self.__name = name
         self.__type = type
+        self.__slaveID = slaveID
 
         if (IsNumericalTypeValue(type)):
             self.__value = GetNumericalValue(value)
@@ -61,6 +62,9 @@ class Setting():
 
     def GetType(self):
         return self.__type
+    
+    def GetSlaveID(self):
+        return self.__slaveID
 
     def SetValue(self, value:int):
         self.__value = value
@@ -86,6 +90,48 @@ class SettingList():
 
     def GetSize(self) -> int:
         return self.__settings.__len__()
+
+class SlaveSettings():
+    def __init__(self, slaveID:int) -> None:
+        self.__slaveID = slaveID
+        self.__settingList = SettingList()
+
+    def GetID(self) -> int:
+        return self.__slaveID
+    
+    def AddSetting(self, setting:Setting) -> None:
+        self.__settingList.AddSetting(setting)
+
+class SlaveList():
+    def __init__(self) -> None:
+        self.__slaves = []
+
+    def AddSlave(self, slaveID:int) -> SlaveSettings:
+        slave:SlaveSettings
+
+        slave = self.GetSlaveByID(slaveID)
+        if slave == None:
+            slave = SlaveSettings(slaveID)
+            self.__slaves.append(slave)
+
+        return slave
+
+    def GetSlave(self, index:int) -> SlaveSettings:
+        return self.__slaves[index]
+    
+    def GetSlaveByID(self, slaveID:int) -> SlaveSettings:
+        index = 0
+        size = self.GetSize()
+
+        while (index < size):
+            if (self.__slaves[index].GetID() == slaveID):
+                return self.__slaves[index]
+            index += 1
+        
+        return None
+
+    def GetSize(self) -> int:
+        return self.__slaves.__len__()
 
 class SettingLayout():
     def __init__(self) -> None:
