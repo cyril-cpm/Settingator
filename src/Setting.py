@@ -6,6 +6,7 @@ class SettingType(Enum):
     SLIDER = 1
     TRIGGER = 2
     SWITCH = 3
+    LABEL = 4
 
 def IsNumericalTypeValue(settingType:int) -> bool:
     if (settingType == SettingType.SLIDER.value):
@@ -102,6 +103,15 @@ class SlaveSettings():
     def AddSetting(self, setting:Setting) -> None:
         self.__settingList.AddSetting(setting)
 
+    def GetNumberSetting(self) -> int:
+        return self.__settingList.GetSize()
+    
+    def GetSetting(self, index:int) -> Setting:
+        return self.__settingList.GetSetting(index)
+    
+    def GetSettingByRef(self, ref:int) -> Setting:
+        return self.__settingList.GetSettingByRef(ref)
+
 class SlaveList():
     def __init__(self) -> None:
         self.__slaves = []
@@ -132,6 +142,10 @@ class SlaveList():
 
     def GetSize(self) -> int:
         return self.__slaves.__len__()
+    
+    def GetSettingBySlaveIDAndRef(self, IDRef:tuple) -> Setting:
+        slaveID, ref = IDRef
+        return self.GetSlaveByID(slaveID).GetSettingByRef(ref)
 
 class SettingLayout():
     def __init__(self) -> None:

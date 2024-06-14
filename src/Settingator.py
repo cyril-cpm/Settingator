@@ -6,6 +6,7 @@ class Settingator:
     def __init__(self, ctr:ICTR) -> None:
         self.__communicator = ctr
         self.__slaveList = SlaveList()
+        self.__shouldUpdateDisplay = False
         return
     
     def Update(self) -> None:
@@ -60,6 +61,7 @@ class Settingator:
         if (msgIndex != (byteArray.__len__() - 1) and byteArray[msgIndex] != MessageControlFrame.END.value):
             isValid = False
         
+        self.__shouldUpdateDisplay = True
         return isValid
 
     def __ParseSetting(self, byteArray:bytearray, msgIndex:int, slave:SlaveSettings) -> int:
@@ -100,3 +102,15 @@ class Settingator:
         msgIndex += nameLen + 1
 
         return msgIndex
+    
+    def ShouldUpdateDisplay(self) -> bool:
+        return self.__shouldUpdateDisplay
+    
+    def ResetShouldUpdateDisplay(self) -> None:
+        self.__shouldUpdateDisplay = False
+    
+    def GetSlaveList(self) -> SlaveList:
+        return self.__slaveList
+    
+    def GetSettingBySlaveIDAndRef(self, IDRef:tuple) -> Setting:
+        return self.__slaveList.GetSettingBySlaveIDAndRef(IDRef)

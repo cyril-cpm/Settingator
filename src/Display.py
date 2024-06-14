@@ -3,11 +3,11 @@ from typing import Type
 from Setting import *
 
 class IDisplay(ABC):
-    def __init__(self, settingLayout:SettingLayout) -> None:
-        self.__settingLayout = settingLayout
+    def __init__(self, slaveList:SlaveList) -> None:
+        self.__slaveList = slaveList
 
     def GetSettingLayout(self):
-        return self.__settingLayout
+        return self.__slaveList
 
     @abstractmethod
     def DisplaySettings(self) -> None:
