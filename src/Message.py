@@ -78,73 +78,15 @@ class Message():
         newValue = bytearray()
 
         if self.GetType() == MessageType.SETTING_UPDATE.value:
-            ref = self.__buffer[5]
-            newValueLen = self.__buffer[6]
-            newValue = self.__buffer[7:7+newValueLen]
+            ref = self.__byteArray[5]
+            newValueLen = self.__byteArray[6]
+            newValue = self.__byteArray[7:7+newValueLen]
 
         return (ref, newValue, self.GetSlaveID())
 
-    def SetInitRequest(self, slaveID:int, param:int) -> None:
-        self.__type = MessageType.INIT_REQUEST.value
-        self.__byteArray = bytearray()
-        self.__byteArray.append(MessageControlFrame.START.value)
-        self.__byteArray.append(0x00)
-        self.__byteArray.append(0x00)
-        self.__byteArray.append(slaveID)
-        self.__byteArray.append(self.__type)
-        self.__byteArray.append(param)
-        self.__byteArray.append(MessageControlFrame.END.value)
-        size = self.__byteArray.__len__()
-        self.__byteArray[1] = size >> 8
-        self.__byteArray[2] = size
-        self.__isValid = True
-
-    def SetBridgeInit(self, slaveID:int, slaveName:bytearray) -> None:
-        pass
-
-    def FromSetting(self, setting:Setting) -> None:
-        self.__setting = setting
-        self.__type = MessageType.SETTING_UPDATE.value
-        self.__byteArray = bytearray()
-        self.__byteArray.append(MessageControlFrame.START.value)
-        self.__byteArray.append(0x00)
-        self.__byteArray.append(0x00)
-        self.__byteArray.append(setting.GetSlaveID())
-        self.__byteArray.append(self.__type)
-        self.__byteArray.append(setting.GetRef())
-        self.__byteArray.append(0x01)
-        self.__byteArray.append(setting.GetValue())
-        self.__byteArray.append(MessageControlFrame.END.value)
-        size = self.__byteArray.__len__()
-        self.__byteArray[1] = size >> 8
-        self.__byteArray[2] = size
-        self.__isValid = True
-
-    def FromByteArray(self, byteArray:bytearray) -> None:
-        self.__byteArray = byteArray
-        self.__isValid = True
-
-        self.__isValid = self.__CheckMsgSize(byteArray)
-        if (not(self.__isValid)):
-            return
-
-        self.__slaveID = byteArray[3]
-        msgType = byteArray[4]
-        if (msgType == MessageType.INIT_REQUEST.value):
-            pass
-        elif (msgType == MessageType.SETTING_INIT.value):
-            self.__isValid = self.__ParseSettingInit(byteArray)
-        elif (msgType == MessageType.SETTING_UPDATE.value):
-            pass
-        else:
-            self.__isValid = False
-
     def GetSetting(self) -> Setting:
         return self.__setting
-
-    def GetSettingList(self) -> SettingList:
-        return self.__settingList
-
+    
     def IsValid(self) -> bool:
         return self.__isValid
 
@@ -171,73 +113,3 @@ class Message():
 
         return True
         
-    def __ParseSettingInit(self, byteArray:bytearray) -> bool:
-        isValid = True
-
-        if (byteArray[4] != self.__type):
-            isValid = False
-            return isValid
-
-        nbSetting = byteArray[5]
-
-        self.__settingList = SettingList()
-
-        msgIndex = 6
-        loopIndex = 0
-
-        while((loopIndex < nbSetting) and isValid):
-            msgIndex = self.__ParseSetting(byteArray, msgIndex)
-            if (msgIndex < 0):
-                isValid = False
-
-            loopIndex += 1
-
-        if (loopIndex != nbSetting):
-            isValid = False
-
-        if (msgIndex != (byteArray.__len__() - 1) and byteArray[msgIndex] != MessageControlFrame.END.value):
-            isValid = False
-        
-        self.__isValid = isValid
-
-        return isValid
-
-    def __ParseSetting(self, byteArray:bytearray, msgIndex:int) -> int:
-        msgSize = byteArray.__len__()
-
-        if (msgIndex >= msgSize):
-            return -1
-
-        ref = byteArray[msgIndex]
-
-        msgIndex += 1
-        if (msgIndex >= msgSize):
-            return -1
-
-        settingType = byteArray[msgIndex]
-        
-        msgIndex += 1  
-        if (msgIndex >= msgSize):
-            return -1
-
-        valueLen = byteArray[msgIndex]
-        value = GetBytes(byteArray, msgIndex)
-
-        msgIndex += valueLen + 1
-        
-        if (msgIndex >= msgSize):
-            return -1
-
-        nameLen = byteArray[msgIndex]
-
-        if ((msgIndex + nameLen) >= msgSize):
-            return -1
-
-        name = GetString(byteArray, msgIndex)
-
-        self.__settingList.AddSetting(Setting(ref, self.__slaveID, name, settingType, value))
-
-        msgIndex += nameLen + 1
-
-        return msgIndex
-

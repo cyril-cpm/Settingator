@@ -5,8 +5,9 @@ from Message import *
 class Settingator:
     def __init__(self, ctr:ICTR) -> None:
         self.__communicator = ctr
-        self.__slaveList = SlaveList()
-        self.__shouldUpdateDisplay = False
+        self.__slaveSetting = dict()
+        self.__shouldUpdateDisplayLayout = False
+        self.__shouldUpdateSetting = None
         return
     
     def Update(self) -> None:
@@ -17,6 +18,12 @@ class Settingator:
 
             if msg.GetType() == MessageType.SETTING_INIT.value:
                 self.__ParseSettingInit(msg.GetByteArray())
+
+            elif msg.GetType() == MessageType.SETTING_UPDATE.value:
+                ref, value, slaveID = msg.ExtractSettingUpdate()
+                setting = self.__slaveSetting[slaveID][ref]
+                setting.SetValue(value)
+                self.__shouldUpdateSetting = (slaveID, ref)
 
             self.__communicator.Flush()
         return
@@ -42,14 +49,16 @@ class Settingator:
         isValid = True
 
         slaveID = byteArray[3]
-        slave = self.__slaveList.AddSlave(slaveID)
+        if not slaveID in self.__slaveSetting:
+            self.__slaveSetting[slaveID] = dict()
+        
         nbSetting = byteArray[5]
 
         msgIndex = 6
         loopIndex = 0
 
         while((loopIndex < nbSetting) and isValid):
-            msgIndex = self.__ParseSetting(byteArray, msgIndex, slave)
+            msgIndex = self.__ParseSetting(byteArray, msgIndex, slaveID)
             if (msgIndex < 0):
                 isValid = False
 
@@ -61,10 +70,10 @@ class Settingator:
         if (msgIndex != (byteArray.__len__() - 1) and byteArray[msgIndex] != MessageControlFrame.END.value):
             isValid = False
         
-        self.__shouldUpdateDisplay = True
+        self.__shouldUpdateDisplayLayout = True
         return isValid
 
-    def __ParseSetting(self, byteArray:bytearray, msgIndex:int, slave:SlaveSettings) -> int:
+    def __ParseSetting(self, byteArray:bytearray, msgIndex:int, slaveID:int) -> int:
         msgSize = byteArray.__len__()
 
         if (msgIndex >= msgSize):
@@ -97,20 +106,46 @@ class Settingator:
 
         name = GetString(byteArray, msgIndex)
 
-        #self.__settingList.AddSetting(Setting(ref, self.__slaveID, name, settingType, value))
-        slave.AddSetting(Setting(ref, slave.GetID(), name, settingType, value))
+        self.__slaveSetting[slaveID][ref] = Setting(ref, slaveID, name, settingType, value)
+        
         msgIndex += nameLen + 1
 
         return msgIndex
     
-    def ShouldUpdateDisplay(self) -> bool:
-        return self.__shouldUpdateDisplay
+    def ShouldUpdateDisplayLayout(self) -> bool:
+        return self.__shouldUpdateDisplayLayout
     
-    def ResetShouldUpdateDisplay(self) -> None:
-        self.__shouldUpdateDisplay = False
+    def ResetShouldUpdateDisplayLayout(self) -> None:
+        self.__shouldUpdateDisplayLayout = False
     
-    def GetSlaveList(self) -> SlaveList:
-        return self.__slaveList
+    def ShouldUpdateSetting(self) -> bool:
+        return self.__shouldUpdateSetting != None
     
-    def GetSettingBySlaveIDAndRef(self, IDRef:tuple) -> Setting:
-        return self.__slaveList.GetSettingBySlaveIDAndRef(IDRef)
+    def ResetShouldUpdateSetting(self) -> None:
+        self.__shouldUpdateSetting = None
+
+    def GetSettingToUpdate(self) -> tuple:
+        return self.__shouldUpdateSetting
+
+    def SendUpdateSetting(self, setting:Setting) -> None:
+        if setting != None:
+            type = MessageType.SETTING_UPDATE.value
+            byteArray = bytearray()
+            byteArray = bytearray()
+            byteArray.append(MessageControlFrame.START.value)
+            byteArray.append(0x00)
+            byteArray.append(0x00)
+            byteArray.append(setting.GetSlaveID())
+            byteArray.append(type)
+            byteArray.append(setting.GetRef())
+            byteArray.append(0x01)
+            byteArray.append(setting.GetValue())
+            byteArray.append(MessageControlFrame.END.value)
+            size = byteArray.__len__()
+            byteArray[1] = size >> 8
+            byteArray[2] = size
+
+            self.__communicator.Write(Message(byteArray))
+
+    def GetSlaveSettings(self) -> dict:
+        return self.__slaveSetting

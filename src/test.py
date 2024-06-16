@@ -9,16 +9,19 @@ STR = Settingator(com)
 STR.SendBridgeInitRequest(4, b'Desk')
 STR.SendBridgeInitRequest(5, b'Turret')
 
-displayer = PySimpleGUIDisplay()
+displayer = PySimpleGUIDisplay(STR.GetSlaveSettings())
 
 while True:
     STR.Update()
 
-    if STR.ShouldUpdateDisplay() == True:
-        #displayer = PySimpleGUIDisplay(STR.GetSlaveList())
-        displayer.UpdateLayout(STR.GetSlaveList())
-        STR.ResetShouldUpdateDisplay()
+    if STR.ShouldUpdateDisplayLayout() == True:
+        displayer.UpdateLayout(STR.GetSlaveSettings()) #STR.GetSlaveList())
+        STR.ResetShouldUpdateDisplayLayout()
+
+    if STR.ShouldUpdateSetting():
+        displayer.UpdateSetting(STR.GetSettingToUpdate())
+        STR.ResetShouldUpdateSetting()
 
     
-    displayer.Update()
+    STR.SendUpdateSetting(displayer.Update())
 
