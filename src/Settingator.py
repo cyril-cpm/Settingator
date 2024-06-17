@@ -1,11 +1,14 @@
 from Setting import *
 from Communicator import ICTR
 from Message import *
+from Display import *
 
 class Settingator:
-    def __init__(self, ctr:ICTR) -> None:
+    def __init__(self, ctr:ICTR, display:IDisplay) -> None:
         self.__communicator = ctr
-        self.__slaveSetting = dict()
+        self.__display = display
+        self.__slaveSettings = dict()
+        self.__display.SetSlaveSettingsRef(self.__slaveSettings)
         self.__shouldUpdateDisplayLayout = False
         self.__shouldUpdateSetting = None
         return
@@ -21,11 +24,22 @@ class Settingator:
 
             elif msg.GetType() == MessageType.SETTING_UPDATE.value:
                 ref, value, slaveID = msg.ExtractSettingUpdate()
-                setting = self.__slaveSetting[slaveID][ref]
+                setting = self.__slaveSettings[slaveID][ref]
                 setting.SetValue(value)
                 self.__shouldUpdateSetting = (slaveID, ref)
 
             self.__communicator.Flush()
+
+        self.SendUpdateSetting(self.__display.Update())
+        
+        if self.__shouldUpdateDisplayLayout:
+            self.__display.UpdateLayout(self.__slaveSettings)
+            self.__shouldUpdateDisplayLayout = False
+
+        if self.__shouldUpdateSetting != None:
+            self.__display.UpdateSetting(self.__shouldUpdateSetting)
+            self.__shouldUpdateSetting = None
+
         return
     
     def SendBridgeInitRequest(self, slaveID:int, slaveName:bytearray) -> None:
@@ -49,8 +63,8 @@ class Settingator:
         isValid = True
 
         slaveID = byteArray[3]
-        if not slaveID in self.__slaveSetting:
-            self.__slaveSetting[slaveID] = dict()
+        if not slaveID in self.__slaveSettings:
+            self.__slaveSettings[slaveID] = dict()
         
         nbSetting = byteArray[5]
 
@@ -106,26 +120,11 @@ class Settingator:
 
         name = GetString(byteArray, msgIndex)
 
-        self.__slaveSetting[slaveID][ref] = Setting(ref, slaveID, name, settingType, value)
+        self.__slaveSettings[slaveID][ref] = Setting(ref, slaveID, name, settingType, value)
         
         msgIndex += nameLen + 1
 
         return msgIndex
-    
-    def ShouldUpdateDisplayLayout(self) -> bool:
-        return self.__shouldUpdateDisplayLayout
-    
-    def ResetShouldUpdateDisplayLayout(self) -> None:
-        self.__shouldUpdateDisplayLayout = False
-    
-    def ShouldUpdateSetting(self) -> bool:
-        return self.__shouldUpdateSetting != None
-    
-    def ResetShouldUpdateSetting(self) -> None:
-        self.__shouldUpdateSetting = None
-
-    def GetSettingToUpdate(self) -> tuple:
-        return self.__shouldUpdateSetting
 
     def SendUpdateSetting(self, setting:Setting) -> None:
         if setting != None:
@@ -148,4 +147,4 @@ class Settingator:
             self.__communicator.Write(Message(byteArray))
 
     def GetSlaveSettings(self) -> dict:
-        return self.__slaveSetting
+        return self.__slaveSettings

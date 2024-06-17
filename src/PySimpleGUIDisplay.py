@@ -3,10 +3,10 @@ from Setting import *
 import PySimpleGUI as sg
 
 class PySimpleGUIDisplay(IDisplay):
-    def __init__(self, slaveSetting:dict) -> None:
-        super().__init__(slaveSetting)
+    def __init__(self) -> None:
+        IDisplay.__init__(self)
+
         self.__PSGLayout = [[]]
-        self.__slaveSetting = slaveSetting
         
         self.__PSGWindow = sg.Window('Settingator', self.__PSGLayout, element_justification='c', finalize=True)
 
@@ -50,15 +50,12 @@ class PySimpleGUIDisplay(IDisplay):
 
     def UpdateSetting(self, IDRef:tuple) -> None:
         slaveID, ref = IDRef
-        setting = self.__slaveSetting[slaveID][ref]
+        setting = self.GetSlaveSettings()[slaveID][ref]
 
         if setting.GetType() == SettingType.LABEL.value:
             self.__PSGWindow.Element(IDRef).update(setting.GetName() + " : " + setting.GetValue())
         else:    
             self.__PSGWindow.Element(IDRef).update(setting.GetValue())
-
-    def DisplaySettings(self) -> None:
-        pass
 
     def Update(self) -> Setting:
         event, values = self.__PSGWindow.read(0)
@@ -68,7 +65,7 @@ class PySimpleGUIDisplay(IDisplay):
                 quit()
 
             slaveID, ref = event
-            setting = self.__slaveSetting[slaveID][ref]
+            setting = self.GetSlaveSettings()[slaveID][ref]
 
             if (setting.GetType() != SettingType.TRIGGER.value):
                 setting.SetValue(int(values[event]))
