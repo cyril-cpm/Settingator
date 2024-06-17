@@ -11,6 +11,7 @@ class Settingator:
         self.__display.SetSlaveSettingsRef(self.__slaveSettings)
         self.__shouldUpdateDisplayLayout = False
         self.__shouldUpdateSetting = None
+        self.__notifCallback = dict()
         return
     
     def Update(self) -> None:
@@ -27,6 +28,13 @@ class Settingator:
                 setting = self.__slaveSettings[slaveID][ref]
                 setting.SetValue(value)
                 self.__shouldUpdateSetting = (slaveID, ref)
+
+            elif msg.GetType() == MessageType.NOTIF.value:
+                notifByte, slaveID = msg.ExtractNotif()
+
+                if notifByte in self.__notifCallback:
+                    self.__notifCallback[notifByte](slaveID)
+
 
             self.__communicator.Flush()
 
@@ -148,3 +156,6 @@ class Settingator:
 
     def GetSlaveSettings(self) -> dict:
         return self.__slaveSettings
+    
+    def AddNotifCallback(self, notifByte:int, callback) -> None:
+        self.__notifCallback[notifByte] = callback

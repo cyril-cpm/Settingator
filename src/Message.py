@@ -28,6 +28,7 @@ class MessageType(Enum):
     SETTING_UPDATE:int = 0x11
     INIT_REQUEST:int = 0x12
     SETTING_INIT:int = 0x13
+    NOTIF:int = 0x14
     ESP_NOW_INIT_WITH_SSID:int = 0x54
 
 class MessageControlFrame(Enum):
@@ -83,6 +84,15 @@ class Message():
             newValue = self.__byteArray[7:7+newValueLen]
 
         return (ref, newValue, self.GetSlaveID())
+
+    def ExtractNotif(self) -> tuple:
+        notifByte = 0
+        slaveID = 0
+
+        if self.GetType() == MessageType.NOTIF.value:
+            notifByte = self.__byteArray[5]
+        
+        return (notifByte, self.GetSlaveID())
 
     def GetSetting(self) -> Setting:
         return self.__setting

@@ -13,15 +13,18 @@ VERSION
 
 SETTINGATOR
 
-INIT_REQUEST:   ->
+INIT_REQUEST 0x12: ->
 | StartMsgByte | MsgSize | MsgSize | Slave_ID | INIT_REQUEST | InitParam | MsgEndByte |
 
-SETTING_UPDATE: <->
+SETTING_UPDATE 0x11: <->
 | StartMsgByte | MsgSize | MsgSize | Slave_ID | SETTING_UPDATE | SettingRef | SettingValueLen | SettingValue ... | EndMsgByte |
 
-SETTING_INIT:   <-
+SETTING_INIT 0x13:   <-
 | StartMsgByte | MsgSize | MsgSize | Slave_ID | SETTING_INIT | NbSetting | Settin1gRef | Seting1Type |SettingValueLen | Setting1Value ... | Setting1NameLen | Setting1Name ... | EndMsgByte |
 exemple [0xff, 0x00, 0x20, 0x01, 0x13, 0x02, 0x08, 0x01, 0x01, 0x42, 0x0C, 0x55, 0x6E, 0x20, 0x53, 0x6C, 0x69, 0x64, 0x65, 0x72, 0x20, 0x42, 0x47, 0x67, 0x02, 0x01, 0x87, 0x03, 0x2D, 0x5F, 0xB0, 0x00]
+
+NOTIF 0x14: <-
+| StartMsgByte | MsgSize | MsgSize | Slave_ID | NOTIF | NOTIF_BYTE | MsgEndByte |
 
 Un Slider BG
 
@@ -29,6 +32,6 @@ BRIDGE
 
 | StartMsgByte | MsgSize | MsgSize | Slave_ID | MsgType | MsgContent ... MsgContent | MsgEndByte |
 
-ESP_NOW_INIT_WITH_SSID: ->
+ESP_NOW_INIT_WITH_SSID 0x54: ->
 
 | StartMsgByte | MsgSize | MsgSize | Slave_ID | ESP_NOW_INIT_WITH_SSID | SSID ... SSID | MsgEndByte |
