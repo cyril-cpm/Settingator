@@ -25,9 +25,12 @@ class Settingator:
 
             elif msg.GetType() == MessageType.SETTING_UPDATE.value:
                 ref, value, slaveID = msg.ExtractSettingUpdate()
-                setting = self.__slaveSettings[slaveID][ref]
-                setting.SetValue(value)
-                self.__shouldUpdateSetting = (slaveID, ref)
+
+                if slaveID in self.__slaveSettings:
+                    if ref in self.__slaveSettings[slaveID]:
+                        setting = self.__slaveSettings[slaveID][ref]
+                        setting.SetValue(value)
+                        self.__shouldUpdateSetting = (slaveID, ref)
 
             elif msg.GetType() == MessageType.NOTIF.value:
                 notifByte, slaveID = msg.ExtractNotif()
