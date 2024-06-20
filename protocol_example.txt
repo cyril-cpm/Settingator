@@ -26,6 +26,13 @@ exemple [0xff, 0x00, 0x20, 0x01, 0x13, 0x02, 0x08, 0x01, 0x01, 0x42, 0x0C, 0x55,
 NOTIF 0x14: <-
 | StartMsgByte | MsgSize | MsgSize | Slave_ID | NOTIF | NOTIF_BYTE | MsgEndByte |
 
+CONFIG_ESP_NOW_DIRECT_NOTIF 0x15: ->
+| StartMsgByte | MsgSize | MsgSize | SlaveID_src | SlaveID_Dest | DST_MAC_1 ... DST_MAC_6 | NOTIF_BYTE | MsgEndByte |
+
+CONFIG_ESP_NOW_DIRECT_SETTING_UPDATE 0x16: ->
+
+| StartMsgByte | MsgSize | MsgSize | SlaveID_src | SlaveID_Dest | DST_MAC_1 ... DST_MAC_6 | REF_SETTING | SettingValueLen | MsgEndByte |
+
 Un Slider BG
 
 BRIDGE
@@ -33,5 +40,10 @@ BRIDGE
 | StartMsgByte | MsgSize | MsgSize | Slave_ID | MsgType | MsgContent ... MsgContent | MsgEndByte |
 
 ESP_NOW_INIT_WITH_SSID 0x54: ->
-
 | StartMsgByte | MsgSize | MsgSize | Slave_ID | ESP_NOW_INIT_WITH_SSID | SSID ... SSID | MsgEndByte |
+
+ESP_NOW_CONFIG_DIRECT_NOTIF 0x55: ->
+| StartMsgByte | MsgSize | MsgSize | Slave_ID_Src | Slave_ID_Dest | NotifByte | MsgEndByte |
+
+ESP_NOW_CONFIG_DIRECT_SETTING_UPDATE 0x56: ->
+| StartMsgByte | MsgSize | MsgSize | Slave_ID_Src | Slave_ID_Dest | SettingRef | SettingValueLen | MsgEndByte |
