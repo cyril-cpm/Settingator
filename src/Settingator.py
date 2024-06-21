@@ -55,35 +55,35 @@ class Settingator:
     
     def SendBridgeInitRequest(self, slaveID:int, slaveName:bytearray) -> None:
         type = MessageType.ESP_NOW_INIT_WITH_SSID.value
-        byteArray = bytearray()
-        byteArray.append(MessageControlFrame.START.value)
-        byteArray.append(0x00)
-        byteArray.append(0x00)
-        byteArray.append(slaveID)
-        byteArray.append(type)
-        byteArray += slaveName
-        byteArray.append(MessageControlFrame.END.value)
-        size = byteArray.__len__()
-        byteArray[1] = size >> 8
-        byteArray[2] = size
+        buffer = bytearray()
+        buffer.append(MessageControlFrame.START.value)
+        buffer.append(0x00)
+        buffer.append(0x00)
+        buffer.append(slaveID)
+        buffer.append(type)
+        buffer += slaveName
+        buffer.append(MessageControlFrame.END.value)
+        size = buffer.__len__()
+        buffer[1] = size >> 8
+        buffer[2] = size
 
-        bridgeInitRequest = Message(byteArray)
+        bridgeInitRequest = Message(buffer)
         self.__communicator.Write(bridgeInitRequest)
 
-    def __ParseSettingInit(self, byteArray:bytearray) -> bool:
+    def __ParseSettingInit(self, buffer:bytearray) -> bool:
         isValid = True
 
-        slaveID = byteArray[3]
+        slaveID = buffer[3]
         if not slaveID in self.__slaveSettings:
             self.__slaveSettings[slaveID] = dict()
         
-        nbSetting = byteArray[5]
+        nbSetting = buffer[5]
 
         msgIndex = 6
         loopIndex = 0
 
         while((loopIndex < nbSetting) and isValid):
-            msgIndex = self.__ParseSetting(byteArray, msgIndex, slaveID)
+            msgIndex = self.__ParseSetting(buffer, msgIndex, slaveID)
             if (msgIndex < 0):
                 isValid = False
 
@@ -92,44 +92,44 @@ class Settingator:
         if (loopIndex != nbSetting):
             isValid = False
 
-        if (msgIndex != (byteArray.__len__() - 1) and byteArray[msgIndex] != MessageControlFrame.END.value):
+        if (msgIndex != (buffer.__len__() - 1) and buffer[msgIndex] != MessageControlFrame.END.value):
             isValid = False
         
         self.__shouldUpdateDisplayLayout = True
         return isValid
 
-    def __ParseSetting(self, byteArray:bytearray, msgIndex:int, slaveID:int) -> int:
-        msgSize = byteArray.__len__()
+    def __ParseSetting(self, buffer:bytearray, msgIndex:int, slaveID:int) -> int:
+        msgSize = buffer.__len__()
 
         if (msgIndex >= msgSize):
             return -1
 
-        ref = byteArray[msgIndex]
+        ref = buffer[msgIndex]
 
         msgIndex += 1
         if (msgIndex >= msgSize):
             return -1
 
-        settingType = byteArray[msgIndex]
+        settingType = buffer[msgIndex]
         
         msgIndex += 1  
         if (msgIndex >= msgSize):
             return -1
 
-        valueLen = byteArray[msgIndex]
-        value = GetBytes(byteArray, msgIndex)
+        valueLen = buffer[msgIndex]
+        value = GetBytes(buffer, msgIndex)
 
         msgIndex += valueLen + 1
         
         if (msgIndex >= msgSize):
             return -1
 
-        nameLen = byteArray[msgIndex]
+        nameLen = buffer[msgIndex]
 
         if ((msgIndex + nameLen) >= msgSize):
             return -1
 
-        name = GetString(byteArray, msgIndex)
+        name = GetString(buffer, msgIndex)
 
         self.__slaveSettings[slaveID][ref] = Setting(ref, slaveID, name, settingType, value)
         
@@ -140,21 +140,21 @@ class Settingator:
     def SendUpdateSetting(self, setting:Setting) -> None:
         if setting != None:
             type = MessageType.SETTING_UPDATE.value
-            byteArray = bytearray()
-            byteArray.append(MessageControlFrame.START.value)
-            byteArray.append(0x00)
-            byteArray.append(0x00)
-            byteArray.append(setting.GetSlaveID())
-            byteArray.append(type)
-            byteArray.append(setting.GetRef())
-            byteArray.append(0x01)
-            byteArray.append(setting.GetValue())
-            byteArray.append(MessageControlFrame.END.value)
-            size = byteArray.__len__()
-            byteArray[1] = size >> 8
-            byteArray[2] = size
+            buffer = bytearray()
+            buffer.append(MessageControlFrame.START.value)
+            buffer.append(0x00)
+            buffer.append(0x00)
+            buffer.append(setting.GetSlaveID())
+            buffer.append(type)
+            buffer.append(setting.GetRef())
+            buffer.append(0x01)
+            buffer.append(setting.GetValue())
+            buffer.append(MessageControlFrame.END.value)
+            size = buffer.__len__()
+            buffer[1] = size >> 8
+            buffer[2] = size
 
-            self.__communicator.Write(Message(byteArray))
+            self.__communicator.Write(Message(buffer))
 
     def GetSlaveSettings(self) -> dict:
         return self.__slaveSettings
@@ -162,23 +162,43 @@ class Settingator:
     def AddNotifCallback(self, notifByte:int, callback) -> None:
         self.__notifCallback[notifByte] = callback
 
+    def ConfigDirectNotf(self, srcSlaveID:int, dstSlaveID:int, notifByte:int) -> None:
+        buffer = bytearray()
+        buffer.append(MessageControlFrame.START.value)
+        buffer.append(0x00)
+        buffer.append(0x07)
+        buffer.append(srcSlaveID)
+        buffer.append(MessageType.ESP_NOW_CONFIG_DIRECT_NOTF.value)
+        buffer.append(dstSlaveID)
+        buffer.append(notifByte)
+        buffer.append(MessageControlFrame.END.value)
+
+        self.__communicator.Write(Message(buffer))
+
     def ConfigDirectSettingUpdate(self, srcSlaveID:int, dstSlaveID:int, settingRef) -> None:
         setting:Setting = None
 
         if dstSlaveID in self.__slaveSettings:
             if settingRef in self.__slaveSettings[dstSlaveID]:
                 setting = self.__slaveSettings[dstSlaveID][settingRef]
+            
+            else:
+                print("SettingRef " + str(settingRef) + " not found on Slave " + str(dstSlaveID))
+        
+        else:
+            print("Slave " + str(dstSlaveID) + " not found")
 
-        buffer = bytearray()
-        buffer.append(MessageControlFrame.START.value)
-        buffer.append(0x00)
-        buffer.append(0x08)
-        buffer.append(srcSlaveID)
-        buffer.append(MessageType.ESP_NOW_CONFIG_DIRECT_SETTING_UPDATE.value)
-        buffer.append(dstSlaveID)
-        buffer.append(settingRef)
-        buffer.append(setting.GetValueLen())
-        buffer.append(MessageControlFrame.END.value)
+        if setting != None:
+            buffer = bytearray()
+            buffer.append(MessageControlFrame.START.value)
+            buffer.append(0x00)
+            buffer.append(0x08)
+            buffer.append(srcSlaveID)
+            buffer.append(MessageType.ESP_NOW_CONFIG_DIRECT_SETTING_UPDATE.value)
+            buffer.append(dstSlaveID)
+            buffer.append(settingRef)
+            buffer.append(setting.GetValueLen())
+            buffer.append(MessageControlFrame.END.value)
 
-        self.__communicator.Write(Message(buffer))
+            self.__communicator.Write(Message(buffer))
 

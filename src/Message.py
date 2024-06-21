@@ -1,14 +1,14 @@
 from Setting import *
 
-def GetBytes(byteArray:bytearray, index:int):
-    arraySize = byteArray[index]
+def GetBytes(buffer:bytearray, index:int):
+    arraySize = buffer[index]
 
-    retArray = byteArray[index+1:index+1+arraySize]
+    retArray = buffer[index+1:index+1+arraySize]
 
     return retArray
 
-def GetString(byteArray:bytearray, msgIndex:int):
-    strBytes = GetBytes(byteArray, msgIndex)
+def GetString(buffer:bytearray, msgIndex:int):
+    strBytes = GetBytes(buffer, msgIndex)
 
     string = str()
 
@@ -40,20 +40,20 @@ class MessageControlFrame(Enum):
     START:int = 0xFF
     END:int = 0x00
 
-def GetFrameMessage(byteArray: bytearray) -> bytearray:
-    size = byteArray[2]
-    size += byteArray[1] << 8
+def GetFrameMessage(buffer: bytearray) -> bytearray:
+    size = buffer[2]
+    size += buffer[1] << 8
 
     if (size == 0):
         return bytearray()
     
-    if (byteArray[0] != MessageControlFrame.START.value):
+    if (buffer[0] != MessageControlFrame.START.value):
         return bytearray()
     
-    if (byteArray[size - 1] != MessageControlFrame.END.value):
+    if (buffer[size - 1] != MessageControlFrame.END.value):
         return bytearray()
     
-    return byteArray[0:size]
+    return buffer[0:size]
 
 class Message():
     def __init__(self, buffer:bytearray=None) -> None:
@@ -62,12 +62,12 @@ class Message():
             self.__type = MessageType.UNINITIALISED.value
             self.__slaveID = 0
             self.__setting = None
-            self.__byteArray = None
+            self.__buffer = None
         else:
             self.__type = buffer[4]
             self.__slaveID = buffer[3]
             self.__len = buffer.__len__()
-            self.__byteArray = buffer
+            self.__buffer = buffer
             self.__setting = None
 
     def GetLength(self) -> int:
@@ -84,9 +84,9 @@ class Message():
         newValue = bytearray()
 
         if self.GetType() == MessageType.SETTING_UPDATE.value:
-            ref = self.__byteArray[5]
-            newValueLen = self.__byteArray[6]
-            newValue = self.__byteArray[7:7+newValueLen]
+            ref = self.__buffer[5]
+            newValueLen = self.__buffer[6]
+            newValue = self.__buffer[7:7+newValueLen]
 
         return (ref, newValue, self.GetSlaveID())
 
@@ -95,7 +95,7 @@ class Message():
         slaveID = 0
 
         if self.GetType() == MessageType.NOTIF.value:
-            notifByte = self.__byteArray[5]
+            notifByte = self.__buffer[5]
         
         return (notifByte, self.GetSlaveID())
 
@@ -106,22 +106,22 @@ class Message():
         return self.__isValid
 
     def GetByteArray(self) -> bytearray:
-        return self.__byteArray
+        return self.__buffer
 
-    def __CheckMsgSize(self, byteArray:bytearray) -> bool:
-        len = byteArray.__len__()
+    def __CheckMsgSize(self, buffer:bytearray) -> bool:
+        len = buffer.__len__()
 
         if (len < 7):
             return False
 
-        if (byteArray[0] != MessageControlFrame.START.value):
+        if (buffer[0] != MessageControlFrame.START.value):
             return False
 
-        if (byteArray[len-1] != MessageControlFrame.END.value):
+        if (buffer[len-1] != MessageControlFrame.END.value):
             return False
 
-        size = byteArray[2]
-        size += byteArray[1] << 8
+        size = buffer[2]
+        size += buffer[1] << 8
 
         if (size != len):
             return False

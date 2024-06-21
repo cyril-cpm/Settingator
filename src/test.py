@@ -6,11 +6,14 @@ com = SerialCTR("COM8")
 
 display = PySimpleGUIDisplay()
 
-def configFunction():
+def configFunction(window:sg.Window):
+    print(window["ConfigValue"].get())
     STR.ConfigDirectSettingUpdate(4, 5, 1)
 
 
-display.AddPreLayout(("Config", configFunction))
+display.AddPreLayout((IDP_BUTTON, "Config", configFunction))
+display.AddPreLayout((IDP_INPUT, "value", "ConfigValue"))
+
 
 STR = Settingator(com, display)
 
@@ -33,6 +36,8 @@ STR.AddNotifCallback(0x69, notifLaser)
 
 STR.SendBridgeInitRequest(4, b'Desk')
 STR.SendBridgeInitRequest(5, b'Turret')
+
+display.UpdateLayout(None)
 
 while True:
     STR.Update()

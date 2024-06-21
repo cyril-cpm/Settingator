@@ -9,7 +9,7 @@ class PySimpleGUIDisplay(IDisplay):
         self.__PSGLayout = [[]]
         self.__PreLayout = []
         
-        self.__PSGWindow = sg.Window('Settingator', self.__PSGLayout, element_justification='c', finalize=True)
+        self.__PSGWindow = sg.Window('Settingator', self.__PSGLayout, element_justification='left', finalize=True)
 
     def GetPSGLayout(self):
         return self.__PSGLayout
@@ -18,17 +18,30 @@ class PySimpleGUIDisplay(IDisplay):
         self.__PreLayout.append(element)
 
     def UpdateLayout(self, slaveSettings:dict) -> None:
-        self.__PSGLayout = [[]]
+        self.__PSGLayout = [[],[]]
+
+        topFrameLayout = [[]]
 
         for element in self.__PreLayout:
-            name, callback = element
-            self.__PSGLayout[0].append(sg.Button(name, key=callback))
+            type, name, key = element
+            if type == IDP_BUTTON:
+                topFrameLayout[0].append(sg.Button(name, key=key))
+            elif type == IDP_INPUT:
+                topFrameLayout[0].append(sg.Input(name, key=key))
+        
+        self.__PSGLayout[0].append(sg.Frame(title="", border_width=0, layout=topFrameLayout, vertical_alignment="top", expand_x=True, expand_y=True))
 
+        #self.__PSGLayout[1].append(sg.HorizontalSeparator())
+
+        bottomFrameLayout = [[]]
+        slaveCtrlLayout = []
+        
         if slaveSettings != None:
-            slaveIndex = 1
+            slaveIndex = 0
 
             for slaveID in slaveSettings:
-                self.__PSGLayout.append([])
+                slaveCtrlLayout.append([])
+                slaveFrameLayout = [[]]
 
                 for ref in slaveSettings[slaveID]:
                     setting = slaveSettings[slaveID][ref]
@@ -50,14 +63,23 @@ class PySimpleGUIDisplay(IDisplay):
 
                     else:
                         element=sg.Text("Not Supported Setting")
-                    self.__PSGLayout[slaveIndex].append(element)
+                    
+                    slaveFrameLayout[0].append(element)
+                
+                slaveCtrlLayout[slaveIndex].append(sg.Frame("SlaveID: " + str(slaveID), slaveFrameLayout, vertical_alignment="bottom", expand_x=True))
 
                 slaveIndex += 1
             
-            window = sg.Window('Settingator', self.__PSGLayout, element_justification='c', finalize=True)
-            self.__PSGWindow.close()
-            self.__PSGWindow = window
-            print(self.__PSGLayout)
+        bottomFrameLayout[0].append(sg.Output(expand_x=True, expand_y=True))
+        bottomFrameLayout[0].append(sg.Column(slaveCtrlLayout, vertical_alignment="bottom"))
+
+        self.__PSGLayout[1].append(sg.Frame(title="", border_width=0, layout=bottomFrameLayout, expand_x=True, expand_y=True))
+
+        window = sg.Window('Settingator', self.__PSGLayout, element_justification='left', finalize=True)
+        window.Maximize()
+        self.__PSGWindow.close()
+        self.__PSGWindow = window
+        print(self.__PSGLayout)
 
     def UpdateSetting(self, IDRef:tuple) -> None:
         slaveID, ref = IDRef
@@ -83,5 +105,5 @@ class PySimpleGUIDisplay(IDisplay):
                     setting.SetValue(int(values[event]))
 
             if callable(event):
-                event()
+                event(self.__PSGWindow)
         return setting
