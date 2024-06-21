@@ -29,7 +29,12 @@ class MessageType(Enum):
     INIT_REQUEST:int = 0x12
     SETTING_INIT:int = 0x13
     NOTIF:int = 0x14
+    CONFIG_ESP_NOW_DIRECT_NOTIF:int = 0x15
+    CONFIG_ESP_NOW_DIRECT_SETTING_UPDATE:int = 0x16
+
     ESP_NOW_INIT_WITH_SSID:int = 0x54
+    ESP_NOW_CONFIG_DIRECT_NOTF:int = 0x55
+    ESP_NOW_CONFIG_DIRECT_SETTING_UPDATE:int = 0x56
 
 class MessageControlFrame(Enum):
     START:int = 0xFF

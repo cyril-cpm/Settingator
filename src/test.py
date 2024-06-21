@@ -6,6 +6,11 @@ com = SerialCTR("COM8")
 
 display = PySimpleGUIDisplay()
 
+def configFunction():
+    STR.ConfigDirectSettingUpdate(4, 5, 1)
+
+
+display.AddPreLayout(("Config", configFunction))
 
 STR = Settingator(com, display)
 
@@ -18,7 +23,7 @@ def notifTestB(slaveID:int):
     print(slaveID)
 
 def notifLaser(slaveID:int):
-    STR.SendUpdateSetting(STR.GetSlaveSettings()[5][1])
+    #STR.SendUpdateSetting(STR.GetSlaveSettings()[5][1])
     print("Laser Detected")
     print(slaveID)
 

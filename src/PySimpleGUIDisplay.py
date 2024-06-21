@@ -7,14 +7,25 @@ class PySimpleGUIDisplay(IDisplay):
         IDisplay.__init__(self)
 
         self.__PSGLayout = [[]]
+        self.__PreLayout = []
         
         self.__PSGWindow = sg.Window('Settingator', self.__PSGLayout, element_justification='c', finalize=True)
 
+    def GetPSGLayout(self):
+        return self.__PSGLayout
+
+    def AddPreLayout(self, element:tuple) -> None:
+        self.__PreLayout.append(element)
+
     def UpdateLayout(self, slaveSettings:dict) -> None:
-        
+        self.__PSGLayout = [[]]
+
+        for element in self.__PreLayout:
+            name, callback = element
+            self.__PSGLayout[0].append(sg.Button(name, key=callback))
+
         if slaveSettings != None:
-            slaveIndex = 0
-            self.__PSGLayout = []
+            slaveIndex = 1
 
             for slaveID in slaveSettings:
                 self.__PSGLayout.append([])
@@ -64,11 +75,13 @@ class PySimpleGUIDisplay(IDisplay):
             if (event == sg.WIN_CLOSED):
                 quit()
 
-            slaveID, ref = event
-            setting = self.GetSlaveSettings()[slaveID][ref]
+            if isinstance(event, tuple):
+                slaveID, ref = event
+                setting = self.GetSlaveSettings()[slaveID][ref]
 
-            if (setting.GetType() != SettingType.TRIGGER.value):
-                setting.SetValue(int(values[event]))
+                if (setting.GetType() != SettingType.TRIGGER.value):
+                    setting.SetValue(int(values[event]))
 
-
+            if callable(event):
+                event()
         return setting

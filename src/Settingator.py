@@ -141,7 +141,6 @@ class Settingator:
         if setting != None:
             type = MessageType.SETTING_UPDATE.value
             byteArray = bytearray()
-            byteArray = bytearray()
             byteArray.append(MessageControlFrame.START.value)
             byteArray.append(0x00)
             byteArray.append(0x00)
@@ -162,3 +161,24 @@ class Settingator:
     
     def AddNotifCallback(self, notifByte:int, callback) -> None:
         self.__notifCallback[notifByte] = callback
+
+    def ConfigDirectSettingUpdate(self, srcSlaveID:int, dstSlaveID:int, settingRef) -> None:
+        setting:Setting = None
+
+        if dstSlaveID in self.__slaveSettings:
+            if settingRef in self.__slaveSettings[dstSlaveID]:
+                setting = self.__slaveSettings[dstSlaveID][settingRef]
+
+        buffer = bytearray()
+        buffer.append(MessageControlFrame.START.value)
+        buffer.append(0x00)
+        buffer.append(0x08)
+        buffer.append(srcSlaveID)
+        buffer.append(MessageType.ESP_NOW_CONFIG_DIRECT_SETTING_UPDATE.value)
+        buffer.append(dstSlaveID)
+        buffer.append(settingRef)
+        buffer.append(setting.GetValueLen())
+        buffer.append(MessageControlFrame.END.value)
+
+        self.__communicator.Write(Message(buffer))
+
