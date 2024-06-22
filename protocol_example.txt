@@ -33,6 +33,12 @@ CONFIG_ESP_NOW_DIRECT_SETTING_UPDATE 0x16: ->
 
 | StartMsgByte | MsgSize | MsgSize | SlaveID_src | CONFIG_ESP_NOW_DIRECT_SETTING_UPDATE | SlaveID_Dest | DST_MAC_1 ... DST_MAC_6 | REF_SETTING | SettingValueLen | MsgEndByte |
 
+REMOVE_DIRECT_NOTIF_CONFIG 0x17: ->
+| StartMsgByte | MsgSize | MsgSize | SlaveID | REMOVE_DIRECT_NOTIF_CONFIG | SlaveID_Dest | NotifByte | EndMsgByte |
+
+REMOVE_DIRECT_SETTING_UPDATE_CONFIG 0x18: ->
+| StartMsgByte | MsgSize | MsgSize | SlaveID | REMOVE_DIRECT_SETTING_UPDATE_CONFIG | SlaveID_Dest |SettingRef | EndMsgByte |
+
 Un Slider BG
 
 BRIDGE
@@ -47,3 +53,9 @@ ESP_NOW_CONFIG_DIRECT_NOTIF 0x55: ->
 
 ESP_NOW_CONFIG_DIRECT_SETTING_UPDATE 0x56: ->
 | StartMsgByte | MsgSize | MsgSize | Slave_ID_Src | ESP_NOW_CONFIG_DIRECT_SETTING_UPDATE | Slave_ID_Dest | SettingRef | SettingValueLen | MsgEndByte |
+
+ESP_NOW_REMOVE_DIRECT_NOTIF_CONFIG 0x57: ->
+| StartMsgByte | MsgSize | MsgSize | SlaveID | ESP_NOW_REMOVE_DIRECT_NOTIF_CONFIG | Slave_ID_Dest | NotifByte | MsgEndByte |
+
+ESP_NOW_REMOVE_DIRECT_SETTING_UPDATE_CONFIG 0x58: ->
+| StartMsgByte | MsgSize | MsgSize | SlaveID | ESP_NOW_REMOVE_DIRECT_SETTING_UPDATE_CONFIG | SlaveID_Dest | SettingRef | MsgEndByte |
