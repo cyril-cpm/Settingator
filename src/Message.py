@@ -35,6 +35,8 @@ class MessageType(Enum):
     ESP_NOW_INIT_WITH_SSID:int = 0x54
     ESP_NOW_CONFIG_DIRECT_NOTF:int = 0x55
     ESP_NOW_CONFIG_DIRECT_SETTING_UPDATE:int = 0x56
+    ESP_NOW_REMOVE_DIRECT_NOTIF_CONFIG:int = 0x57
+    ESP_NOW_REMOVE_DIRECT_SETTING_UPDATE_CONFIG:int = 0x58
 
 class MessageControlFrame(Enum):
     START:int = 0xFF

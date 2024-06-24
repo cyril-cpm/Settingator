@@ -18,7 +18,7 @@ def IsNumericalTypeValue(settingType:int) -> bool:
     if (settingType == SettingType.SWITCH.value):
         return True
 
-def GetNumericalValue(value:bytearray) -> tuple:
+def GetNumericalValueFromBuffer(value:bytearray) -> tuple:
     valueLen = value.__len__()
 
     retValue = 0
@@ -30,7 +30,7 @@ def GetNumericalValue(value:bytearray) -> tuple:
     
     return (retValue, valueLen)
 
-def GetStringValue(value:bytearray) -> tuple:
+def GetStringValueFromBuffer(value:bytearray) -> tuple:
     string = str()
     strLen = value.__len__()
     index = 0
@@ -48,9 +48,9 @@ class Setting():
         self.__slaveID = slaveID
 
         if (IsNumericalTypeValue(type)):
-            self.__value, self.__valueLen = GetNumericalValue(value)
+            self.__value, self.__valueLen = GetNumericalValueFromBuffer(value)
         else:
-            self.__value, self.__valueLen = GetStringValue(value)
+            self.__value, self.__valueLen = GetStringValueFromBuffer(value)
 
     def GetName(self):
         return self.__name
@@ -71,7 +71,6 @@ class Setting():
         return self.__slaveID
 
     def SetValue(self, value):
-        if (IsNumericalTypeValue(type)):
-            self.__value, self.__valueLen = GetNumericalValue(value)
-        else:
-            self.__value, self.__valueLen = GetStringValue(value)
+        if (IsNumericalTypeValue(self.__type)):
+            self.__value = value
+

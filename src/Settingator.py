@@ -166,7 +166,7 @@ class Settingator:
         buffer = bytearray()
         buffer.append(MessageControlFrame.START.value)
         buffer.append(0x00)
-        buffer.append(0x07)
+        buffer.append(0x08)
         buffer.append(srcSlaveID)
         buffer.append(MessageType.ESP_NOW_CONFIG_DIRECT_NOTF.value)
         buffer.append(dstSlaveID)
@@ -202,3 +202,19 @@ class Settingator:
 
             self.__communicator.Write(Message(buffer))
 
+    def RemoveDirectMessageConfig(self, srcSlaveID:int, dstSlaveID:int, configID:int, configType:int) -> None:
+        buffer = bytearray()
+        buffer.append(MessageControlFrame.START.value)
+        buffer.append(0x00)
+        buffer.append(0x08)
+        buffer.append(srcSlaveID)
+        buffer.append(configType)
+        buffer.append(dstSlaveID)
+        buffer.append(configID)
+        buffer.append(MessageControlFrame.END.value)
+
+    def RemoveDirectNotifConfig(self, srcSlaveID:int, dstSlaveID:int, notifByte:int) -> None:
+        self.RemoveDirectMessageConfig(srcSlaveID, dstSlaveID, notifByte, MessageType.ESP_NOW_REMOVE_DIRECT_NOTIF_CONFIG.value)
+
+    def RemoveDirectSettingUpdateConfig(self, srcSlaveID:int, dstSlave:int, settingRef:int) -> None:
+        self.RemoveDirectMessageConfig(srcSlaveID, dstSlave, settingRef, MessageType.ESP_NOW_REMOVE_DIRECT_SETTING_UPDATE_CONFIG.value)
