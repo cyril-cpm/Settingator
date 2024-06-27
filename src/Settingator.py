@@ -70,6 +70,20 @@ class Settingator:
         bridgeInitRequest = Message(buffer)
         self.__communicator.Write(bridgeInitRequest)
 
+    def SendInitRequest(self, slaveID:int) -> None:
+        type = MessageType.INIT_REQUEST.value
+        buffer = bytearray()
+        buffer.append(MessageControlFrame.START.value)
+        buffer.append(0x00)
+        buffer.append(0x07)
+        buffer.append(slaveID)
+        buffer.append(MessageType.INIT_REQUEST.value)
+        buffer.append(0x00)
+        buffer.append(MessageControlFrame.END.value)
+
+        initRequest = Message(buffer)
+        self.__communicator.Write(initRequest)
+
     def __ParseSettingInit(self, buffer:bytearray) -> bool:
         isValid = True
 
@@ -212,6 +226,8 @@ class Settingator:
         buffer.append(dstSlaveID)
         buffer.append(configID)
         buffer.append(MessageControlFrame.END.value)
+
+        self.__communicator.Write(Message(buffer))
 
     def RemoveDirectNotifConfig(self, srcSlaveID:int, dstSlaveID:int, notifByte:int) -> None:
         self.RemoveDirectMessageConfig(srcSlaveID, dstSlaveID, notifByte, MessageType.ESP_NOW_REMOVE_DIRECT_NOTIF_CONFIG.value)

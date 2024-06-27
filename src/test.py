@@ -44,6 +44,14 @@ display.AddPreLayout((IDP_BUTTON, "targetRight", targetRight))
 
 STR = Settingator(com, display)
 
+def addDirectSU(window:sg.Window):
+    STR.ConfigDirectSettingUpdate(4, 5, 2)
+
+def removeDirectSU(window:sg.Window):
+    STR.RemoveDirectSettingUpdateConfig(4, 5, 2)
+
+display.AddPreLayout((IDP_BUTTON, "addDSU", addDirectSU))
+display.AddPreLayout((IDP_BUTTON, "removeDSU", removeDirectSU))
 
 def notifLaser(slaveID:int):
 
@@ -92,8 +100,14 @@ def notifLaser(slaveID:int):
 
 STR.AddNotifCallback(0x05, notifLaser)
 
-STR.SendBridgeInitRequest(4, b'Desk')
-STR.SendBridgeInitRequest(5, b'Turret')
+#STR.SendBridgeInitRequest(4, b'Desk')
+#STR.SendBridgeInitRequest(5, b'Turret')
+
+
+def SendInitRequest(window:sg.Window):
+    STR.SendInitRequest(0x42)
+
+display.AddPreLayout((IDP_BUTTON,"Init", SendInitRequest))
 
 display.UpdateLayout(None)
 
