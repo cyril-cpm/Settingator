@@ -31,8 +31,6 @@ class PySimpleGUIDisplay(IDisplay):
         
         self.__PSGLayout[0].append(sg.Frame(title="", border_width=0, layout=topFrameLayout, vertical_alignment="top", expand_x=True, expand_y=True))
 
-        #self.__PSGLayout[1].append(sg.HorizontalSeparator())
-
         bottomFrameLayout = [[]]
         slaveCtrlLayout = []
         

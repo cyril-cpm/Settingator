@@ -15,7 +15,9 @@ left_trigger:Setting
 right_trigger:Setting
 
 def targetRight(window:sg.Window):
-    #STR.ConfigDirectSettingUpdate(4, 5, 2) #A améliorer
+    STR.ConfigDirectSettingUpdate(4, 5, 2) #A améliorer
+    
+    STR.SendUpdateSetting(STR.GetSlaveSettings()[4][2])
     
     global targetting
     global target_side
@@ -64,7 +66,7 @@ def notifLaser(slaveID:int):
 
     if targetting:
         if step == 0:
-            speed_setting.SetValue(192)
+            speed_setting.SetValue(128)
             STR.SendUpdateSetting(speed_setting)
 
             if target_side == "R":
@@ -74,7 +76,7 @@ def notifLaser(slaveID:int):
             step = 3
 
         elif step == 3:
-            speed_setting.SetValue(128)
+            speed_setting.SetValue(64)
             STR.SendUpdateSetting(speed_setting)
 
             if target_side == "R":
@@ -87,9 +89,10 @@ def notifLaser(slaveID:int):
             step = 0
             target_side = ""
             targetting = False
-            #STR.RemoveDirectSettingUpdateConfig(4, 5, 2)
-            STR.SendUpdateSetting(STR.GetSlaveSettings()[5][2])
-            STR.SendUpdateSetting(STR.GetSlaveSettings()[5][4])
+            STR.RemoveDirectSettingUpdateConfig(4, 5, 2)
+            STR.SendUpdateSetting(STR.GetSlaveSettings()[4][3])
+            #STR.SendUpdateSetting(STR.GetSlaveSettings()[5][2])
+            #STR.SendUpdateSetting(STR.GetSlaveSettings()[5][4])
         
             
 
@@ -100,8 +103,8 @@ def notifLaser(slaveID:int):
 
 STR.AddNotifCallback(0x05, notifLaser)
 
-#STR.SendBridgeInitRequest(4, b'Desk')
-#STR.SendBridgeInitRequest(5, b'Turret')
+STR.SendBridgeInitRequest(4, b'Desk')
+STR.SendBridgeInitRequest(5, b'Turret')
 
 
 def SendInitRequest(window:sg.Window):
