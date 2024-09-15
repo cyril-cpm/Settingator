@@ -32,7 +32,7 @@ class Settingator:
                     if ref in self.__slaveSettings[slaveID]:
                         setting = self.__slaveSettings[slaveID][ref]
                         setting.SetValue(value)
-                        self.__shouldUpdateSetting = (slaveID, ref)
+                        self.__shouldUpdateSetting = setting
 
             elif msg.GetType() == MessageType.NOTIF.value:
                 notifByte, slaveID = msg.ExtractNotif()
@@ -55,7 +55,7 @@ class Settingator:
 
         return
     
-    def SendBridgeInitRequest(self, slaveID:int, slaveName:bytearray, callbackFunction:function = None, expectedSlaveNumber:int = 1) -> None:
+    def SendBridgeInitRequest(self, slaveID:int, slaveName:bytearray, callbackFunction = None, expectedSlaveNumber:int = 1) -> None:
         
         if callbackFunction != None:
             while expectedSlaveNumber != 0: 
@@ -98,7 +98,6 @@ class Settingator:
         slaveID = buffer[3]
         if not slaveID in self.__slaveSettings:
             self.__slaveSettings[slaveID] = dict()
-            self.__slaves[slaveID] = Slave(slaveID, self.__slaveSettings[slaveID])
         
         nbSetting = buffer[5]
 
@@ -120,6 +119,8 @@ class Settingator:
         
         self.__shouldUpdateDisplayLayout = True
 
+        if not slaveID in self.__slaves:
+            self.__slaves[slaveID] = Slave(self, slaveID, self.__slaveSettings[slaveID])
         if slaveID in self.__initCallback:
             self.__initCallback[slaveID](self.__slaves[slaveID])
 
@@ -256,18 +257,26 @@ class Slave:
         self.__settings = settings
         self.__str = str
 
+    def GetSettingByRef(self, ref:int):
+        return self.__settings[ref]
+
+    def GetSettingByName(self, settingName:str):
+        for setting in self.__settings:
+            if self.__settings[setting].GetName() == settingName:
+                return self.GetSettingByRef(setting)
+
     def SendSettingUpdateByRef(self, ref:int, value = None):
 
         if (value != None):
             self.__settings[ref].SetValue(value)
 
-        self.__str.SendUpdateSetting(self, self.__settings[ref])
+        self.__str.SendUpdateSetting(self.__settings[ref])
 
     def SendSettingUpdateByName(self, settingName:str, value = None):
 
         for setting in self.__settings:
-            if setting.GetName() == settingName:
-                self.SendSettingUpdateByRef(setting.GetRef(), value)
+            if self.__settings[setting].GetName() == settingName:
+                self.SendSettingUpdateByRef(self.__settings[setting].GetRef(), value)
                 break
 
     def ConfigDiretNotif(self, target, notifByte:int):
@@ -275,3 +284,6 @@ class Slave:
 
     def ConfigDirectSettingUpdate(self, target, settingRef:int):
         self.__str.ConfigDirectSettingUpdate(self.__ID, target.GetID(), settingRef)
+
+    def GetID(self):
+        return self.__ID

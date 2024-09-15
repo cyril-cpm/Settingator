@@ -5,6 +5,8 @@ from Setting import *
 #enum display
 IDP_BUTTON = 0x01
 IDP_INPUT = 0x02
+IDP_TEXT = 0x03
+IDP_FRAME = 0x04
 
 class IDisplay(ABC):
     def __init__(self) -> None:
@@ -25,5 +27,5 @@ class IDisplay(ABC):
         pass
 
     @abstractmethod
-    def UpdateSetting(self, IDRef:tuple) -> None:
+    def UpdateSetting(self,setting:Setting) -> None:
         pass

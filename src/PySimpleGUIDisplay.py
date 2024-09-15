@@ -17,7 +17,7 @@ class PySimpleGUIDisplay(IDisplay):
     def AddPreLayout(self, element:tuple) -> None:
         self.__PreLayout.append(element)
 
-    def UpdateLayout(self, slaveSettings:dict) -> None:
+    def UpdateLayout(self, slaveSettings:dict = None) -> None:
         self.__PSGLayout = [[],[]]
 
         topFrameLayout = [[]]
@@ -28,6 +28,16 @@ class PySimpleGUIDisplay(IDisplay):
                 topFrameLayout[0].append(sg.Button(name, key=key))
             elif type == IDP_INPUT:
                 topFrameLayout[0].append(sg.Input(name, key=key))
+            elif type == IDP_TEXT:
+                topFrameLayout[0].append(sg.Text(name, key=key))
+            elif type == IDP_FRAME:
+                frameLayout = [[]]
+                for frameElement in key:
+                    frameElementType, frameElementName, frameElementKey = frameElement
+                    if frameElementType == IDP_BUTTON:
+                        frameLayout[0].append(sg.Button(frameElementName, key=frameElementKey))
+
+                topFrameLayout[0].append(sg.Frame(name, frameLayout))
         
         self.__PSGLayout[0].append(sg.Frame(title="", border_width=0, layout=topFrameLayout, vertical_alignment="top", expand_x=True, expand_y=True))
 
@@ -79,14 +89,14 @@ class PySimpleGUIDisplay(IDisplay):
         self.__PSGWindow = window
         print(self.__PSGLayout)
 
-    def UpdateSetting(self, IDRef:tuple) -> None:
-        slaveID, ref = IDRef
-        setting = self.GetSlaveSettings()[slaveID][ref]
+    def UpdateSetting(self, setting:Setting) -> None:
+        slaveID = setting.GetSlaveID()
+        ref = setting.GetRef()
 
         if setting.GetType() == SettingType.LABEL.value:
-            self.__PSGWindow.Element(IDRef).update(setting.GetName() + " : " + setting.GetValue())
+            self.__PSGWindow.Element((slaveID, ref)).update(setting.GetName() + " : " + setting.GetValue())
         else:    
-            self.__PSGWindow.Element(IDRef).update(setting.GetValue())
+            self.__PSGWindow.Element((slaveID, ref)).update(setting.GetValue())
 
     def Update(self) -> Setting:
         event, values = self.__PSGWindow.read(0)
