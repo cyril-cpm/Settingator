@@ -8,10 +8,12 @@ class Settingator:
         self.__communicator = ctr
         self.__display = display
         self.__slaveSettings = dict()
+        self.__slaves = dict()
         self.__display.SetSlaveSettingsRef(self.__slaveSettings)
         self.__shouldUpdateDisplayLayout = False
         self.__shouldUpdateSetting = None
         self.__notifCallback = dict()
+        self.__initCallback = dict()
         return
     
     def Update(self) -> None:
@@ -53,7 +55,13 @@ class Settingator:
 
         return
     
-    def SendBridgeInitRequest(self, slaveID:int, slaveName:bytearray) -> None:
+    def SendBridgeInitRequest(self, slaveID:int, slaveName:bytearray, callbackFunction:function = None, expectedSlaveNumber:int = 1) -> None:
+        
+        if callbackFunction != None:
+            while expectedSlaveNumber != 0: 
+                self.__initCallback[slaveID + expectedSlaveNumber - 1] = callbackFunction
+                expectedSlaveNumber -= 1
+        
         type = MessageType.ESP_NOW_INIT_WITH_SSID.value
         buffer = bytearray()
         buffer.append(MessageControlFrame.START.value)
@@ -90,6 +98,7 @@ class Settingator:
         slaveID = buffer[3]
         if not slaveID in self.__slaveSettings:
             self.__slaveSettings[slaveID] = dict()
+            self.__slaves[slaveID] = Slave(slaveID, self.__slaveSettings[slaveID])
         
         nbSetting = buffer[5]
 
@@ -110,6 +119,10 @@ class Settingator:
             isValid = False
         
         self.__shouldUpdateDisplayLayout = True
+
+        if slaveID in self.__initCallback:
+            self.__initCallback[slaveID](self.__slaves[slaveID])
+
         return isValid
 
     def __ParseSetting(self, buffer:bytearray, msgIndex:int, slaveID:int) -> int:
@@ -234,3 +247,31 @@ class Settingator:
 
     def RemoveDirectSettingUpdateConfig(self, srcSlaveID:int, dstSlave:int, settingRef:int) -> None:
         self.RemoveDirectMessageConfig(srcSlaveID, dstSlave, settingRef, MessageType.ESP_NOW_REMOVE_DIRECT_SETTING_UPDATE_CONFIG.value)
+
+
+
+class Slave:
+    def __init__(self, str:Settingator, slaveID:int, settings:dict) -> None:
+        self.__ID = slaveID
+        self.__settings = settings
+        self.__str = str
+
+    def SendSettingUpdateByRef(self, ref:int, value = None):
+
+        if (value != None):
+            self.__settings[ref].SetValue(value)
+
+        self.__str.SendUpdateSetting(self, self.__settings[ref])
+
+    def SendSettingUpdateByName(self, settingName:str, value = None):
+
+        for setting in self.__settings:
+            if setting.GetName() == settingName:
+                self.SendSettingUpdateByRef(setting.GetRef(), value)
+                break
+
+    def ConfigDiretNotif(self, target, notifByte:int):
+        self.__str.ConfigDirectNotf(self.__ID, target.GetID(), notifByte)
+
+    def ConfigDirectSettingUpdate(self, target, settingRef:int):
+        self.__str.ConfigDirectSettingUpdate(self.__ID, target.GetID(), settingRef)
