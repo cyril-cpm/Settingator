@@ -14,6 +14,7 @@ STR = Settingator(com, display)
 NUMBER_PLAYER = 2
 
 GS_INIT = 0
+GS_WAITING_TO_START = 1
 
 gameStep = GS_INIT
 
@@ -211,6 +212,10 @@ def notifLaser(slaveID:int):
 
 ###   INIT SYSTEM    ###
 
+def startGame(window:sg.Window):
+    display.RemovePreLayout(startGameButton)
+
+startGameButton = (IDP_BUTTON, "startGame", startGame)
 
 def initPlayer(window:sg.Window):
     STR.AddNotifCallback(0x05, initNotifLaser)
@@ -227,8 +232,11 @@ def initNotifLaser(slaveID:int):
         turret.SendSettingUpdateByName("STOP")
         display.RemovePreLayout(InitPlayerButton)
         global turretPos
+        global gameStep
 
         turretPos = TP_END
+        display.AddPreLayout(startGameButton)
+        gameStep = GS_WAITING_TO_START
         display.UpdateLayout(STR.GetSlaveSettings())
 
 display.AddPreLayout(InitPlayerButton)
