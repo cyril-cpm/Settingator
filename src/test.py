@@ -17,6 +17,11 @@ GS_INIT = 0
 
 gameStep = GS_INIT
 
+RED_BUTTON = 13
+GREEN_BUTTON = 12
+YELLOW_BUTTON = 14
+BLUE_BUTTON = 27
+
 class Player():
     def __init__(self):
         self.__score = 0
@@ -83,6 +88,27 @@ class Players():
 playerList = Players()
 
 turret:Slave
+
+def playerPressButton(slaveID:int, button:int):
+    #player:Player = playerList.GetPlayerBySlaveID(slaveID)
+
+    logString = "Slave "+str(slaveID) + " pressed button "
+
+    if button == RED_BUTTON:
+        logString += "red"
+    elif button == GREEN_BUTTON:
+        logString += "green"
+    elif button == BLUE_BUTTON:
+        logString += "blue"
+    elif button == YELLOW_BUTTON:
+        logString += "yellow"
+
+    print(logString)
+
+STR.AddNotifCallback(RED_BUTTON, lambda slaveID : playerPressButton(slaveID, RED_BUTTON))
+STR.AddNotifCallback(GREEN_BUTTON, lambda slaveID : playerPressButton(slaveID, GREEN_BUTTON))
+STR.AddNotifCallback(BLUE_BUTTON, lambda slaveID : playerPressButton(slaveID, BLUE_BUTTON))
+STR.AddNotifCallback(YELLOW_BUTTON, lambda slaveID : playerPressButton(slaveID, YELLOW_BUTTON))
 ########################
 
 
@@ -100,46 +126,25 @@ targetedPlayer:Player = None
 
 LASER_DETECTED = 2
 
-def targetRight(window:sg.Window):
-    STR.ConfigDirectSettingUpdate(2, 1, LASER_DETECTED) #A améliorer
-    
-    STR.SendUpdateSetting(STR.GetSlaveSettings()[2][2])
-    
-    global targetting
-    global target_side
-    global step
-
-    targetting = True
-    target_side = "R"
-    step = 0
-
-    turret.SendSettingUpdateByName("SPEED", 255)
-    turret.SendSettingUpdateByName("DROITE")
-
-    display.UpdateSetting(turret.GetSettingByName("SPEED"))
-
-display.AddPreLayout((IDP_BUTTON, "targetRight", targetRight))
-
-
 def targetPlayer(windows:sg.Window, orderedPlayer:int):
-    STR.AddNotifCallback(0x05, notifLaser)
-    player:Player = playerList.GetPlayerByOrder(orderedPlayer)
     
-    STR.ConfigDirectSettingUpdate(2, 1, LASER_DETECTED) #A améliorer
-    player.GetSlave().ConfigDirectSettingUpdate(turret, LASER_DETECTED)
-    
-    player.Send("RED ACCEL LOADING")
-    
-    print("targetting player " + str(orderedPlayer))
-    print("turretPos : " + str(turretPos))
-
     global targetting
     global target_side
     global targetedPlayer
     global step
 
+    STR.AddNotifCallback(0x05, notifLaser)
+    targetedPlayer = playerList.GetPlayerByOrder(orderedPlayer)
+    
+    targetedPlayer.GetSlave().ConfigDirectSettingUpdate(turret, LASER_DETECTED)
+    
+    targetedPlayer.Send("RED ACCEL LOADING")
+    
+    print("targetting player " + str(targetedPlayer.GetOrder()))
+    print("turretPos : " + str(turretPos))
+
+
     step = 0
-    targetedPlayer = player
 
     turret.SendSettingUpdateByName("SPEED", 255)
 
@@ -171,32 +176,25 @@ def notifLaser(slaveID:int):
     global target_side
     global targetting
     global turretPos
+    global targetedPlayer
 
     if targetting and slaveID == targetedPlayer.GetSlave().GetID():
         print("targetedPlayer is " + str(targetedPlayer.GetOrder()))
         if step == 0:
-            #speed_setting.SetValue(128)
-            #STR.SendUpdateSetting(speed_setting)
             turret.SendSettingUpdateByName("SPEED", 128)
 
             if target_side == "R":
-                #STR.SendUpdateSetting(left_trigger)
                 turret.SendSettingUpdateByName("GAUCHE")
             elif target_side == "L":
-                #STR.SendUpdateSetting(left_trigger)
                 turret.SendSettingUpdateByName("DROITE")
             step = 3
 
         elif step == 3:
-            #speed_setting.SetValue(64)
-            #STR.SendUpdateSetting(speed_setting)
             turret.SendSettingUpdateByName("SPEED", 64)
 
             if target_side == "R":
-                #STR.SendUpdateSetting(right_trigger)
                 turret.SendSettingUpdateByName("DROITE")
             elif target_side == "L":
-                #STR.SendUpdateSetting(left_trigger)
                 turret.SendSettingUpdateByName("GAUCHE")
             step = 4
 
@@ -205,17 +203,16 @@ def notifLaser(slaveID:int):
             target_side = ""
             targetting = False
 
-            targetedPlayer.Send("RED_BAD")
+            targetedPlayer.Send("RED BAD")
             turret.SendSettingUpdateByName("STOP")
             turret.SendSettingUpdateByName("SHOOT")
-            turretPos = targetedPlayer.GetOrder()
-            #STR.SendUpdateSetting(STR.GetSlaveSettings()[5][2])
-            #STR.SendUpdateSetting(STR.GetSlaveSettings()[5][4])
+            targetedPlayer = None
         
         display.UpdateSetting(turret.GetSettingByName("SPEED"))
 
     print("Laser Detected")
     print(slaveID)
+    turretPos = playerList.GetPlayerBySlaveID(slaveID).GetOrder()
 
 ########################
 
