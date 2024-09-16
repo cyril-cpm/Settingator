@@ -17,6 +17,9 @@ class PySimpleGUIDisplay(IDisplay):
     def AddPreLayout(self, element:tuple) -> None:
         self.__PreLayout.append(element)
 
+    def RemovePreLayout(self, element:tuple) -> None:
+        self.__PreLayout.remove(element)
+
     def UpdateLayout(self, slaveSettings:dict = None) -> None:
         self.__PSGLayout = [[],[]]
 

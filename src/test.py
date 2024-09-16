@@ -125,6 +125,7 @@ target_side = ""
 targetedPlayer:Player = None
 
 LASER_DETECTED = 2
+LASER_NOTIF = 0x05
 
 def targetPlayer(windows:sg.Window, orderedPlayer:int):
     
@@ -133,7 +134,7 @@ def targetPlayer(windows:sg.Window, orderedPlayer:int):
     global targetedPlayer
     global step
 
-    STR.AddNotifCallback(0x05, notifLaser)
+    STR.AddNotifCallback(LASER_NOTIF, notifLaser)
     targetedPlayer = playerList.GetPlayerByOrder(orderedPlayer)
     
     targetedPlayer.GetSlave().ConfigDirectSettingUpdate(turret, LASER_DETECTED)
@@ -161,14 +162,6 @@ def targetPlayer(windows:sg.Window, orderedPlayer:int):
         print("turning left")
 
     display.UpdateSetting(turret.GetSettingByName("SPEED"))
-
-def initPlayer(window:sg.Window):
-    STR.AddNotifCallback(0x05, initNotifLaser)
-
-    turret.SendSettingUpdateByName("SPEED", 255)
-    turret.SendSettingUpdateByName("DROITE")
-
-display.AddPreLayout((IDP_BUTTON, "initPlayer", initPlayer))
 
 def notifLaser(slaveID:int):
 
@@ -203,8 +196,8 @@ def notifLaser(slaveID:int):
             target_side = ""
             targetting = False
 
+            targetedPlayer.GetSlave().RemoveDirectSettingUpdateConfig(turret, LASER_DETECTED)
             targetedPlayer.Send("RED BAD")
-            turret.SendSettingUpdateByName("STOP")
             turret.SendSettingUpdateByName("SHOOT")
             targetedPlayer = None
         
@@ -218,18 +211,31 @@ def notifLaser(slaveID:int):
 
 ###   INIT SYSTEM    ###
 
+
+def initPlayer(window:sg.Window):
+    STR.AddNotifCallback(0x05, initNotifLaser)
+
+    turret.SendSettingUpdateByName("SPEED", 255)
+    turret.SendSettingUpdateByName("DROITE")
+
+InitPlayerButton = (IDP_BUTTON, "initPlayer", initPlayer)
+
 def initNotifLaser(slaveID:int):
     playerList.AddOrderedPlayer(playerList.GetPlayerBySlaveID(slaveID))
 
     if playerList.GetNumberOfOrderedPlayer() >= NUMBER_PLAYER:
         turret.SendSettingUpdateByName("STOP")
+        display.RemovePreLayout(InitPlayerButton)
         global turretPos
 
         turretPos = TP_END
+        display.UpdateLayout(STR.GetSlaveSettings())
+
+display.AddPreLayout(InitPlayerButton)
 
 ########################
 
-STR.AddNotifCallback(0x05, notifLaser)
+STR.AddNotifCallback(LASER_NOTIF, notifLaser)
 
 
 def DeskCallback(slave:Slave):
@@ -244,11 +250,6 @@ def TurretCallback(slave:Slave):
 
 STR.SendBridgeInitRequest(1, b'Turret', TurretCallback)
 
-
-def SendInitRequest(window:sg.Window):
-    STR.SendInitRequest(0x42)
-
-display.AddPreLayout((IDP_BUTTON,"Init", SendInitRequest))
 
 display.UpdateLayout(None)
 

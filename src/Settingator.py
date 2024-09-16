@@ -285,5 +285,8 @@ class Slave:
     def ConfigDirectSettingUpdate(self, target, settingRef:int):
         self.__str.ConfigDirectSettingUpdate(self.__ID, target.GetID(), settingRef)
 
+    def RemoveDirectSettingUpdateConfig(self, target, settingRef:int):
+        self.__str.RemoveDirectSettingUpdateConfig(self.__ID, target.GetID(), settingRef)
+
     def GetID(self):
         return self.__ID
