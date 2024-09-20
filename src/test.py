@@ -1,7 +1,9 @@
 from Settingator import *
 from PySerialCommunicator import *
 from PySimpleGUIDisplay import *
-
+import csv
+import random
+import time
 
 com = SerialCTR("COM8")
 
@@ -110,6 +112,30 @@ STR.AddNotifCallback(RED_BUTTON, lambda slaveID : playerPressButton(slaveID, RED
 STR.AddNotifCallback(GREEN_BUTTON, lambda slaveID : playerPressButton(slaveID, GREEN_BUTTON))
 STR.AddNotifCallback(BLUE_BUTTON, lambda slaveID : playerPressButton(slaveID, BLUE_BUTTON))
 STR.AddNotifCallback(YELLOW_BUTTON, lambda slaveID : playerPressButton(slaveID, YELLOW_BUTTON))
+
+class Game():
+    def __init__(self):
+        self.__questionPool = []
+        self.__question = 0
+        
+    def Start(self):
+        allQuestion = []
+        
+        with open("question.csv") as questionFile:
+            csvContent = csv.reader(questionFile, delimiter=';')
+
+            for row in csvContent:
+                allQuestion.append(row)
+
+        random.seed(time.time())
+
+        for index in range(1, 10, 1):
+            questionNo = random.randint(0, allQuestion.__len__())
+            self.__questionPool.append(allQuestion[questionNo])
+
+            
+        
+
 ########################
 
 
@@ -214,6 +240,8 @@ def notifLaser(slaveID:int):
 
 def startGame(window:sg.Window):
     display.RemovePreLayout(startGameButton)
+    display.Update(STR.GetSlaveSettings())
+    game.run()
 
 startGameButton = (IDP_BUTTON, "startGame", startGame)
 
@@ -263,3 +291,4 @@ display.UpdateLayout(None)
 
 while True:
     STR.Update()
+    game.Update()
