@@ -38,7 +38,6 @@ for question in questionPool:
 def speak():
     engine.runAndWait()
 
-#speak()
 t = threading.Thread(target=speak)
 t.start()
 

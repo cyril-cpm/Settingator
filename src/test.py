@@ -17,6 +17,11 @@ NUMBER_PLAYER = 2
 
 GS_INIT = 0
 GS_WAITING_TO_START = 1
+GS_ABOUT_TO_READ = 2
+GS_READING = 3
+GS_WAITING = 4
+GS_REWARDING = 5
+GS_FINISHED = 6
 
 gameStep = GS_INIT
 
@@ -113,12 +118,23 @@ STR.AddNotifCallback(GREEN_BUTTON, lambda slaveID : playerPressButton(slaveID, G
 STR.AddNotifCallback(BLUE_BUTTON, lambda slaveID : playerPressButton(slaveID, BLUE_BUTTON))
 STR.AddNotifCallback(YELLOW_BUTTON, lambda slaveID : playerPressButton(slaveID, YELLOW_BUTTON))
 
+NULL = 0
+AUTO = 1
+MANUAL = 2
+
 class Game():
     def __init__(self):
         self.__questionPool = []
         self.__question = 0
+        self.__mode = NULL
         
-    def Start(self):
+    def Start(self, mode:int):
+        self.__mode = mode
+
+        display.RemovePreLayout(startGameAutoButton)
+        display.RemovePreLayout(startGameManualButton)
+        display.Update(STR.GetSlaveSettings())
+
         allQuestion = []
         
         with open("question.csv") as questionFile:
@@ -130,10 +146,36 @@ class Game():
         random.seed(time.time())
 
         for index in range(1, 10, 1):
-            questionNo = random.randint(0, allQuestion.__len__())
+            questionNo = random.randint(0, allQuestion.__len__() - 1)
             self.__questionPool.append(allQuestion[questionNo])
 
+        gameStep == GS_ABOUT_TO_READ
+
+    def Update(self):
+        if self.__mode == AUTO:
+            if gameStep == GS_ABOUT_TO_READ:
+                gameStep == GS_READING
+
+            elif gameStep == GS_READING:
+                gameStep == GS_WAITING
+
+            elif gameStep == GS_WAITING:
+                gameStep == GS_REWARDING
+
+            elif gameStep == GS_REWARDING:
+                if self.__question == 9:
+                    gameStep == GS_FINISHED
+                else:
+                    self.__question += 1
+                    gameStep == GS_ABOUT_TO_READ
+
+            elif gameStep == GS_FINISHED:
+                pass
             
+        elif self.__mode == MANUAL:
+            pass
+
+game = Game()           
         
 
 ########################
@@ -238,12 +280,15 @@ def notifLaser(slaveID:int):
 
 ###   INIT SYSTEM    ###
 
-def startGame(window:sg.Window):
-    display.RemovePreLayout(startGameButton)
-    display.Update(STR.GetSlaveSettings())
-    game.run()
+def startGameAuto(window:sg.Window):
+    game.Start(AUTO)
 
-startGameButton = (IDP_BUTTON, "startGame", startGame)
+startGameAutoButton = (IDP_BUTTON, "startGameAuto", startGameAuto)
+
+def startGameManual(window:sg.Window):
+    game.Start(MANUAL)
+
+startGameManualButton = (IDP_BUTTON, "startGameManual", startGameManual)
 
 def initPlayer(window:sg.Window):
     STR.AddNotifCallback(0x05, initNotifLaser)
