@@ -156,7 +156,7 @@ class Game():
     def Update(self):
         if self.__mode == AUTO:
             if self.__gameStep.value == GS_ABOUT_TO_READ:
-                self.__speakingQueue.put(("Coucou, Yolo", True))
+                self.Ask("Coucou Yolo")
 
             elif self.__gameStep.value == GS_READING:
                 pass
@@ -181,7 +181,7 @@ class Game():
                     self.__gameStep.value = GS_ABOUT_TO_READ
 
             elif self.__gameStep.value == GS_FINISHED:
-                self.__speakingQueue.put(("Les questions sont finies", False))
+                self.Say("Les questions sont finies")
             
         elif self.__mode == MANUAL:
             pass
@@ -197,6 +197,15 @@ class Game():
     
     def SetGameStep(self, gameStep):
         self.__gameStep.value = gameStep
+
+    def Ask(self, sentence:str):
+        self._Speak(sentence, True)
+
+    def Say(self, sentence:str):
+        self._Speak(sentence, False)
+
+    def _Speak(self, sentence:str, isQuestion:bool = True):
+        self.__speakingQueue.put((sentence, isQuestion))
 
 game:Game          
         
