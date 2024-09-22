@@ -156,7 +156,13 @@ class Game():
     def Update(self):
         if self.__mode == AUTO:
             if self.__gameStep.value == GS_ABOUT_TO_READ:
-                self.Ask("Coucou Yolo")
+                answerOrder = dict()
+                answerOrdered = False
+                while not answerOrdered:
+                    newIndex = random.randint(0, 3)
+
+                    if newIndex in questionOrder
+
 
             elif self.__gameStep.value == GS_READING:
                 pass
