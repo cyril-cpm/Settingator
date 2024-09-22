@@ -8,9 +8,14 @@ import multiprocessing
 
 queue = multiprocessing.Queue()
 
+def onStart(name, truc):
+    print(name)
+
 def speakingProcessFunction(queue):
     engine = pyttsx3.init()
     engine.setProperty('volume', 0.5)
+
+    engine.connect('started-utterance', lambda name : onStart(name, 5))
 
     voices = engine.getProperty('voices')
 

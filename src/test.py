@@ -4,12 +4,14 @@ from PySimpleGUIDisplay import *
 import csv
 import random
 import time
+import multiprocessing
+import pyttsx3
 
-com = SerialCTR("COM8")
+com:SerialCTR
 
-display = PySimpleGUIDisplay()
+display:PySimpleGUIDisplay
 
-STR = Settingator(com, display)
+STR:Settingator
 
 ###   GAME SYSTEM    ###
 
@@ -22,8 +24,7 @@ GS_READING = 3
 GS_WAITING = 4
 GS_REWARDING = 5
 GS_FINISHED = 6
-
-gameStep = GS_INIT
+GS_FINISHED_READING = 7
 
 RED_BUTTON = 13
 GREEN_BUTTON = 12
@@ -113,10 +114,7 @@ def playerPressButton(slaveID:int, button:int):
 
     print(logString)
 
-STR.AddNotifCallback(RED_BUTTON, lambda slaveID : playerPressButton(slaveID, RED_BUTTON))
-STR.AddNotifCallback(GREEN_BUTTON, lambda slaveID : playerPressButton(slaveID, GREEN_BUTTON))
-STR.AddNotifCallback(BLUE_BUTTON, lambda slaveID : playerPressButton(slaveID, BLUE_BUTTON))
-STR.AddNotifCallback(YELLOW_BUTTON, lambda slaveID : playerPressButton(slaveID, YELLOW_BUTTON))
+
 
 NULL = 0
 AUTO = 1
@@ -127,13 +125,17 @@ class Game():
         self.__questionPool = []
         self.__question = 0
         self.__mode = NULL
+        self.__speakingQueue = multiprocessing.Queue()
+        self.__gameStepLock = multiprocessing.Lock()
+        self.__gameStep = multiprocessing.Value('i', GS_INIT)
+        self.__finishedReadingTimestamp = 0
         
     def Start(self, mode:int):
         self.__mode = mode
 
         display.RemovePreLayout(startGameAutoButton)
         display.RemovePreLayout(startGameManualButton)
-        display.Update(STR.GetSlaveSettings())
+        display.UpdateLayout(STR.GetSlaveSettings())
 
         allQuestion = []
         
@@ -149,35 +151,55 @@ class Game():
             questionNo = random.randint(0, allQuestion.__len__() - 1)
             self.__questionPool.append(allQuestion[questionNo])
 
-        gameStep == GS_ABOUT_TO_READ
+        self.__gameStep.value = GS_ABOUT_TO_READ
 
     def Update(self):
         if self.__mode == AUTO:
-            if gameStep == GS_ABOUT_TO_READ:
-                gameStep == GS_READING
+            if self.__gameStep.value == GS_ABOUT_TO_READ:
+                self.__speakingQueue.put(("Coucou, Yolo", True))
 
-            elif gameStep == GS_READING:
-                gameStep == GS_WAITING
+            elif self.__gameStep.value == GS_READING:
+                pass
 
-            elif gameStep == GS_WAITING:
-                gameStep == GS_REWARDING
+            elif self.__gameStep.value == GS_FINISHED_READING:
+                print("finishedReading")
 
-            elif gameStep == GS_REWARDING:
+                self.__gameStep.value = GS_WAITING
+                self.__finishedReadingTimestamp = time.time()
+
+            elif self.__gameStep.value == GS_WAITING:
+
+                if time.time() - self.__finishedReadingTimestamp >= 10:
+                    print("starting rewarding")
+                    self.__gameStep.value = GS_REWARDING
+
+            elif self.__gameStep.value == GS_REWARDING:
                 if self.__question == 9:
-                    gameStep == GS_FINISHED
+                    self.__gameStep.value = GS_FINISHED
                 else:
                     self.__question += 1
-                    gameStep == GS_ABOUT_TO_READ
+                    self.__gameStep.value = GS_ABOUT_TO_READ
 
-            elif gameStep == GS_FINISHED:
-                pass
+            elif self.__gameStep.value == GS_FINISHED:
+                self.__speakingQueue.put(("Les questions sont finies", False))
             
         elif self.__mode == MANUAL:
             pass
 
-game = Game()           
-        
+    def GetSpeakingQueue(self):
+        return self.__speakingQueue
+    
+    def GetGameStepLock(self):
+        return self.__gameStepLock
+    
+    def GetGameStep(self):
+        return self.__gameStep
+    
+    def SetGameStep(self, gameStep):
+        self.__gameStep.value = gameStep
 
+game:Game          
+        
 ########################
 
 
@@ -308,32 +330,79 @@ def initNotifLaser(slaveID:int):
         global gameStep
 
         turretPos = TP_END
-        display.AddPreLayout(startGameButton)
-        gameStep = GS_WAITING_TO_START
+        display.AddPreLayout(startGameAutoButton)
+        display.AddPreLayout(startGameManualButton)
+        game.SetGameStep(GS_WAITING_TO_START)
         display.UpdateLayout(STR.GetSlaveSettings())
-
-display.AddPreLayout(InitPlayerButton)
 
 ########################
 
-STR.AddNotifCallback(LASER_NOTIF, notifLaser)
+### SPEAKING PROCESS ###
 
+def onStart(gameStep):
+    gameStep.value = GS_READING
+
+def onEnd(gameStep):
+    gameStep.value = GS_FINISHED_READING
+
+def speakingProcessFunction(queue:multiprocessing.Queue, gameStep):
+    engine = pyttsx3.init()
+    engine.setProperty('volume', 0.5)
+
+    #engine.connect('started-utterance', lambda name : onStart(gameStep))
+    #engine.connect('finished-utterance', lambda name : onEnd(gameStep))
+
+    voices = engine.getProperty('voices')
+
+    for voice in voices:
+        if "French" in voice.name:
+            engine.setProperty("voice", voice.id)
+            break
+
+    while True:
+        sentence, isQuestion = queue.get()
+        engine.say(sentence)
+        if isQuestion:
+            gameStep.value = GS_READING
+        engine.runAndWait()
+        if isQuestion:
+            gameStep.value = GS_FINISHED_READING
+
+########################
 
 def DeskCallback(slave:Slave):
     playerList.AddPlayer(slave)
-
-STR.SendBridgeInitRequest(2, b'Desk', DeskCallback, NUMBER_PLAYER)
-
 
 def TurretCallback(slave:Slave):
     global turret
     turret = slave
 
-STR.SendBridgeInitRequest(1, b'Turret', TurretCallback)
+if __name__ == "__main__":
+    game = Game()
 
+    speakingProcess = multiprocessing.Process(target=speakingProcessFunction, args=(game.GetSpeakingQueue(), game.GetGameStep()))
+    speakingProcess.start()
 
-display.UpdateLayout(None)
+    com = SerialCTR("COM4")
 
-while True:
-    STR.Update()
-    game.Update()
+    display = PySimpleGUIDisplay()
+    
+    STR = Settingator(com, display)
+
+    STR.AddNotifCallback(RED_BUTTON, lambda slaveID : playerPressButton(slaveID, RED_BUTTON))
+    STR.AddNotifCallback(GREEN_BUTTON, lambda slaveID : playerPressButton(slaveID, GREEN_BUTTON))
+    STR.AddNotifCallback(BLUE_BUTTON, lambda slaveID : playerPressButton(slaveID, BLUE_BUTTON))
+    STR.AddNotifCallback(YELLOW_BUTTON, lambda slaveID : playerPressButton(slaveID, YELLOW_BUTTON))
+
+    STR.AddNotifCallback(LASER_NOTIF, notifLaser)
+    STR.SendBridgeInitRequest(1, b'Turret', TurretCallback)
+    STR.SendBridgeInitRequest(2, b'Desk', DeskCallback, NUMBER_PLAYER)
+
+    display.AddPreLayout(startGameAutoButton)
+    display.AddPreLayout(startGameManualButton)
+    display.AddPreLayout(InitPlayerButton)
+    display.UpdateLayout(None)
+
+    while True:
+        STR.Update()
+        game.Update()
