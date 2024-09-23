@@ -25,6 +25,7 @@ GS_WAITING = 4
 GS_REWARDING = 5
 GS_FINISHED = 6
 GS_FINISHED_READING = 7
+GS_FINISHED_REWARDING = 8
 
 RED_BUTTON = 13
 GREEN_BUTTON = 12
@@ -38,6 +39,8 @@ class Player():
         self.__fail = 0
         self.__slave = None
         self.__order = 0
+        self.__answeredCurrentQuestion = False
+        self.__lastAnswer = None
 
     def SetSlave(self, slave:Slave):
         self.__slave = slave
@@ -53,6 +56,29 @@ class Player():
     
     def SetOrder(self, order:int):
         self.__order = order
+
+    def CanAnswer(self):
+        return not self.__answeredCurrentQuestion
+    
+    def ResetAnswered(self):
+        self.SetAnswered(False)
+        self.__lastAnswer = None
+
+    def SetAnswered(self, value:bool = True):
+        self.__answeredCurrentQuestion = value
+
+    def SetLastAnswer(self, value:int):
+        self.__lastAnswer = value
+        self.SetAnswered()
+
+    def GetLastAnswer(self):
+        return self.__lastAnswer
+    
+    def IncreaseGood(self):
+        self.__score += 1
+    
+    def IncreaseFail(self):
+        self.__fail += 1
 
 class Players():
     def __init__(self):
@@ -78,6 +104,8 @@ class Players():
         for index in self.__playerList:
             if self.__playerList[index].GetSlave().GetID() == slaveID:
                 return self.__playerList[index]
+        
+        return None
     
     def AddOrderedPlayer(self, player:Player):
         self.__numberOrderedPlayer += 1
@@ -99,8 +127,6 @@ playerList = Players()
 turret:Slave
 
 def playerPressButton(slaveID:int, button:int):
-    #player:Player = playerList.GetPlayerBySlaveID(slaveID)
-
     logString = "Slave "+str(slaveID) + " pressed button "
 
     if button == RED_BUTTON:
@@ -114,6 +140,20 @@ def playerPressButton(slaveID:int, button:int):
 
     print(logString)
 
+    player:Player = playerList.GetPlayerBySlaveID(slaveID)
+
+    if player != None:
+        if player.CanAnswer() and game.CanAnswer():
+            if button == RED_BUTTON:
+                player.SetLastAnswer(0)
+            elif button == GREEN_BUTTON:                
+                player.SetLastAnswer(1)
+            elif button == YELLOW_BUTTON:
+                player.SetLastAnswer(2)
+            elif button == BLUE_BUTTON:
+                player.SetLastAnswer(3)
+
+            player.Send("BLUE_FROZEN")
 
 
 NULL = 0
@@ -129,6 +169,11 @@ class Game():
         self.__gameStepLock = multiprocessing.Lock()
         self.__gameStep = multiprocessing.Value('i', GS_INIT)
         self.__finishedReadingTimestamp = 0
+        self.__currentQuestionGoodAnswer = 0
+
+        ## REWARDING ##
+        self.__allRewarded = False
+        self.__currentRewardingPlayer = 0
         
     def Start(self, mode:int):
         self.__mode = mode
@@ -139,7 +184,7 @@ class Game():
 
         allQuestion = []
         
-        with open("question.csv") as questionFile:
+        with open("question.csv", encoding="utf-8") as questionFile:
             csvContent = csv.reader(questionFile, delimiter=';')
 
             for row in csvContent:
@@ -158,11 +203,27 @@ class Game():
             if self.__gameStep.value == GS_ABOUT_TO_READ:
                 answerOrder = dict()
                 answerOrdered = False
+                index = 0
+                alreadyPulled = dict()
+
                 while not answerOrdered:
-                    newIndex = random.randint(0, 3)
+                    newIndex = random.randint(2, 5)
 
-                    if newIndex in questionOrder
+                    if not newIndex in alreadyPulled:
+                        answerOrder[index] = newIndex
+                        alreadyPulled[newIndex] = True
 
+                        if newIndex == 2:
+                            self.__currentQuestionGoodAnswer = index
+
+                        index += 1
+                        
+                        if index >= 4:
+                            answerOrdered = True
+
+                question = self.__questionPool[self.__question]
+                questionStr = question[1] + " " + question[answerOrder[0]] + ", " + question[answerOrder[1]] + ", " + question[answerOrder[2]] + " ou " + question[answerOrder[3]] + " ?"
+                self.Ask(questionStr)
 
             elif self.__gameStep.value == GS_READING:
                 pass
@@ -180,6 +241,34 @@ class Game():
                     self.__gameStep.value = GS_REWARDING
 
             elif self.__gameStep.value == GS_REWARDING:
+                if not self.__allRewarded:
+                    if not targetting:
+                        targetPlayer(None, self.__currentRewardingPlayer)
+                    if targetDone:
+                        if time.time() - targetDoneTimestamp > 3:
+                            playerToReward:Player = playerList.GetPlayerByOrder(self.__currentRewardingPlayer)
+                            shoot = playerToReward.GetLastAnswer() == self.__currentQuestionGoodAnswer
+
+                            if shoot:
+                                playerToReward.IncreaseGood()
+                                playerToReward.Send("GREEN GOOD")
+                            else:
+                                playerToReward.IncreaseFail()
+                                playerToReward.Send("RED BAD")
+                                turret.SendSettingUpdateByName("SHOOT")
+
+                            self.__currentRewardingPlayer += 1
+
+                            if self.__currentRewardingPlayer == NUMBER_PLAYER:
+                                self.__allRewarded = True
+                else:
+                    self.__gameStep.value = GS_FINISHED_REWARDING
+                    self.__allRewarded = False
+
+            elif self.__gameStep.value == GS_FINISHED_REWARDING:
+                for playerIndex in range(0, NUMBER_PLAYER - 1):
+                    playerList.GetPlayerByOrder(playerIndex).ResetAnswer()
+
                 if self.__question == 9:
                     self.__gameStep.value = GS_FINISHED
                 else:
@@ -201,6 +290,9 @@ class Game():
     def GetGameStep(self):
         return self.__gameStep
     
+    def GetGameStepValue(self):
+        return self.__gameStep.value
+    
     def SetGameStep(self, gameStep):
         self.__gameStep.value = gameStep
 
@@ -209,6 +301,11 @@ class Game():
 
     def Say(self, sentence:str):
         self._Speak(sentence, False)
+
+    def CanAnswer(self):
+        gameStep = self.GetGameStep()
+
+        return (gameStep == GS_READING or gameStep == GS_FINISHED_READING or gameStep == GS_WAITING)
 
     def _Speak(self, sentence:str, isQuestion:bool = True):
         self.__speakingQueue.put((sentence, isQuestion))
@@ -229,6 +326,8 @@ targetting = False
 step = 0
 target_side = ""
 targetedPlayer:Player = None
+targetDone = False
+targetDoneTimestamp = 0
 
 LASER_DETECTED = 2
 LASER_NOTIF = 0x05
@@ -239,6 +338,10 @@ def targetPlayer(windows:sg.Window, orderedPlayer:int):
     global target_side
     global targetedPlayer
     global step
+    global targetDone
+    global targetDoneTimestamp
+
+    targetDone = False
 
     STR.AddNotifCallback(LASER_NOTIF, notifLaser)
     targetedPlayer = playerList.GetPlayerByOrder(orderedPlayer)
@@ -276,6 +379,8 @@ def notifLaser(slaveID:int):
     global targetting
     global turretPos
     global targetedPlayer
+    global targetDone
+    global targetDoneTimestamp
 
     if targetting and slaveID == targetedPlayer.GetSlave().GetID():
         print("targetedPlayer is " + str(targetedPlayer.GetOrder()))
@@ -303,9 +408,9 @@ def notifLaser(slaveID:int):
             targetting = False
 
             targetedPlayer.GetSlave().RemoveDirectSettingUpdateConfig(turret, LASER_DETECTED)
-            targetedPlayer.Send("RED BAD")
-            turret.SendSettingUpdateByName("SHOOT")
             targetedPlayer = None
+            targetDone = True
+            targetDoneTimestamp = time.time()
         
         display.UpdateSetting(turret.GetSettingByName("SPEED"))
 
@@ -354,18 +459,9 @@ def initNotifLaser(slaveID:int):
 
 ### SPEAKING PROCESS ###
 
-def onStart(gameStep):
-    gameStep.value = GS_READING
-
-def onEnd(gameStep):
-    gameStep.value = GS_FINISHED_READING
-
 def speakingProcessFunction(queue:multiprocessing.Queue, gameStep):
     engine = pyttsx3.init()
     engine.setProperty('volume', 0.5)
-
-    #engine.connect('started-utterance', lambda name : onStart(gameStep))
-    #engine.connect('finished-utterance', lambda name : onEnd(gameStep))
 
     voices = engine.getProperty('voices')
 
@@ -398,7 +494,7 @@ if __name__ == "__main__":
     speakingProcess = multiprocessing.Process(target=speakingProcessFunction, args=(game.GetSpeakingQueue(), game.GetGameStep()))
     speakingProcess.start()
 
-    com = SerialCTR("COM4")
+    com = SerialCTR("COM6")
 
     display = PySimpleGUIDisplay()
     
