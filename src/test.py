@@ -172,8 +172,7 @@ class Game():
         self.__currentQuestionGoodAnswer = 0
 
         ## REWARDING ##
-        self.__allRewarded = False
-        self.__currentRewardingPlayer = 0
+        
         
     def Start(self, mode:int):
         self.__mode = mode
@@ -241,29 +240,8 @@ class Game():
                     self.__gameStep.value = GS_REWARDING
 
             elif self.__gameStep.value == GS_REWARDING:
-                if not self.__allRewarded:
-                    if not targetting:
-                        targetPlayer(None, self.__currentRewardingPlayer)
-                    if targetDone:
-                        if time.time() - targetDoneTimestamp > 3:
-                            playerToReward:Player = playerList.GetPlayerByOrder(self.__currentRewardingPlayer)
-                            shoot = playerToReward.GetLastAnswer() == self.__currentQuestionGoodAnswer
-
-                            if shoot:
-                                playerToReward.IncreaseGood()
-                                playerToReward.Send("GREEN GOOD")
-                            else:
-                                playerToReward.IncreaseFail()
-                                playerToReward.Send("RED BAD")
-                                turret.SendSettingUpdateByName("SHOOT")
-
-                            self.__currentRewardingPlayer += 1
-
-                            if self.__currentRewardingPlayer == NUMBER_PLAYER:
-                                self.__allRewarded = True
-                else:
-                    self.__gameStep.value = GS_FINISHED_REWARDING
-                    self.__allRewarded = False
+                if target.Reward(self.__currentQuestionGoodAnswer):
+                    self.__gameStep.value == GS_FINISHED_REWARDING
 
             elif self.__gameStep.value == GS_FINISHED_REWARDING:
                 for playerIndex in range(0, NUMBER_PLAYER - 1):
@@ -332,8 +310,117 @@ targetDoneTimestamp = 0
 LASER_DETECTED = 2
 LASER_NOTIF = 0x05
 
-def targetPlayer(windows:sg.Window, orderedPlayer:int):
+class Target():
+    def __init__(self):
+        self.__turretPos = TP_START
+        self.__targetting = False
+        self.__step = 0
+        self.__target_side = ""
+        self.__targetedPlayer:Player = None
+        self.__targetDone = False
+        self.__targetDoneTimestamp = 0
+        self.__allRewarded = False
+        self.__currentRewardingPlayer = 0
+
+    def Reward(self, goodAnswer:int) -> bool:
+        if not self.__allRewarded:
+            if not self.__targetting:
+                targetPlayer(None, self.__currentRewardingPlayer)
+            if self.__targetDone:
+                if time.time() - self.__targetDoneTimestamp > 3:
+                    playerToReward:Player = playerList.GetPlayerByOrder(self.__currentRewardingPlayer)
+                    shoot = playerToReward.GetLastAnswer() == goodAnswer
+
+                    if shoot:
+                        playerToReward.IncreaseGood()
+                        playerToReward.Send("GREEN GOOD")
+                    else:
+                        playerToReward.IncreaseFail()
+                        playerToReward.Send("RED BAD")
+                        turret.SendSettingUpdateByName("SHOOT")
+
+                    self.__currentRewardingPlayer += 1
+
+                    if self.__currentRewardingPlayer == NUMBER_PLAYER:
+                        self.__allRewarded = True
+                        self.__currentRewardingPlayer = 0
+        else:
+            self.__allRewarded = False
+
+        return not self.__allRewarded
+
+    def TargetPlayer(self, orderedPlayer:int):
+        self.__targetDone = False
+        STR.AddNotifCallback(LASER_NOTIF, self._notifLaser)
+         
+        self.__targetedPlayer = playerList.GetPlayerByOrder(orderedPlayer)
+        self.__targetedPlayer.GetSlave().ConfigDirectSettingUpdate(turret, LASER_DETECTED)
+
+        print("targetting player " + str(self.__targetedPlayer.GetOrder()))
+        print("turretPos : " + str(self.__turretPos))
+
+        self.__step = 0
+
+        turret.SendSettingUpdateByName("SPEED", 255)
+
+        if self.__turretPos < orderedPlayer:
+            self.__targetting = True
+            self.__target_side = "R"
+            turret.SendSettingUpdateByName("DROITE")
+            print("turning right")
+
+        elif orderedPlayer < self.__turretPos:
+            self.__targetting = True
+            self.__targetting = "L"
+            turret.SendSettingUpdateByName("GAUCHE")
+            print("turning left")
+
+        display.UpdateSetting(turret.GetSettingByName("SPEED"))
     
+    def _notifLaser(self, slaveID):
+        
+        if self.__targetting and slaveID == self.__targetedPlayer.GetSlave().GetID():
+            print("targetedPlayer is " + str(targetedPlayer.GetOrder()))
+            if self.__step == 0:
+                turret.SendSettingUpdateByName("SPEED", 128)
+
+                if self.__target_side == "R":
+                    turret.SendSettingUpdateByName("GAUCHE")
+                elif self.__target_side == "L":
+                    turret.SendSettingUpdateByName("DROITE")
+                self.__step = 1
+
+            elif self.__step == 1:
+                turret.SendSettingUpdateByName("SPEED", 64)
+
+                if self.__target_side == "R":
+                    turret.SendSettingUpdateByName("DROITE")
+                elif self.__target_side == "L":
+                    turret.SendSettingUpdateByName("GAUCHE")
+                self.__step = 2
+
+            elif self.__step == 2:
+                self.__step = 0
+                self.__target_side = ""
+                self.__targetting = False
+
+                self.__targetedPlayer.GetSlave().RemoveDirectSettingUpdateConfig(turret, LASER_DETECTED)
+                self.__targetedPlayer = None
+                self.__targetDoneTimestamp = time.time()
+
+            display.UpdateSetting(turret.GetSettingByName("SPEED"))
+
+        print("Laser Detected")
+        print(slaveID)
+
+        self.__turretPos = playerList.GetPlayerBySlaveID(slaveID).GetOrder()
+
+target = Target()
+
+def targetPlayer(windows:sg.Window, orderedPlayer:int):
+    target.TargetPlayer(orderedPlayer)
+    return
+
     global targetting
     global target_side
     global targetedPlayer
@@ -353,7 +440,6 @@ def targetPlayer(windows:sg.Window, orderedPlayer:int):
     print("targetting player " + str(targetedPlayer.GetOrder()))
     print("turretPos : " + str(turretPos))
 
-
     step = 0
 
     turret.SendSettingUpdateByName("SPEED", 255)
@@ -363,7 +449,7 @@ def targetPlayer(windows:sg.Window, orderedPlayer:int):
         target_side = "R"
         turret.SendSettingUpdateByName("DROITE")
         print("turning right")
-    
+     
     elif orderedPlayer < turretPos:
         targetting = True
         target_side = "L"
