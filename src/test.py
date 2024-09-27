@@ -160,6 +160,28 @@ NULL = 0
 AUTO = 1
 MANUAL = 2
 
+class QuestionDisplay():
+    def __init__(self):
+
+        self.__PSGLayout = [[],[]]
+
+
+        questionFrameLayout = [[sg.Text("Coucou")]]
+        questionFrame = sg.Frame("Question", questionFrameLayout, background_color='#000000', size=(200, 200))
+
+        self.__PSGLayout[0].append(questionFrame)
+
+        answerFrameLayout = [[sg.Text("Orevoir")]]
+        answerFrame = sg.Frame("Answer", answerFrameLayout, background_color='#FF0000', size=(200, 200))
+
+        self.__PSGLayout[1].append(answerFrame)
+
+
+        
+        self.__PSGWindow = sg.Window('Display', self.__PSGLayout, element_justification='left', finalize=True)
+
+test = QuestionDisplay()
+
 class Game():
     def __init__(self):
         self.__questionPool = []
@@ -170,9 +192,10 @@ class Game():
         self.__gameStep = multiprocessing.Value('i', GS_INIT)
         self.__finishedReadingTimestamp = 0
         self.__currentQuestionGoodAnswer = 0
+        self.__questionDisplay = QuestionDisplay()
 
-        ## REWARDING ##
-        
+    def DisplayQuestion(question, order):
+        pass
         
     def Start(self, mode:int):
         self.__mode = mode
@@ -219,8 +242,11 @@ class Game():
                         
                         if index >= 4:
                             answerOrdered = True
-
+                
                 question = self.__questionPool[self.__question]
+
+                game.DisplayQuestion(question, answerOrder)
+
                 questionStr = question[1] + " " + question[answerOrder[0]] + ", " + question[answerOrder[1]] + ", " + question[answerOrder[2]] + " ou " + question[answerOrder[3]] + " ?"
                 self.Ask(questionStr)
 
