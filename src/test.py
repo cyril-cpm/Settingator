@@ -6,6 +6,7 @@ import random
 import time
 import multiprocessing
 import pyttsx3
+import pygame.mixer as mx
 
 com:SerialCTR
 
@@ -122,6 +123,19 @@ class Players():
         frameName:str = "Player " + str(self.__numberOrderedPlayer) + " : Slave " + str(player.GetSlave().GetID())
         display.AddPreLayout((IDP_FRAME, frameName, [(IDP_BUTTON, "target", lambda window : targetPlayer(window, player.GetOrder()))]))
 
+    def AllAnswered(self):
+        allAnswered = True
+
+        for player in self.__playerList:
+            if self.__playerList[player].CanAnswer():
+                allAnswered = False
+
+        return allAnswered
+    
+    def SendAll(self, command):
+        for player in self.__playerList:
+            self.__playerList[player].Send(command)
+
 playerList = Players()
 
 turret:Slave
@@ -153,7 +167,7 @@ def playerPressButton(slaveID:int, button:int):
             elif button == BLUE_BUTTON:
                 player.SetLastAnswer(3)
 
-            player.Send("BLUE_FROZEN")
+            player.Send("BLUE FROZEN")
 
 
 NULL = 0
@@ -180,7 +194,7 @@ class QuestionDisplay():
         
         self.__PSGWindow = sg.Window('Display', self.__PSGLayout, element_justification='left', finalize=True)
 
-test = QuestionDisplay()
+#test = QuestionDisplay()
 
 class Game():
     def __init__(self):
@@ -192,7 +206,28 @@ class Game():
         self.__gameStep = multiprocessing.Value('i', GS_INIT)
         self.__finishedReadingTimestamp = 0
         self.__currentQuestionGoodAnswer = 0
+        self.__accelDone = False
         self.__questionDisplay = QuestionDisplay()
+
+        ### Sound Management ###
+        mx.init(channels=1)
+        self.__channel = mx.Channel(0)
+        self.__goodSound = mx.Sound("good.wav")
+        self.__badSound = mx.Sound("bad.wav")
+        self.__waitingSound = mx.Sound("waiting.wav")
+        self.__endWaitSound = mx.Sound("endWait.wav")
+
+    def PlayGoodSound(self):
+        self.__channel.play(self.__goodSound)
+
+    def PlayBadSound(self):
+        self.__channel.play(self.__badSound)
+
+    def PlayWaitingSound(self):
+        self.__channel.play(self.__waitingSound)
+
+    def PlayEndWaitSound(self):
+        self.__channel.play(self.__endWaitSound)
 
     def DisplayQuestion(question, order):
         pass
@@ -223,6 +258,7 @@ class Game():
     def Update(self):
         if self.__mode == AUTO:
             if self.__gameStep.value == GS_ABOUT_TO_READ:
+                playerList.SendAll("BLUE LOADING")
                 answerOrder = dict()
                 answerOrdered = False
                 index = 0
@@ -245,7 +281,7 @@ class Game():
                 
                 question = self.__questionPool[self.__question]
 
-                game.DisplayQuestion(question, answerOrder)
+                #game.DisplayQuestion(question, answerOrder)
 
                 questionStr = question[1] + " " + question[answerOrder[0]] + ", " + question[answerOrder[1]] + ", " + question[answerOrder[2]] + " ou " + question[answerOrder[3]] + " ?"
                 self.Ask(questionStr)
@@ -254,26 +290,40 @@ class Game():
                 pass
 
             elif self.__gameStep.value == GS_FINISHED_READING:
+                self.PlayWaitingSound()
                 print("finishedReading")
 
                 self.__gameStep.value = GS_WAITING
                 self.__finishedReadingTimestamp = time.time()
+                self.__accelDone = False
 
             elif self.__gameStep.value == GS_WAITING:
+                if not self.__accelDone and time.time() - self.__finishedReadingTimestamp >= 7:
+                    for playerIndex in range(1, NUMBER_PLAYER + 1):
+                        player:Player = playerList.GetPlayerByOrder(playerIndex)
 
-                if time.time() - self.__finishedReadingTimestamp >= 10:
+                        if player.CanAnswer():
+                            player.Send("RED ACCEL LOADING")
+
+                    self.__accelDone = True
+
+                if time.time() - self.__finishedReadingTimestamp >= 10 or playerList.AllAnswered():
+                    self.PlayEndWaitSound()
+                    playerList.SendAll("BLUE FROZEN")
                     print("starting rewarding")
                     self.__gameStep.value = GS_REWARDING
 
             elif self.__gameStep.value == GS_REWARDING:
                 if target.Reward(self.__currentQuestionGoodAnswer):
-                    self.__gameStep.value == GS_FINISHED_REWARDING
+                    self.__gameStep.value = GS_FINISHED_REWARDING
 
             elif self.__gameStep.value == GS_FINISHED_REWARDING:
-                for playerIndex in range(0, NUMBER_PLAYER - 1):
-                    playerList.GetPlayerByOrder(playerIndex).ResetAnswer()
+                time.sleep(3)
 
-                if self.__question == 9:
+                for playerIndex in range(1, NUMBER_PLAYER + 1):
+                    playerList.GetPlayerByOrder(playerIndex).ResetAnswered()
+
+                if self.__question == 3:
                     self.__gameStep.value = GS_FINISHED
                 else:
                     self.__question += 1
@@ -291,9 +341,12 @@ class Game():
     def GetGameStepLock(self):
         return self.__gameStepLock
     
-    def GetGameStep(self):
+    def GetGameStepValue(self):
         return self.__gameStep
     
+    def GetGameStep(self):
+        return self.__gameStep
+
     def GetGameStepValue(self):
         return self.__gameStep.value
     
@@ -307,7 +360,7 @@ class Game():
         self._Speak(sentence, False)
 
     def CanAnswer(self):
-        gameStep = self.GetGameStep()
+        gameStep = self.GetGameStepValue()
 
         return (gameStep == GS_READING or gameStep == GS_FINISHED_READING or gameStep == GS_WAITING)
 
@@ -350,22 +403,25 @@ class Target():
 
     def Reward(self, goodAnswer:int) -> bool:
         if not self.__allRewarded:
-            if not self.__targetting:
-                targetPlayer(None, self.__currentRewardingPlayer)
+            if not self.__targetDone and not self.__targetting:
+                targetPlayer(None, self.__currentRewardingPlayer+1)
             if self.__targetDone:
                 if time.time() - self.__targetDoneTimestamp > 3:
-                    playerToReward:Player = playerList.GetPlayerByOrder(self.__currentRewardingPlayer)
+                    playerToReward:Player = playerList.GetPlayerByOrder(self.__currentRewardingPlayer+1)
                     shoot = playerToReward.GetLastAnswer() == goodAnswer
 
                     if shoot:
                         playerToReward.IncreaseGood()
                         playerToReward.Send("GREEN GOOD")
+                        game.PlayGoodSound()
                     else:
                         playerToReward.IncreaseFail()
                         playerToReward.Send("RED BAD")
                         turret.SendSettingUpdateByName("SHOOT")
+                        game.PlayBadSound()
 
                     self.__currentRewardingPlayer += 1
+                    self.__targetDone = False
 
                     if self.__currentRewardingPlayer == NUMBER_PLAYER:
                         self.__allRewarded = True
@@ -373,7 +429,7 @@ class Target():
         else:
             self.__allRewarded = False
 
-        return not self.__allRewarded
+        return self.__allRewarded
 
     def TargetPlayer(self, orderedPlayer:int):
         self.__targetDone = False
@@ -397,16 +453,16 @@ class Target():
 
         elif orderedPlayer < self.__turretPos:
             self.__targetting = True
-            self.__targetting = "L"
+            self.__target_side = "L"
             turret.SendSettingUpdateByName("GAUCHE")
             print("turning left")
 
         display.UpdateSetting(turret.GetSettingByName("SPEED"))
     
     def _notifLaser(self, slaveID):
-        
+        print("___notifLaser")
         if self.__targetting and slaveID == self.__targetedPlayer.GetSlave().GetID():
-            print("targetedPlayer is " + str(targetedPlayer.GetOrder()))
+            print("targetedPlayer is " + str(self.__targetedPlayer.GetOrder()))
             if self.__step == 0:
                 turret.SendSettingUpdateByName("SPEED", 128)
 
@@ -431,7 +487,9 @@ class Target():
                 self.__targetting = False
 
                 self.__targetedPlayer.GetSlave().RemoveDirectSettingUpdateConfig(turret, LASER_DETECTED)
+                turret.SendSettingUpdateByName("STOP")
                 self.__targetedPlayer = None
+                self.__targetDone = True
                 self.__targetDoneTimestamp = time.time()
 
             display.UpdateSetting(turret.GetSettingByName("SPEED"))
@@ -440,6 +498,9 @@ class Target():
         print(slaveID)
 
         self.__turretPos = playerList.GetPlayerBySlaveID(slaveID).GetOrder()
+
+    def SetTurretPos(self, turretPos):
+        self.__turretPos = turretPos
 
 target = Target()
 
@@ -561,7 +622,7 @@ def initNotifLaser(slaveID:int):
         global turretPos
         global gameStep
 
-        turretPos = TP_END
+        target.SetTurretPos(TP_END)
         display.AddPreLayout(startGameAutoButton)
         display.AddPreLayout(startGameManualButton)
         game.SetGameStep(GS_WAITING_TO_START)
@@ -573,7 +634,7 @@ def initNotifLaser(slaveID:int):
 
 def speakingProcessFunction(queue:multiprocessing.Queue, gameStep):
     engine = pyttsx3.init()
-    engine.setProperty('volume', 0.5)
+    engine.setProperty('volume', 1)
 
     voices = engine.getProperty('voices')
 
@@ -606,7 +667,7 @@ if __name__ == "__main__":
     speakingProcess = multiprocessing.Process(target=speakingProcessFunction, args=(game.GetSpeakingQueue(), game.GetGameStep()))
     speakingProcess.start()
 
-    com = SerialCTR("COM6")
+    com = SerialCTR("COM8")
 
     display = PySimpleGUIDisplay()
     
@@ -621,8 +682,8 @@ if __name__ == "__main__":
     STR.SendBridgeInitRequest(1, b'Turret', TurretCallback)
     STR.SendBridgeInitRequest(2, b'Desk', DeskCallback, NUMBER_PLAYER)
 
-    display.AddPreLayout(startGameAutoButton)
-    display.AddPreLayout(startGameManualButton)
+    #display.AddPreLayout(startGameAutoButton)
+    #display.AddPreLayout(startGameManualButton)
     display.AddPreLayout(InitPlayerButton)
     display.UpdateLayout(None)
 
