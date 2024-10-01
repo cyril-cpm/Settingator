@@ -283,7 +283,7 @@ class Game():
 
                 #game.DisplayQuestion(question, answerOrder)
 
-                questionStr = question[1] + " " + question[answerOrder[0]] + ", " + question[answerOrder[1]] + ", " + question[answerOrder[2]] + " ou " + question[answerOrder[3]] + " ?"
+                questionStr = question[1] + " Réponse A: " + question[answerOrder[0]] + ", Réponse B:" + question[answerOrder[1]] + ", Réponse C: " + question[answerOrder[2]] + " Réponse D: " + question[answerOrder[3]] + " ?"
                 self.Ask(questionStr)
 
             elif self.__gameStep.value == GS_READING:
