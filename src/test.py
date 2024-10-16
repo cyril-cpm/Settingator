@@ -8,6 +8,8 @@ import multiprocessing
 import pyttsx3
 import pygame.mixer as mx
 
+TESTING = True
+
 com:SerialCTR
 
 display:PySimpleGUIDisplay
@@ -130,6 +132,9 @@ class Players():
             if self.__playerList[player].CanAnswer():
                 allAnswered = False
 
+        if self.__playerList.__len__() == 0:
+            allAnswered = False
+
         return allAnswered
     
     def SendAll(self, command):
@@ -215,6 +220,8 @@ class QuestionAndScoreDisplay():
         ansBFrame = sg.Frame("", [[sg.VPush(background_color=GREEN_COLOR)], [self.__ansBText], [sg.VPush(background_color=GREEN_COLOR)]], border_width=0, background_color=GREEN_COLOR, size=(int(self.__screenWidth/2) - 20,1), expand_y=True, pad=10)
         ansCFrame = sg.Frame("", [[sg.VPush(background_color=YELLOW_COLOR)], [self.__ansCText], [sg.VPush(background_color=YELLOW_COLOR)]], border_width=0, background_color=YELLOW_COLOR, size=(int(self.__screenWidth/2) - 20,1), expand_y=True, pad=10)
         ansDFrame = sg.Frame("", [[sg.VPush(background_color=BLUE_COLOR)], [self.__ansDText], [sg.VPush(background_color=BLUE_COLOR)]], border_width=0, background_color=BLUE_COLOR, size=(int(self.__screenWidth/2) - 20,1), expand_y=True, pad=10)
+
+        self.__ansFrame = ansAFrame
 
         answerFrameLayout = [[],[]]
         answerFrameLayout[0].append(ansAFrame)
@@ -325,6 +332,10 @@ class QuestionAndScoreDisplay():
 
     def SetQuestion(self, question, ansA, ansB, ansC, ansD):
 
+        self.__scoreDisplayFrame.update(visible=False)
+        self.__questionDisplayFrame.update(visible=True)
+        self.__PSGWindow.read(0)
+
         questionLength = sg.Text.string_width_in_pixels("_ 3000", question)
         width = self.__screenWidth - 80
         fontSize = int(3000 * (width / questionLength))
@@ -349,13 +360,20 @@ class QuestionAndScoreDisplay():
         fontSize = int(3000 * (width / lengthiest))
         fontStr = "_ "+str(fontSize)
 
+        height = sg.Text.char_height_in_pixels(fontStr)
+
+        ansFrameWidth, ansFrameHeight = self.__ansFrame.get_size()
+
+        ansFrameHeight = ansFrameHeight - 20
+
+        if height > ansFrameHeight:
+            fontSize = int(fontSize * (ansFrameHeight / height))
+        fontStr = "_ "+str(fontSize)
+
         self.__ansAText.update(value=ansA, font=fontStr)
         self.__ansBText.update(value=ansB, font=fontStr)
         self.__ansCText.update(value=ansC, font=fontStr)
         self.__ansDText.update(value=ansD, font=fontStr)
-
-        self.__scoreDisplayFrame.update(visible=False)
-        self.__questionDisplayFrame.update(visible=True)
 
     def SetScore(self, fiName, fiGood, fiBad, sName, sGood, sBad, tName, tGood, tBad, foName, foGood, foBad):
         self.__firstPlayerName.update(fiName)
@@ -486,8 +504,8 @@ class Game():
                 
                 question = self.__questionPool[self.__question]
 
-                #game.DisplayQuestion(question, answerOrder)
-
+                
+                self.__questionAndScoreDisplay.SetQuestion(question[1], question[answerOrder[0]], question[answerOrder[1]], question[answerOrder[2]], question[answerOrder[3]])
                 questionStr = question[1] + " Réponse A: " + question[answerOrder[0]] + ", Réponse B:" + question[answerOrder[1]] + ", Réponse C: " + question[answerOrder[2]] + " Réponse D: " + question[answerOrder[3]] + " ?"
                 self.Ask(questionStr)
 
@@ -503,7 +521,13 @@ class Game():
                 self.__accelDone = False
 
             elif self.__gameStep.value == GS_WAITING:
-                if not self.__accelDone and time.time() - self.__finishedReadingTimestamp >= 7:
+                if time.time() - self.__finishedReadingTimestamp >= 10 or playerList.AllAnswered():
+                    self.PlayEndWaitSound()
+                    playerList.SendAll("BLUE FROZEN")
+                    print("starting rewarding")
+                    self.__gameStep.value = GS_FINISHED_REWARDING #GS_REWARDING
+                
+                elif not self.__accelDone and time.time() - self.__finishedReadingTimestamp >= 7 and not TESTING:
                     for playerIndex in range(1, NUMBER_PLAYER + 1):
                         player:Player = playerList.GetPlayerByOrder(playerIndex)
 
@@ -512,12 +536,6 @@ class Game():
 
                     self.__accelDone = True
 
-                if time.time() - self.__finishedReadingTimestamp >= 10 or playerList.AllAnswered():
-                    self.PlayEndWaitSound()
-                    playerList.SendAll("BLUE FROZEN")
-                    print("starting rewarding")
-                    self.__gameStep.value = GS_REWARDING
-
             elif self.__gameStep.value == GS_REWARDING:
                 if target.Reward(self.__currentQuestionGoodAnswer):
                     self.__gameStep.value = GS_FINISHED_REWARDING
@@ -525,8 +543,9 @@ class Game():
             elif self.__gameStep.value == GS_FINISHED_REWARDING:
                 time.sleep(3)
 
-                for playerIndex in range(1, NUMBER_PLAYER + 1):
-                    playerList.GetPlayerByOrder(playerIndex).ResetAnswered()
+                if not TESTING:
+                    for playerIndex in range(1, NUMBER_PLAYER + 1):
+                        playerList.GetPlayerByOrder(playerIndex).ResetAnswered()
 
                 if self.__question == 3:
                     self.__gameStep.value = GS_FINISHED
@@ -867,8 +886,8 @@ if __name__ == "__main__":
     STR.SendBridgeInitRequest(1, b'Turret', TurretCallback)
     STR.SendBridgeInitRequest(2, b'Desk', DeskCallback, NUMBER_PLAYER)
 
-    #display.AddPreLayout(startGameAutoButton)
-    #display.AddPreLayout(startGameManualButton)
+    display.AddPreLayout(startGameAutoButton)
+    display.AddPreLayout(startGameManualButton)
     display.AddPreLayout(InitPlayerButton)
 
     display.AddPreLayout(testDisplayScoreButton)
