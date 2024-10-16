@@ -123,10 +123,7 @@ class QuestionAndScoreDisplay():
 
     def Update(self):
         event, values = self.__PSGWindow.read(0)
-        if event != sg.TIMEOUT_KEY:
-            if (event == sg.WIN_CLOSED):
-                quit()
-        elif event == 'Escape:27':
+        if event == 'Escape:27':
             quit()
 
     def SetQuestion(self, question, ansA, ansB, ansC, ansD):

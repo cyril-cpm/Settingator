@@ -190,7 +190,13 @@ class QuestionAndScoreDisplay():
     def __init__(self):
 
         self.__PSGLayout = [[]]
-        x, y =sg.Window.get_screen_size()
+
+        dummyWindow = sg.Window("",[[]], location=(-1, 0), finalize=True, size=(0,0), no_titlebar=True)
+        dummyWindow.Maximize()
+
+        self.__screenWidth, self.__screenHeight = dummyWindow.Size
+
+        dummyWindow.Close()
 
         #### QUESTION DISPLAY ####
 
@@ -198,17 +204,17 @@ class QuestionAndScoreDisplay():
 
         self.__questionText = sg.Text("", background_color=DARK_GREY_COLOR, expand_x=True, justification="center")
         questionFrameLayout = [[sg.VPush(background_color=DARK_GREY_COLOR)], [self.__questionText], [sg.VPush(background_color=DARK_GREY_COLOR)]]
-        questionFrame = sg.Frame("", questionFrameLayout, border_width=0, background_color=DARK_GREY_COLOR, expand_y=True, pad=10, size=(x- 20, 1))
+        questionFrame = sg.Frame("", questionFrameLayout, border_width=0, background_color=DARK_GREY_COLOR, expand_y=True, pad=10, size=(self.__screenWidth - 20, 1))
 
         self.__ansAText = sg.Text("", background_color=RED_COLOR, expand_x=True, justification="center")
         self.__ansBText = sg.Text("", background_color=GREEN_COLOR, expand_x=True, justification="center")
         self.__ansCText = sg.Text("", background_color=YELLOW_COLOR, expand_x=True, justification="center")
         self.__ansDText = sg.Text("", background_color=BLUE_COLOR, expand_x=True, justification="center")
 
-        ansAFrame = sg.Frame("", [[sg.VPush(background_color=RED_COLOR)], [self.__ansAText], [sg.VPush(background_color=RED_COLOR)]], border_width=0, background_color=RED_COLOR, size=(int(x/2) - 20,1), expand_y=True, pad=10)
-        ansBFrame = sg.Frame("", [[sg.VPush(background_color=GREEN_COLOR)], [self.__ansBText], [sg.VPush(background_color=GREEN_COLOR)]], border_width=0, background_color=GREEN_COLOR, size=(int(x/2) - 20,1), expand_y=True, pad=10)
-        ansCFrame = sg.Frame("", [[sg.VPush(background_color=YELLOW_COLOR)], [self.__ansCText], [sg.VPush(background_color=YELLOW_COLOR)]], border_width=0, background_color=YELLOW_COLOR, size=(int(x/2) - 20,1), expand_y=True, pad=10)
-        ansDFrame = sg.Frame("", [[sg.VPush(background_color=BLUE_COLOR)], [self.__ansDText], [sg.VPush(background_color=BLUE_COLOR)]], border_width=0, background_color=BLUE_COLOR, size=(int(x/2) - 20,1), expand_y=True, pad=10)
+        ansAFrame = sg.Frame("", [[sg.VPush(background_color=RED_COLOR)], [self.__ansAText], [sg.VPush(background_color=RED_COLOR)]], border_width=0, background_color=RED_COLOR, size=(int(self.__screenWidth/2) - 20,1), expand_y=True, pad=10)
+        ansBFrame = sg.Frame("", [[sg.VPush(background_color=GREEN_COLOR)], [self.__ansBText], [sg.VPush(background_color=GREEN_COLOR)]], border_width=0, background_color=GREEN_COLOR, size=(int(self.__screenWidth/2) - 20,1), expand_y=True, pad=10)
+        ansCFrame = sg.Frame("", [[sg.VPush(background_color=YELLOW_COLOR)], [self.__ansCText], [sg.VPush(background_color=YELLOW_COLOR)]], border_width=0, background_color=YELLOW_COLOR, size=(int(self.__screenWidth/2) - 20,1), expand_y=True, pad=10)
+        ansDFrame = sg.Frame("", [[sg.VPush(background_color=BLUE_COLOR)], [self.__ansDText], [sg.VPush(background_color=BLUE_COLOR)]], border_width=0, background_color=BLUE_COLOR, size=(int(self.__screenWidth/2) - 20,1), expand_y=True, pad=10)
 
         answerFrameLayout = [[],[]]
         answerFrameLayout[0].append(ansAFrame)
@@ -216,7 +222,7 @@ class QuestionAndScoreDisplay():
         answerFrameLayout[1].append(ansCFrame)
         answerFrameLayout[1].append(ansDFrame)
 
-        answerFrame = sg.Frame("", answerFrameLayout, border_width=0, background_color=LIGHT_GREY_COLOR, size=(x - 20,1), expand_y=True, pad=10)
+        answerFrame = sg.Frame("", answerFrameLayout, border_width=0, background_color=LIGHT_GREY_COLOR, size=(self.__screenWidth - 20,1), expand_y=True, pad=10)
 
         questionDisplayLayout[0].append(questionFrame)
         questionDisplayLayout[1].append(answerFrame)
@@ -228,86 +234,99 @@ class QuestionAndScoreDisplay():
 
         #### SCORE DISPLAY #####
 
-        nameFont = "_ 35"
-        scoreFont = "Inconsolata 35"
+        self.__labelWidth = int(self.__screenWidth/3)
+        self.__labelHeight = int(self.__screenHeight/10)
 
-        self.__firstPlayerName = sg.Text("", background_color=GOLD_COLOR, expand_x=True, font=nameFont)
-        self.__secondPlayerName = sg.Text("", background_color=SILVER_COLOR, expand_x=True, font=nameFont)
-        self.__thirdPlayerName = sg.Text("", background_color=BRONZE_COLOR, expand_x=True, font=nameFont)
-        self.__fourthPlayerName = sg.Text("", background_color=DARK_RED_COLOR, expand_x=True, font=nameFont)
-
-        self.__firstPlayerGood = sg.Text("", background_color=GOLD_COLOR, text_color=GREEN_COLOR, font=scoreFont)
-        self.__secondPlayerGood = sg.Text("", background_color=SILVER_COLOR, text_color=GREEN_COLOR, font=scoreFont)
-        self.__thirdPlayerGood = sg.Text("", background_color=BRONZE_COLOR, text_color=GREEN_COLOR, font=scoreFont)
-        self.__fourthPlayerGood = sg.Text("", background_color=DARK_RED_COLOR, text_color=GREEN_COLOR, font=scoreFont)
-
-        self.__firstPlayerBad = sg.Text("", background_color=GOLD_COLOR, text_color=RED_COLOR, font=scoreFont)
-        self.__secondPlayerBad = sg.Text("", background_color=SILVER_COLOR, text_color=RED_COLOR, font=scoreFont)
-        self.__thirdPlayerBad = sg.Text("", background_color=BRONZE_COLOR, text_color=RED_COLOR, font=scoreFont)
-        self.__fourthPlayerBad = sg.Text("", background_color=DARK_RED_COLOR, text_color=RED_COLOR, font=scoreFont)
-
-        self.__firstPlayerTotal = sg.Text("", background_color=GOLD_COLOR, text_color=YELLOW_COLOR, font=scoreFont)
-        self.__secondPlayerTotal = sg.Text("", background_color=SILVER_COLOR, text_color=YELLOW_COLOR, font=scoreFont)
-        self.__thirdPlayerTotal = sg.Text("", background_color=BRONZE_COLOR, text_color=YELLOW_COLOR, font=scoreFont)
-        self.__fourthPlayerTotal = sg.Text("", background_color=DARK_RED_COLOR, text_color=YELLOW_COLOR, font=scoreFont)
-
-        labelWidth = int(x/3)
-        labelHeight = int(y/10)
-
-        firstPlayer = sg.Frame("", [[sg.VPush(background_color=GOLD_COLOR)],
-                                 [sg.Column([[self.__firstPlayerName, self.__firstPlayerGood, self.__firstPlayerBad, self.__firstPlayerTotal]], expand_x=True, pad=40)],
-                                 [sg.VPush(background_color=GOLD_COLOR)]],
-                                 background_color=GOLD_COLOR, size=(labelWidth-20, labelHeight), pad=10)
+        length = sg.Text.string_width_in_pixels("_ 3000", "WWWWWWWWWWWWWWW")
         
-        secondPlayer = sg.Frame("", [[sg.VPush(background_color=SILVER_COLOR)],
-                                  [sg.Column([[self.__secondPlayerName, self.__secondPlayerGood, self.__secondPlayerBad, self.__secondPlayerTotal]], expand_x=True, pad=40)],
-                                  [sg.VPush(background_color=SILVER_COLOR)]],
-                                 background_color=SILVER_COLOR, size=(labelWidth-20, labelHeight), pad=10)
+        width = int(self.__labelWidth * 2.0/3.0)
+        fontSize = int(3000 * (width / length))
+
+        nameFont = "_ " + str(fontSize)
+        scoreFont = "Inconsolata " + str(fontSize)
+
+        self.__firstPlayerName = self.__newPlayerName(GOLD_COLOR, nameFont)
+        self.__secondPlayerName = self.__newPlayerName(SILVER_COLOR, nameFont)
+        self.__thirdPlayerName = self.__newPlayerName(BRONZE_COLOR, nameFont)
+        self.__fourthPlayerName = self.__newPlayerName(DARK_RED_COLOR, nameFont)
+
+        self.__firstPlayerGood = self.__newPlayerScore(GOLD_COLOR, GREEN_COLOR, scoreFont)
+        self.__secondPlayerGood = self.__newPlayerScore(SILVER_COLOR, GREEN_COLOR, scoreFont)
+        self.__thirdPlayerGood = self.__newPlayerScore(BRONZE_COLOR, GREEN_COLOR, scoreFont)
+        self.__fourthPlayerGood = self.__newPlayerScore(DARK_RED_COLOR, GREEN_COLOR, scoreFont)
+
+        self.__firstPlayerBad = self.__newPlayerScore(GOLD_COLOR, RED_COLOR, scoreFont)
+        self.__secondPlayerBad = self.__newPlayerScore(SILVER_COLOR, RED_COLOR, scoreFont)
+        self.__thirdPlayerBad = self.__newPlayerScore(BRONZE_COLOR, RED_COLOR, scoreFont)
+        self.__fourthPlayerBad = self.__newPlayerScore(DARK_RED_COLOR, RED_COLOR, scoreFont)
+
+        self.__firstPlayerTotal = self.__newPlayerScore(GOLD_COLOR, YELLOW_COLOR, scoreFont)
+        self.__secondPlayerTotal = self.__newPlayerScore(SILVER_COLOR, YELLOW_COLOR, scoreFont)
+        self.__thirdPlayerTotal = self.__newPlayerScore(BRONZE_COLOR, YELLOW_COLOR, scoreFont)
+        self.__fourthPlayerTotal = self.__newPlayerScore(DARK_RED_COLOR, YELLOW_COLOR, scoreFont)
+
+        firstPlayer = self.__newPlayerFrame(GOLD_COLOR, self.__firstPlayerName, self.__firstPlayerGood, self.__firstPlayerBad, self.__firstPlayerTotal)
         
-        thirdPlayer = sg.Frame("", [[sg.VPush(background_color=BRONZE_COLOR)],
-                                 [sg.Column([[self.__thirdPlayerName, self.__thirdPlayerGood, self.__thirdPlayerBad, self.__thirdPlayerTotal]], expand_x=True, pad=40)],
-                                 [sg.VPush(background_color=BRONZE_COLOR)]],
-                                background_color=BRONZE_COLOR, size=(labelWidth-20, labelHeight), pad=10)
+        secondPlayer = self.__newPlayerFrame(SILVER_COLOR, self.__secondPlayerName, self.__secondPlayerGood, self.__secondPlayerBad, self.__secondPlayerTotal)
         
-        fourthPlayer = sg.Frame("", [[sg.VPush(background_color=DARK_RED_COLOR)],
-                                  [sg.Column([[self.__fourthPlayerName, self.__fourthPlayerGood, self.__fourthPlayerBad, self.__fourthPlayerTotal]], expand_x=True, pad=40)],
-                                  [sg.VPush(background_color=DARK_RED_COLOR)]],
-                                 background_color=DARK_RED_COLOR, size=(labelWidth-20, labelHeight), pad=10)
+        thirdPlayer = self.__newPlayerFrame(BRONZE_COLOR, self.__thirdPlayerName, self.__thirdPlayerGood, self.__thirdPlayerBad, self.__thirdPlayerTotal)
+        
+        fourthPlayer = self.__newPlayerFrame(DARK_RED_COLOR, self.__fourthPlayerName, self.__fourthPlayerGood, self.__fourthPlayerBad, self.__fourthPlayerTotal)
 
         scoreLayout = [[firstPlayer], 
                        [secondPlayer],
                        [thirdPlayer],
                        [fourthPlayer]]
         
-        scoreFrame = sg.Frame("", scoreLayout, border_width=0, background_color=LIGHT_GREY_COLOR, size=(labelWidth, 4 * (labelHeight + 20)), element_justification="center")
+        scoreFrame = sg.Frame("", scoreLayout, border_width=0, background_color=LIGHT_GREY_COLOR, size=(self.__labelWidth, 4 * (self.__labelHeight + 20)), element_justification="center")
 
         scoreDisplayLayout = [[sg.VPush(background_color=BLACK_COLOR)],
                               [scoreFrame],
                               [sg.VPush(background_color=BLACK_COLOR)]]
 
-        self.__scoreDisplayFrame = sg.Frame("", scoreDisplayLayout, border_width=0, background_color=BLACK_COLOR, pad=0, element_justification="center", visible=False, size=(x, y))
+        self.__scoreDisplayFrame = sg.Frame("", scoreDisplayLayout, border_width=0, background_color=BLACK_COLOR, pad=0, element_justification="center", visible=False, size=(self.__screenWidth, self.__screenHeight))
 
         self.__PSGLayout[0].append(self.__scoreDisplayFrame)
 
         ########################
 
-        self.__PSGWindow = sg.Window('Display', self.__PSGLayout, element_justification='left', finalize=True, background_color=BLACK_COLOR, element_padding=0, return_keyboard_events=True, no_titlebar=True)
+        ####### MAXIMIZE #######
+
+        self.__maximizeButton = sg.Button("Maximize", key=self.__maximizeDisplay, visible=False)
+        self.__PSGLayout[0].append(self.__maximizeButton)
+
+        ########################
+
+        self.__PSGWindow = sg.Window('Display', self.__PSGLayout, location=(-1, 0), grab_anywhere=True, element_justification='left', finalize=True, background_color=BLACK_COLOR, element_padding=0, return_keyboard_events=True, no_titlebar=True, size=(0, 0))
         self.__PSGWindow.Maximize()
-        self.__PSGWindow.get_screen_size()
+
+        return
+
+    def __newPlayerName(self, color, font):
+        return sg.Text("", background_color=color, expand_x=True, font=font)
+    
+    def __newPlayerScore(self, bgColor, fgColor, font):
+        return sg.Text("", background_color=bgColor, text_color=fgColor, font=font)
+    
+    def __newPlayerFrame(self, color, name, good, bad, total):
+        return sg.Frame("", [[sg.VPush(background_color=color)],
+                                 [sg.Column([[name, good, bad, total]], expand_x=True, pad=(40, 0), background_color=color)],
+                                 [sg.VPush(background_color=color)]],
+                                 background_color=color, size=(self.__labelWidth-20, self.__labelHeight), pad=10)
 
     def Update(self):
         event, values = self.__PSGWindow.read(0)
-        if event != sg.TIMEOUT_KEY:
-            if (event == sg.WIN_CLOSED):
-                quit()
-        elif event == 'Escape:27':
+        if event == 'Escape:27':
+            self.__PSGWindow.Close()
             quit()
 
+        if callable(event):
+            event()
+
     def SetQuestion(self, question, ansA, ansB, ansC, ansD):
-        x, y = sg.Window.get_screen_size()
 
         questionLength = sg.Text.string_width_in_pixels("_ 3000", question)
-        width = x - 80
+        width = self.__screenWidth - 80
         fontSize = int(3000 * (width / questionLength))
         fontStr = "_ "+str(fontSize
                            )
@@ -326,7 +345,7 @@ class QuestionAndScoreDisplay():
         if lengthD > lengthiest:
             lengthiest = lengthD
         
-        width = x/2 - 80
+        width = self.__screenWidth/2 - 80
         fontSize = int(3000 * (width / lengthiest))
         fontStr = "_ "+str(fontSize)
 
@@ -376,6 +395,10 @@ class QuestionAndScoreDisplay():
 
         sgText.update(valueStr)
 
+    def __maximizeDisplay(self):
+        self.__maximizeButton.update(visible=False)
+        self.__PSGWindow.Maximize()
+
 class Game():
     def __init__(self):
         self.__questionPool = []
@@ -387,7 +410,9 @@ class Game():
         self.__finishedReadingTimestamp = 0
         self.__currentQuestionGoodAnswer = 0
         self.__accelDone = False
-        self.__questionDisplay = QuestionAndScoreDisplay()
+        self.__questionAndScoreDisplay = QuestionAndScoreDisplay()
+        #self.__questionAndScoreDisplay.SetScore("Bernard", 1, -3, "Jean-Dom'", 2, 17, "Bapt", 4, 4, "SheitMan", 8, 0)
+
 
         ### Sound Management ###
         mx.init(channels=1)
@@ -515,6 +540,8 @@ class Game():
         elif self.__mode == MANUAL:
             pass
 
+        self.__questionAndScoreDisplay.Update()
+
     def GetSpeakingQueue(self):
         return self.__speakingQueue
     
@@ -546,6 +573,12 @@ class Game():
 
     def _Speak(self, sentence:str, isQuestion:bool = True):
         self.__speakingQueue.put((sentence, isQuestion))
+
+    def SetScoreDisplay(self, fiName, fiGood, fiBad, sName, sGood, sBad, tName, tGood, tBad, foName, foGood, foBad):
+        self.__questionAndScoreDisplay.SetScore(fiName, fiGood, fiBad, sName, sGood, sBad, tName, tGood, tBad, foName, foGood, foBad)
+
+    def SetQuestionDisplay(self, question, ansA, ansB, ansC, ansD):
+        self.__questionAndScoreDisplay.SetQuestion(question, ansA, ansB, ansC, ansD)
 
 game:Game          
         
@@ -686,44 +719,6 @@ target = Target()
 
 def targetPlayer(windows:sg.Window, orderedPlayer:int):
     target.TargetPlayer(orderedPlayer)
-    return
-
-    global targetting
-    global target_side
-    global targetedPlayer
-    global step
-    global targetDone
-    global targetDoneTimestamp
-
-    targetDone = False
-
-    STR.AddNotifCallback(LASER_NOTIF, notifLaser)
-    targetedPlayer = playerList.GetPlayerByOrder(orderedPlayer)
-    
-    targetedPlayer.GetSlave().ConfigDirectSettingUpdate(turret, LASER_DETECTED)
-    
-    targetedPlayer.Send("RED ACCEL LOADING")
-    
-    print("targetting player " + str(targetedPlayer.GetOrder()))
-    print("turretPos : " + str(turretPos))
-
-    step = 0
-
-    turret.SendSettingUpdateByName("SPEED", 255)
-
-    if turretPos < orderedPlayer:
-        targetting = True
-        target_side = "R"
-        turret.SendSettingUpdateByName("DROITE")
-        print("turning right")
-     
-    elif orderedPlayer < turretPos:
-        targetting = True
-        target_side = "L"
-        turret.SendSettingUpdateByName("GAUCHE")
-        print("turning left")
-
-    display.UpdateSetting(turret.GetSettingByName("SPEED"))
 
 def notifLaser(slaveID:int):
 
@@ -793,6 +788,20 @@ def initPlayer(window:sg.Window):
 
 InitPlayerButton = (IDP_BUTTON, "initPlayer", initPlayer)
 
+#TEST#
+
+def testDisplayQuestion(window:sg.Window):
+    game.SetQuestionDisplay("Quelle est la taille du continum espace temps dans la série blargblargblarg ?", "La réponse A", "La grosse réponse B", "repC", "Et non pas la D")
+
+testDisplayQuestionButton = (IDP_BUTTON, "testDisplayQuestion", testDisplayQuestion)
+
+def testDisplayScore(window:sg.Window):
+    game.SetScoreDisplay("Bernard", 1, -3, "Jean-Dom'", 2, 17, "Bapt", 4, 4, "SheitMan", 8, 0)
+
+testDisplayScoreButton = (IDP_BUTTON, "testDisplayScore", testDisplayScore)
+
+######
+
 def initNotifLaser(slaveID:int):
     playerList.AddOrderedPlayer(playerList.GetPlayerBySlaveID(slaveID))
 
@@ -842,12 +851,8 @@ def TurretCallback(slave:Slave):
     turret = slave
 
 if __name__ == "__main__":
-    game = Game()
 
-    speakingProcess = multiprocessing.Process(target=speakingProcessFunction, args=(game.GetSpeakingQueue(), game.GetGameStep()))
-    speakingProcess.start()
-
-    com = SerialCTR("COM8")
+    com = SerialCTR("COM3")
 
     display = PySimpleGUIDisplay()
     
@@ -865,7 +870,16 @@ if __name__ == "__main__":
     #display.AddPreLayout(startGameAutoButton)
     #display.AddPreLayout(startGameManualButton)
     display.AddPreLayout(InitPlayerButton)
+
+    display.AddPreLayout(testDisplayScoreButton)
+    display.AddPreLayout(testDisplayQuestionButton)
+
     display.UpdateLayout(None)
+    
+    game = Game()
+
+    speakingProcess = multiprocessing.Process(target=speakingProcessFunction, args=(game.GetSpeakingQueue(), game.GetGameStep()))
+    speakingProcess.start()
 
     while True:
         STR.Update()
