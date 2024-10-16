@@ -3,15 +3,16 @@ import PySimpleGUI as sg
 RED_COLOR = "#FF0000"
 BLUE_COLOR = "#0000FF"
 GREEN_COLOR = "#00FF00"
-YELLOW_COLOR = "#FFFF00"
+YELLOW_COLOR = "#EEEE00"
 DARK_GREY_COLOR = "#222222"
 BLACK_COLOR = "#000000"
 LIGHT_GREY_COLOR = "#666666"
 GOLD_COLOR = "#D3AF37"
 SILVER_COLOR = "#A8A9AD"
 BRONZE_COLOR = "#49371B"
+DARK_RED_COLOR = "#111111"
 
-class QuestionDisplay():
+class QuestionAndScoreDisplay():
     def __init__(self):
 
         self.__PSGLayout = [[]]
@@ -53,48 +54,51 @@ class QuestionDisplay():
 
         #### SCORE DISPLAY #####
 
-        self.__firstPlayerName = sg.Text("", background_color=GOLD_COLOR)
-        self.__secondPlayerName = sg.Text("", background_color=SILVER_COLOR)
-        self.__thirdPlayerName = sg.Text("", background_color=BRONZE_COLOR)
-        self.__fourthPlayerName = sg.Text("", background_color=RED_COLOR)
+        nameFont = "_ 35"
+        scoreFont = "Inconsolata 35"
 
-        self.__firstPlayerGood = sg.Text("", background_color=GOLD_COLOR, text_color=GREEN_COLOR)
-        self.__secondPlayerGood = sg.Text("", background_color=SILVER_COLOR, text_color=GREEN_COLOR)
-        self.__thirdPlayerGood = sg.Text("", background_color=BRONZE_COLOR, text_color=GREEN_COLOR)
-        self.__fourthPlayerGood = sg.Text("", background_color=RED_COLOR, text_color=GREEN_COLOR)
+        self.__firstPlayerName = sg.Text("", background_color=GOLD_COLOR, expand_x=True, font=nameFont)
+        self.__secondPlayerName = sg.Text("", background_color=SILVER_COLOR, expand_x=True, font=nameFont)
+        self.__thirdPlayerName = sg.Text("", background_color=BRONZE_COLOR, expand_x=True, font=nameFont)
+        self.__fourthPlayerName = sg.Text("", background_color=DARK_RED_COLOR, expand_x=True, font=nameFont)
 
-        self.__firstPlayerBad = sg.Text("", background_color=GOLD_COLOR, text_color=RED_COLOR)
-        self.__secondPlayerBad = sg.Text("", background_color=SILVER_COLOR, text_color=RED_COLOR)
-        self.__thirdPlayerBad = sg.Text("", background_color=BRONZE_COLOR, text_color=RED_COLOR)
-        self.__fourthPlayerBad = sg.Text("", background_color=RED_COLOR, text_color=RED_COLOR)
+        self.__firstPlayerGood = sg.Text("", background_color=GOLD_COLOR, text_color=GREEN_COLOR, font=scoreFont)
+        self.__secondPlayerGood = sg.Text("", background_color=SILVER_COLOR, text_color=GREEN_COLOR, font=scoreFont)
+        self.__thirdPlayerGood = sg.Text("", background_color=BRONZE_COLOR, text_color=GREEN_COLOR, font=scoreFont)
+        self.__fourthPlayerGood = sg.Text("", background_color=DARK_RED_COLOR, text_color=GREEN_COLOR, font=scoreFont)
 
-        self.__firstPlayerTotal = sg.Text("", background_color=GOLD_COLOR, text_color=YELLOW_COLOR)
-        self.__secondPlayerTotal = sg.Text("", background_color=SILVER_COLOR, text_color=YELLOW_COLOR)
-        self.__thirdPlayerTotal = sg.Text("", background_color=BRONZE_COLOR, text_color=YELLOW_COLOR)
-        self.__fourthPlayerTotal = sg.Text("", background_color=RED_COLOR, text_color=YELLOW_COLOR)
+        self.__firstPlayerBad = sg.Text("", background_color=GOLD_COLOR, text_color=RED_COLOR, font=scoreFont)
+        self.__secondPlayerBad = sg.Text("", background_color=SILVER_COLOR, text_color=RED_COLOR, font=scoreFont)
+        self.__thirdPlayerBad = sg.Text("", background_color=BRONZE_COLOR, text_color=RED_COLOR, font=scoreFont)
+        self.__fourthPlayerBad = sg.Text("", background_color=DARK_RED_COLOR, text_color=RED_COLOR, font=scoreFont)
+
+        self.__firstPlayerTotal = sg.Text("", background_color=GOLD_COLOR, text_color=YELLOW_COLOR, font=scoreFont)
+        self.__secondPlayerTotal = sg.Text("", background_color=SILVER_COLOR, text_color=YELLOW_COLOR, font=scoreFont)
+        self.__thirdPlayerTotal = sg.Text("", background_color=BRONZE_COLOR, text_color=YELLOW_COLOR, font=scoreFont)
+        self.__fourthPlayerTotal = sg.Text("", background_color=DARK_RED_COLOR, text_color=YELLOW_COLOR, font=scoreFont)
 
         labelWidth = int(x/3)
         labelHeight = int(y/10)
 
         firstPlayer = sg.Frame("", [[sg.VPush(background_color=GOLD_COLOR)],
-                                 [sg.Column([[self.__firstPlayerName, self.__firstPlayerGood, self.__firstPlayerBad, self.__firstPlayerTotal]])],
+                                 [sg.Column([[self.__firstPlayerName, self.__firstPlayerGood, self.__firstPlayerBad, self.__firstPlayerTotal]], expand_x=True, pad=40)],
                                  [sg.VPush(background_color=GOLD_COLOR)]],
-                                 background_color=GOLD_COLOR, size=(labelWidth-20, labelHeight), pad=10, element_justification="center")
+                                 background_color=GOLD_COLOR, size=(labelWidth-20, labelHeight), pad=10)
         
         secondPlayer = sg.Frame("", [[sg.VPush(background_color=SILVER_COLOR)],
-                                  [sg.Column([[self.__secondPlayerName, self.__secondPlayerGood, self.__secondPlayerBad, self.__secondPlayerTotal]])],
+                                  [sg.Column([[self.__secondPlayerName, self.__secondPlayerGood, self.__secondPlayerBad, self.__secondPlayerTotal]], expand_x=True, pad=40)],
                                   [sg.VPush(background_color=SILVER_COLOR)]],
-                                 background_color=SILVER_COLOR, size=(labelWidth-20, labelHeight), pad=10, element_justification="center")
+                                 background_color=SILVER_COLOR, size=(labelWidth-20, labelHeight), pad=10)
         
         thirdPlayer = sg.Frame("", [[sg.VPush(background_color=BRONZE_COLOR)],
-                                 [sg.Column([[self.__thirdPlayerName, self.__thirdPlayerGood, self.__thirdPlayerBad, self.__thirdPlayerTotal]])],
+                                 [sg.Column([[self.__thirdPlayerName, self.__thirdPlayerGood, self.__thirdPlayerBad, self.__thirdPlayerTotal]], expand_x=True, pad=40)],
                                  [sg.VPush(background_color=BRONZE_COLOR)]],
-                                background_color=BRONZE_COLOR, size=(labelWidth-20, labelHeight), pad=10, element_justification="center")
+                                background_color=BRONZE_COLOR, size=(labelWidth-20, labelHeight), pad=10)
         
-        fourthPlayer = sg.Frame("", [[sg.VPush(background_color=RED_COLOR)],
-                                  [sg.Column([[self.__fourthPlayerName, self.__fourthPlayerGood, self.__fourthPlayerBad, self.__fourthPlayerTotal]])],
-                                  [sg.VPush(background_color=RED_COLOR)]],
-                                 background_color=RED_COLOR, size=(labelWidth-20, labelHeight), pad=10, element_justification="center")
+        fourthPlayer = sg.Frame("", [[sg.VPush(background_color=DARK_RED_COLOR)],
+                                  [sg.Column([[self.__fourthPlayerName, self.__fourthPlayerGood, self.__fourthPlayerBad, self.__fourthPlayerTotal]], expand_x=True, pad=40)],
+                                  [sg.VPush(background_color=DARK_RED_COLOR)]],
+                                 background_color=DARK_RED_COLOR, size=(labelWidth-20, labelHeight), pad=10)
 
         scoreLayout = [[firstPlayer], 
                        [secondPlayer],
@@ -157,7 +161,8 @@ class QuestionDisplay():
         self.__ansCText.update(value=ansC, font=fontStr)
         self.__ansDText.update(value=ansD, font=fontStr)
 
-        return
+        self.__scoreDisplayFrame.update(visible=False)
+        self.__questionDisplayFrame.update(visible=True)
 
     def SetScore(self, fiName, fiGood, fiBad, sName, sGood, sBad, tName, tGood, tBad, foName, foGood, foBad):
         self.__firstPlayerName.update(fiName)
@@ -165,27 +170,42 @@ class QuestionDisplay():
         self.__thirdPlayerName.update(tName)
         self.__fourthPlayerName.update(foName)
 
-        self.__firstPlayerGood.update(str(fiGood))
-        self.__secondPlayerGood.update(str(sGood))
-        self.__thirdPlayerGood.update(str(tGood))
-        self.__fourthPlayerGood.update(str(foGood))
+        self.__transformAndUpdate(fiGood, self.__firstPlayerGood)
+        self.__transformAndUpdate(sGood, self.__secondPlayerGood)
+        self.__transformAndUpdate(tGood, self.__thirdPlayerGood)
+        self.__transformAndUpdate(foGood, self.__fourthPlayerGood)
 
-        self.__firstPlayerBad.update(str(fiBad))
-        self.__secondPlayerBad.update(str(sBad))
-        self.__thirdPlayerBad.update(str(tBad))
-        self.__fourthPlayerBad.update(str(foBad))
+        self.__transformAndUpdate(fiBad, self.__firstPlayerBad)
+        self.__transformAndUpdate(sBad, self.__secondPlayerBad)
+        self.__transformAndUpdate(tBad, self.__thirdPlayerBad)
+        self.__transformAndUpdate(foBad, self.__fourthPlayerBad)
 
-        self.__firstPlayerTotal.update(str(fiGood - fiBad))
-        self.__secondPlayerTotal.update(str(sGood - sBad))
-        self.__thirdPlayerTotal.update(str(tGood - tBad))
-        self.__fourthPlayerTotal.update(str(foGood - foBad))
+        self.__transformAndUpdate(fiGood - fiBad, self.__firstPlayerTotal)
+        self.__transformAndUpdate(sGood - sBad, self.__secondPlayerTotal)
+        self.__transformAndUpdate(tGood - tBad, self.__thirdPlayerTotal)
+        self.__transformAndUpdate(foGood - foBad, self.__fourthPlayerTotal)
 
+        self.__questionDisplayFrame.update(visible=False)
         self.__scoreDisplayFrame.update(visible=True)
 
-test = QuestionDisplay()
+    def __transformAndUpdate(self, value, sgText:sg.Text):
+        valueStr = ""
 
-#test.SetQuestion("Quelle est la taille du continum espace temps dans la série blargblargblarg ?", "La réponse A", "La grosse réponse B", "repC", "Et non pas la D")
-test.SetScore("Bernard", 5, 3, "Jean-Dominique", 2, 7, "Bapt", 4, 4, "SheitMan", 8, 0)
+        if value >= 10:
+            valueStr = "  " + str(value)
+        elif value >= 0:
+            valueStr = "   " + str(value)
+        elif value <= -10:
+            valueStr = " " + str(value)
+        elif value < 0:
+            valueStr = "  " + str(value)
+
+        sgText.update(valueStr)
+
+test = QuestionAndScoreDisplay()
+
+test.SetQuestion("Quelle est la taille du continum espace temps dans la série blargblargblarg ?", "La réponse A", "La grosse réponse B", "repC", "Et non pas la D")
+#test.SetScore("Bernard", 1, -3, "Jean-Dom'", 2, 17, "Bapt", 4, 4, "SheitMan", 8, 0)
 
 while True:
     test.Update()
