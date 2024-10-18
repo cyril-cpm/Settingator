@@ -18,7 +18,7 @@ STR:Settingator
 
 ###   GAME SYSTEM    ###
 
-NUMBER_PLAYER = 2
+NUMBER_PLAYER = 4
 
 GS_INIT = 0
 GS_WAITING_TO_START = 1
@@ -38,18 +38,27 @@ BLUE_BUTTON = 27
 class Player():
     def __init__(self):
         self.__score = 0
+        self.__good = 0
         self.__bonus = 0
         self.__fail = 0
         self.__slave = None
         self.__order = 0
         self.__answeredCurrentQuestion = False
         self.__lastAnswer = None
+        self.__name = ""
+
+    def GetName(self):
+        return self.__name
+    
+    def SetName(self, name):
+        self.__name = name
 
     def SetSlave(self, slave:Slave):
         self.__slave = slave
 
     def Send(self, settingName:str):
-        self.__slave.SendSettingUpdateByName(settingName)
+        if isinstance(self.__slave, Slave):
+            self.__slave.SendSettingUpdateByName(settingName)
 
     def GetSlave(self):
         return self.__slave
@@ -78,10 +87,22 @@ class Player():
         return self.__lastAnswer
     
     def IncreaseGood(self):
-        self.__score += 1
+        self.__good += 1
     
     def IncreaseFail(self):
         self.__fail += 1
+
+    def __updateScore(self):
+        self.__score = self.__good - self.__fail
+
+    def GetScore(self):
+        return self.__score
+    
+    def GetGood(self):
+        return self.__good
+    
+    def GetBad(self):
+        return self.__fail
 
 class Players():
     def __init__(self):
@@ -252,39 +273,26 @@ class QuestionAndScoreDisplay():
         nameFont = "_ " + str(fontSize)
         scoreFont = "Inconsolata " + str(fontSize)
 
-        self.__firstPlayerName = self.__newPlayerName(GOLD_COLOR, nameFont)
-        self.__secondPlayerName = self.__newPlayerName(SILVER_COLOR, nameFont)
-        self.__thirdPlayerName = self.__newPlayerName(BRONZE_COLOR, nameFont)
-        self.__fourthPlayerName = self.__newPlayerName(DARK_RED_COLOR, nameFont)
-
-        self.__firstPlayerGood = self.__newPlayerScore(GOLD_COLOR, GREEN_COLOR, scoreFont)
-        self.__secondPlayerGood = self.__newPlayerScore(SILVER_COLOR, GREEN_COLOR, scoreFont)
-        self.__thirdPlayerGood = self.__newPlayerScore(BRONZE_COLOR, GREEN_COLOR, scoreFont)
-        self.__fourthPlayerGood = self.__newPlayerScore(DARK_RED_COLOR, GREEN_COLOR, scoreFont)
-
-        self.__firstPlayerBad = self.__newPlayerScore(GOLD_COLOR, RED_COLOR, scoreFont)
-        self.__secondPlayerBad = self.__newPlayerScore(SILVER_COLOR, RED_COLOR, scoreFont)
-        self.__thirdPlayerBad = self.__newPlayerScore(BRONZE_COLOR, RED_COLOR, scoreFont)
-        self.__fourthPlayerBad = self.__newPlayerScore(DARK_RED_COLOR, RED_COLOR, scoreFont)
-
-        self.__firstPlayerTotal = self.__newPlayerScore(GOLD_COLOR, YELLOW_COLOR, scoreFont)
-        self.__secondPlayerTotal = self.__newPlayerScore(SILVER_COLOR, YELLOW_COLOR, scoreFont)
-        self.__thirdPlayerTotal = self.__newPlayerScore(BRONZE_COLOR, YELLOW_COLOR, scoreFont)
-        self.__fourthPlayerTotal = self.__newPlayerScore(DARK_RED_COLOR, YELLOW_COLOR, scoreFont)
-
-        firstPlayer = self.__newPlayerFrame(GOLD_COLOR, self.__firstPlayerName, self.__firstPlayerGood, self.__firstPlayerBad, self.__firstPlayerTotal)
+        scoreLayout = []
         
-        secondPlayer = self.__newPlayerFrame(SILVER_COLOR, self.__secondPlayerName, self.__secondPlayerGood, self.__secondPlayerBad, self.__secondPlayerTotal)
-        
-        thirdPlayer = self.__newPlayerFrame(BRONZE_COLOR, self.__thirdPlayerName, self.__thirdPlayerGood, self.__thirdPlayerBad, self.__thirdPlayerTotal)
-        
-        fourthPlayer = self.__newPlayerFrame(DARK_RED_COLOR, self.__fourthPlayerName, self.__fourthPlayerGood, self.__fourthPlayerBad, self.__fourthPlayerTotal)
+        self.__playersElements = []
 
-        scoreLayout = [[firstPlayer], 
-                       [secondPlayer],
-                       [thirdPlayer],
-                       [fourthPlayer]]
-        
+        for index in range(0, NUMBER_PLAYER):
+            playerElements = dict()
+
+            playerElements['name'] = self.__newPlayerName(self.__colorFromIndex(index), nameFont)
+            playerElements['good'] = self.__newPlayerScore(self.__colorFromIndex(index), GREEN_COLOR, scoreFont)
+            playerElements['bad'] = self.__newPlayerScore(self.__colorFromIndex(index), RED_COLOR, scoreFont)
+            playerElements['total'] = self.__newPlayerScore(self.__colorFromIndex(index), YELLOW_COLOR, scoreFont)
+
+            scoreLayout.append([self.__newPlayerFrame(self.__colorFromIndex(index),
+                                                      playerElements['name'],
+                                                      playerElements['good'],
+                                                      playerElements['bad'],
+                                                      playerElements['total'])])
+            
+            self.__playersElements.append(playerElements)
+
         scoreFrame = sg.Frame("", scoreLayout, border_width=0, background_color=LIGHT_GREY_COLOR, size=(self.__labelWidth, 4 * (self.__labelHeight + 20)), element_justification="center")
 
         scoreDisplayLayout = [[sg.VPush(background_color=BLACK_COLOR)],
@@ -320,6 +328,16 @@ class QuestionAndScoreDisplay():
                                  [sg.Column([[name, good, bad, total]], expand_x=True, pad=(40, 0), background_color=color)],
                                  [sg.VPush(background_color=color)]],
                                  background_color=color, size=(self.__labelWidth-20, self.__labelHeight), pad=10)
+
+    def __colorFromIndex(self, index):
+        if index == 0:
+            return GOLD_COLOR
+        if index == 1:
+            return SILVER_COLOR
+        if index == 2:
+            return BRONZE_COLOR
+        if index == 3:
+            return DARK_RED_COLOR
 
     def Update(self):
         event, values = self.__PSGWindow.read(0)
@@ -375,26 +393,13 @@ class QuestionAndScoreDisplay():
         self.__ansCText.update(value=ansC, font=fontStr)
         self.__ansDText.update(value=ansD, font=fontStr)
 
-    def SetScore(self, fiName, fiGood, fiBad, sName, sGood, sBad, tName, tGood, tBad, foName, foGood, foBad):
-        self.__firstPlayerName.update(fiName)
-        self.__secondPlayerName.update(sName)
-        self.__thirdPlayerName.update(tName)
-        self.__fourthPlayerName.update(foName)
+    def SetScore(self, orderedPlayers):
 
-        self.__transformAndUpdate(fiGood, self.__firstPlayerGood)
-        self.__transformAndUpdate(sGood, self.__secondPlayerGood)
-        self.__transformAndUpdate(tGood, self.__thirdPlayerGood)
-        self.__transformAndUpdate(foGood, self.__fourthPlayerGood)
-
-        self.__transformAndUpdate(fiBad, self.__firstPlayerBad)
-        self.__transformAndUpdate(sBad, self.__secondPlayerBad)
-        self.__transformAndUpdate(tBad, self.__thirdPlayerBad)
-        self.__transformAndUpdate(foBad, self.__fourthPlayerBad)
-
-        self.__transformAndUpdate(fiGood - fiBad, self.__firstPlayerTotal)
-        self.__transformAndUpdate(sGood - sBad, self.__secondPlayerTotal)
-        self.__transformAndUpdate(tGood - tBad, self.__thirdPlayerTotal)
-        self.__transformAndUpdate(foGood - foBad, self.__fourthPlayerTotal)
+        for index in range(0, NUMBER_PLAYER):
+            self.__playersElements[index]['name'].update(orderedPlayers[index].GetName())
+            self.__transformAndUpdate(orderedPlayers[index].GetGood(), self.__playersElements[index]['good'])
+            self.__transformAndUpdate(orderedPlayers[index].GetBad(), self.__playersElements[index]['bad'])
+            self.__transformAndUpdate(orderedPlayers[index].GetScore(), self.__playersElements[index]['total'])
 
         self.__questionDisplayFrame.update(visible=False)
         self.__scoreDisplayFrame.update(visible=True)
@@ -547,6 +552,9 @@ class Game():
                     for playerIndex in range(1, NUMBER_PLAYER + 1):
                         playerList.GetPlayerByOrder(playerIndex).ResetAnswered()
 
+                if not (self.__question + 1) % 3:
+                    self.__scoreAnnounce(playerList)
+
                 if self.__question == 3:
                     self.__gameStep.value = GS_FINISHED
                 else:
@@ -593,11 +601,51 @@ class Game():
     def _Speak(self, sentence:str, isQuestion:bool = True):
         self.__speakingQueue.put((sentence, isQuestion))
 
-    def SetScoreDisplay(self, fiName, fiGood, fiBad, sName, sGood, sBad, tName, tGood, tBad, foName, foGood, foBad):
-        self.__questionAndScoreDisplay.SetScore(fiName, fiGood, fiBad, sName, sGood, sBad, tName, tGood, tBad, foName, foGood, foBad)
+    def SetScoreDisplay(self, orderedPlayers):
+        self.__questionAndScoreDisplay.SetScore(orderedPlayers)
 
     def SetQuestionDisplay(self, question, ansA, ansB, ansC, ansD):
         self.__questionAndScoreDisplay.SetQuestion(question, ansA, ansB, ansC, ansD)
+
+    def __scoreAnnounce(self, playerList:Players):
+        unorderedPlayers = []
+
+        for index in range(0, NUMBER_PLAYER):
+            unorderedPlayers.append(playerList.GetPlayer(index))
+
+        orderedPlayers = []
+        annoucementString = "Voici les scores: "
+
+        for index in range(0, NUMBER_PLAYER):
+            highestScore = 0
+            highestScoreIndex = 0
+
+            for secondIndex in range(0, unorderedPlayers.__len__()):
+                if highestScore < unorderedPlayers[secondIndex].GetScore():
+                    highestScore = unorderedPlayers[secondIndex].GetScore()
+                    highestScoreIndex = secondIndex
+
+            if index == 0:
+                annoucementString += "En première position: "
+            elif index == 1:
+                annoucementString += "En deuxième position: "
+            elif index == 2:
+                annoucementString += "En troisième position: "
+            elif index == 3:
+                annoucementString += "Et en dernière position: "
+
+            annoucementString += unorderedPlayers[highestScoreIndex].GetName() +\
+            " avec " + str(unorderedPlayers[highestScoreIndex].GetGood()) + " bonne réponses et " +\
+            str(unorderedPlayers[highestScoreIndex].GetBad()) + " mauvaises réponses, pour un score de total de " +\
+            str(unorderedPlayers[highestScoreIndex].GetScore()) + " points. "
+
+            orderedPlayers.append(unorderedPlayers[highestScoreIndex])
+            unorderedPlayers.remove(unorderedPlayers[highestScoreIndex])
+
+        self.SetScoreDisplay(orderedPlayers)
+
+        self.Say(annoucementString)
+
 
 game:Game          
         
@@ -869,9 +917,23 @@ def TurretCallback(slave:Slave):
     global turret
     turret = slave
 
+####### TESTING ########
+
+def CreateDummyPlayers():
+    playerList.AddPlayer(Slave(STR, 0, dict()))
+    playerList.AddOrderedPlayer(playerList.GetPlayer(0))
+    playerList.AddPlayer(Slave(STR, 1, dict()))
+    playerList.AddOrderedPlayer(playerList.GetPlayer(1))
+    playerList.AddPlayer(Slave(STR, 2, dict()))
+    playerList.AddOrderedPlayer(playerList.GetPlayer(2))
+    playerList.AddPlayer(Slave(STR, 3, dict()))
+    playerList.AddOrderedPlayer(playerList.GetPlayer(3))
+
+########################
+
 if __name__ == "__main__":
 
-    com = SerialCTR("COM3")
+    com = SerialCTR("COM4")
 
     display = PySimpleGUIDisplay()
     
@@ -899,6 +961,9 @@ if __name__ == "__main__":
 
     speakingProcess = multiprocessing.Process(target=speakingProcessFunction, args=(game.GetSpeakingQueue(), game.GetGameStep()))
     speakingProcess.start()
+
+    if TESTING:
+        CreateDummyPlayers()
 
     while True:
         STR.Update()
