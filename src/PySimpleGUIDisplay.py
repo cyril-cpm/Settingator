@@ -39,6 +39,8 @@ class PySimpleGUIDisplay(IDisplay):
                     frameElementType, frameElementName, frameElementKey = frameElement
                     if frameElementType == IDP_BUTTON:
                         frameLayout[0].append(sg.Button(frameElementName, key=frameElementKey))
+                    elif frameElementType == IDP_PLAYER_NAME_INPUT:
+                        frameLayout[0].append(sg.Input(frameElementName, key=frameElementKey, enable_events=True, size=10))
 
                 topFrameLayout[0].append(sg.Frame(name, frameLayout))
         
@@ -116,5 +118,8 @@ class PySimpleGUIDisplay(IDisplay):
                     setting.SetValue(int(values[event]))
 
             if callable(event):
-                event(self.__PSGWindow)
+                if event in values:
+                    event(values[event])
+                else:
+                    event(self.__PSGWindow)
         return setting

@@ -144,7 +144,8 @@ class Players():
     
     def __AddToPreLayout(self, player:Player):
         frameName:str = "Player " + str(self.__numberOrderedPlayer) + " : Slave " + str(player.GetSlave().GetID())
-        display.AddPreLayout((IDP_FRAME, frameName, [(IDP_BUTTON, "target", lambda window : targetPlayer(window, player.GetOrder()))]))
+        display.AddPreLayout((IDP_FRAME, frameName, [(IDP_BUTTON, "target", lambda window : targetPlayer(window, player.GetOrder())),
+                                                     (IDP_PLAYER_NAME_INPUT, "playerName", lambda name : player.SetName(name))]))
 
     def AllAnswered(self):
         allAnswered = True
@@ -404,6 +405,8 @@ class QuestionAndScoreDisplay():
         self.__questionDisplayFrame.update(visible=False)
         self.__scoreDisplayFrame.update(visible=True)
 
+        self.__PSGWindow.read(0)
+
     def __transformAndUpdate(self, value, sgText:sg.Text):
         valueStr = ""
 
@@ -430,6 +433,7 @@ class Game():
         self.__speakingQueue = multiprocessing.Queue()
         self.__gameStepLock = multiprocessing.Lock()
         self.__gameStep = multiprocessing.Value('i', GS_INIT)
+        self.__isSpeaking = multiprocessing.Value('i', False)
         self.__finishedReadingTimestamp = 0
         self.__currentQuestionGoodAnswer = 0
         self.__accelDone = False
@@ -583,15 +587,26 @@ class Game():
 
     def GetGameStepValue(self):
         return self.__gameStep.value
-    
+
     def SetGameStep(self, gameStep):
         self.__gameStep.value = gameStep
+
+    def GetIsSpeaking(self):
+        return self.__isSpeaking
+    
+    def GetIsSpeakingValue(self):
+        return self.__isSpeaking.value
 
     def Ask(self, sentence:str):
         self._Speak(sentence, True)
 
-    def Say(self, sentence:str):
+    def Say(self, sentence:str, wait:bool = True):
         self._Speak(sentence, False)
+
+        if wait:
+            time.sleep(0.1)
+            while (self.GetIsSpeakingValue()):
+                pass
 
     def CanAnswer(self):
         gameStep = self.GetGameStepValue()
@@ -636,7 +651,7 @@ class Game():
 
             annoucementString += unorderedPlayers[highestScoreIndex].GetName() +\
             " avec " + str(unorderedPlayers[highestScoreIndex].GetGood()) + " bonne réponses et " +\
-            str(unorderedPlayers[highestScoreIndex].GetBad()) + " mauvaises réponses, pour un score de total de " +\
+            str(unorderedPlayers[highestScoreIndex].GetBad()) + " mauvaises réponses, pour un score total de " +\
             str(unorderedPlayers[highestScoreIndex].GetScore()) + " points. "
 
             orderedPlayers.append(unorderedPlayers[highestScoreIndex])
@@ -888,7 +903,7 @@ def initNotifLaser(slaveID:int):
 
 ### SPEAKING PROCESS ###
 
-def speakingProcessFunction(queue:multiprocessing.Queue, gameStep):
+def speakingProcessFunction(queue:multiprocessing.Queue, gameStep, speaking):
     engine = pyttsx3.init()
     engine.setProperty('volume', 1)
 
@@ -904,7 +919,9 @@ def speakingProcessFunction(queue:multiprocessing.Queue, gameStep):
         engine.say(sentence)
         if isQuestion:
             gameStep.value = GS_READING
+        speaking.value = True
         engine.runAndWait()
+        speaking.value = False
         if isQuestion:
             gameStep.value = GS_FINISHED_READING
 
@@ -933,7 +950,7 @@ def CreateDummyPlayers():
 
 if __name__ == "__main__":
 
-    com = SerialCTR("COM4")
+    com = SerialCTR("COM8")
 
     display = PySimpleGUIDisplay()
     
@@ -959,7 +976,7 @@ if __name__ == "__main__":
     
     game = Game()
 
-    speakingProcess = multiprocessing.Process(target=speakingProcessFunction, args=(game.GetSpeakingQueue(), game.GetGameStep()))
+    speakingProcess = multiprocessing.Process(target=speakingProcessFunction, args=(game.GetSpeakingQueue(), game.GetGameStep(), game.GetIsSpeaking()))
     speakingProcess.start()
 
     if TESTING:

@@ -7,6 +7,7 @@ IDP_BUTTON = 0x01
 IDP_INPUT = 0x02
 IDP_TEXT = 0x03
 IDP_FRAME = 0x04
+IDP_PLAYER_NAME_INPUT = 0x05
 
 class IDisplay(ABC):
     def __init__(self) -> None:
