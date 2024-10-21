@@ -7,6 +7,7 @@ import time
 import multiprocessing
 import pyttsx3
 import pygame.mixer as mx
+import openai
 
 TESTING = True
 
@@ -88,9 +89,11 @@ class Player():
     
     def IncreaseGood(self):
         self.__good += 1
+        self.__updateScore()
     
     def IncreaseFail(self):
         self.__fail += 1
+        self.__updateScore()
 
     def __updateScore(self):
         self.__score = self.__good - self.__fail
@@ -163,6 +166,9 @@ class Players():
         for player in self.__playerList:
             self.__playerList[player].Send(command)
 
+    def GetList(self):
+        return self.__playerList
+
 playerList = Players()
 
 turret:Slave
@@ -212,6 +218,36 @@ GOLD_COLOR = "#D3AF37"
 SILVER_COLOR = "#A8A9AD"
 BRONZE_COLOR = "#49371B"
 DARK_RED_COLOR = "#111111"
+
+class AIVoice():
+    def __init__(self):
+        api_key = ""
+        with open("openai_api_key.txt") as apiKeyFile:
+            api_key = apiKeyFile.read()
+
+        self.__openai = openai.OpenAI(api_key=api_key)
+
+        self.__preprompt = ""
+        with open("openai_preprompt.txt", encoding="utf-8") as prepromptFile:
+            self.__preprompt = prepromptFile.read()
+        self.__memory = []
+        self.__model = "gpt-4o-mini"
+
+    def MakeRequest(self, content:str) -> str:
+        messages = []
+        messages.append({"role": "system", "content": self.__preprompt})
+
+        for msg in self.__memory:
+            messages.append({"role": "assistant", "content": msg})
+
+        messages.append({"role": "user", "content": content})
+
+        completion = self.__openai.chat.completions.create(model=self.__model, messages=messages)
+
+        self.__memory.append(content)
+        self.__memory.append(completion.choices[0].message.content)
+
+        return completion.choices[0].message.content
 
 class QuestionAndScoreDisplay():
     def __init__(self):
@@ -438,8 +474,7 @@ class Game():
         self.__currentQuestionGoodAnswer = 0
         self.__accelDone = False
         self.__questionAndScoreDisplay = QuestionAndScoreDisplay()
-        #self.__questionAndScoreDisplay.SetScore("Bernard", 1, -3, "Jean-Dom'", 2, 17, "Bapt", 4, 4, "SheitMan", 8, 0)
-
+        self.__aiVoice = AIVoice()
 
         ### Sound Management ###
         mx.init(channels=1)
@@ -448,6 +483,9 @@ class Game():
         self.__badSound = mx.Sound("bad.wav")
         self.__waitingSound = mx.Sound("waiting.wav")
         self.__endWaitSound = mx.Sound("endWait.wav")
+
+    def MakeAIVoiceRequest(self, request:str):
+        return self.__aiVoice.MakeRequest(request)
 
     def PlayGoodSound(self):
         self.__channel.play(self.__goodSound)
@@ -487,6 +525,12 @@ class Game():
 
         self.__gameStep.value = GS_ABOUT_TO_READ
 
+        playerListString = ""
+
+        for index in range(1, NUMBER_PLAYER + 1):
+            playerListString += playerList.GetPlayerByOrder(index).GetName() + " "
+        self.Say(self.__aiVoice.MakeRequest("Présentation: les joueurs sont " + playerListString))
+
     def Update(self):
         if self.__mode == AUTO:
             if self.__gameStep.value == GS_ABOUT_TO_READ:
@@ -515,7 +559,7 @@ class Game():
 
                 
                 self.__questionAndScoreDisplay.SetQuestion(question[1], question[answerOrder[0]], question[answerOrder[1]], question[answerOrder[2]], question[answerOrder[3]])
-                questionStr = question[1] + " Réponse A: " + question[answerOrder[0]] + ", Réponse B:" + question[answerOrder[1]] + ", Réponse C: " + question[answerOrder[2]] + " Réponse D: " + question[answerOrder[3]] + " ?"
+                questionStr = question[1] + " Réponse A: " + question[answerOrder[0]] + ", Réponse B: " + question[answerOrder[1]] + ", Réponse C: " + question[answerOrder[2]] + ", Réponse D: " + question[answerOrder[3]] + " ?"
                 self.Ask(questionStr)
 
             elif self.__gameStep.value == GS_READING:
@@ -529,12 +573,19 @@ class Game():
                 self.__finishedReadingTimestamp = time.time()
                 self.__accelDone = False
 
+                if TESTING:
+                    self.__finishedReadingTimestamp -= 10
+
             elif self.__gameStep.value == GS_WAITING:
                 if time.time() - self.__finishedReadingTimestamp >= 10 or playerList.AllAnswered():
                     self.PlayEndWaitSound()
                     playerList.SendAll("BLUE FROZEN")
                     print("starting rewarding")
-                    self.__gameStep.value = GS_FINISHED_REWARDING #GS_REWARDING
+
+                    if TESTING:
+                        self.__gameStep.value = GS_FINISHED_REWARDING #GS_REWARDING
+                    else:
+                        self.__gameStep.value = GS_REWARDING
                 
                 elif not self.__accelDone and time.time() - self.__finishedReadingTimestamp >= 7 and not TESTING:
                     for playerIndex in range(1, NUMBER_PLAYER + 1):
@@ -556,17 +607,18 @@ class Game():
                     for playerIndex in range(1, NUMBER_PLAYER + 1):
                         playerList.GetPlayerByOrder(playerIndex).ResetAnswered()
 
-                if not (self.__question + 1) % 3:
+                if (self.__question + 1) == 3:
                     self.__scoreAnnounce(playerList)
 
-                if self.__question == 3:
+                if self.__question == 5:
                     self.__gameStep.value = GS_FINISHED
                 else:
                     self.__question += 1
                     self.__gameStep.value = GS_ABOUT_TO_READ
 
             elif self.__gameStep.value == GS_FINISHED:
-                self.Say("Les questions sont finies")
+                self.__scoreAnnounce(playerList, True)
+                self.__gameStep.value = GS_INIT
             
         elif self.__mode == MANUAL:
             pass
@@ -622,14 +674,23 @@ class Game():
     def SetQuestionDisplay(self, question, ansA, ansB, ansC, ansD):
         self.__questionAndScoreDisplay.SetQuestion(question, ansA, ansB, ansC, ansD)
 
-    def __scoreAnnounce(self, playerList:Players):
+    def __scoreAnnounce(self, playerList:Players, final:bool = False):
         unorderedPlayers = []
 
+        requestString = ""
+        if final:
+            requestString = "Score Final: "
+        else:
+            requestString = "Score: "
+
         for index in range(0, NUMBER_PLAYER):
-            unorderedPlayers.append(playerList.GetPlayer(index))
+            thePlayer:Player = playerList.GetPlayer(index)
+            unorderedPlayers.append(thePlayer)
+
+            requestString += thePlayer.GetName() + ": bonnes réponses: " + str(thePlayer.GetGood()) +\
+            " mauvaises réponses: " + str(thePlayer.GetBad()) + " total: " + str(thePlayer.GetScore()) + ". "
 
         orderedPlayers = []
-        annoucementString = "Voici les scores: "
 
         for index in range(0, NUMBER_PLAYER):
             highestScore = 0
@@ -640,22 +701,10 @@ class Game():
                     highestScore = unorderedPlayers[secondIndex].GetScore()
                     highestScoreIndex = secondIndex
 
-            if index == 0:
-                annoucementString += "En première position: "
-            elif index == 1:
-                annoucementString += "En deuxième position: "
-            elif index == 2:
-                annoucementString += "En troisième position: "
-            elif index == 3:
-                annoucementString += "Et en dernière position: "
-
-            annoucementString += unorderedPlayers[highestScoreIndex].GetName() +\
-            " avec " + str(unorderedPlayers[highestScoreIndex].GetGood()) + " bonne réponses et " +\
-            str(unorderedPlayers[highestScoreIndex].GetBad()) + " mauvaises réponses, pour un score total de " +\
-            str(unorderedPlayers[highestScoreIndex].GetScore()) + " points. "
-
             orderedPlayers.append(unorderedPlayers[highestScoreIndex])
             unorderedPlayers.remove(unorderedPlayers[highestScoreIndex])
+
+        annoucementString = self.__aiVoice.MakeRequest(requestString)
 
         self.SetScoreDisplay(orderedPlayers)
 
@@ -695,25 +744,59 @@ class Target():
         self.__targetDoneTimestamp = 0
         self.__allRewarded = False
         self.__currentRewardingPlayer = 0
+        self.__kiddingSentence = ""
+        self.__randomKidding = False
+        self.__shouldKidding = False
 
     def Reward(self, goodAnswer:int) -> bool:
         if not self.__allRewarded:
+            if TESTING and self.__targetDone == False:
+                self.__targetDone = True
+                self.__targetDoneTimestamp = time.time()
+
             if not self.__targetDone and not self.__targetting:
                 targetPlayer(None, self.__currentRewardingPlayer+1)
             if self.__targetDone:
+
+                if self.__randomKidding == False:
+                    self.__randomKidding = True
+
+                    if random.randint(0, 2999) % 3 == 0:
+                        self.__shouldKidding = True
+                        playerToReward:Player = playerList.GetPlayerByOrder(self.__currentRewardingPlayer+1)
+                        shoot = playerToReward.GetLastAnswer() != goodAnswer
+
+                        requestString = "Récompense: " + playerToReward.GetName() + " "
+                        if shoot:
+                            requestString += "se fait tirer dessus."
+                        else:
+                            requestString += "ne se fait pas tirer dessus."
+
+                        self.__kiddingSentence = game.MakeAIVoiceRequest(requestString)
+
+
                 if time.time() - self.__targetDoneTimestamp > 3:
                     playerToReward:Player = playerList.GetPlayerByOrder(self.__currentRewardingPlayer+1)
-                    shoot = playerToReward.GetLastAnswer() == goodAnswer
+                    shoot = playerToReward.GetLastAnswer() != goodAnswer
 
-                    if shoot:
+                    if not shoot:
                         playerToReward.IncreaseGood()
                         playerToReward.Send("GREEN GOOD")
                         game.PlayGoodSound()
                     else:
                         playerToReward.IncreaseFail()
                         playerToReward.Send("RED BAD")
-                        turret.SendSettingUpdateByName("SHOOT")
+                        if not TESTING:
+                            turret.SendSettingUpdateByName("SHOOT")
+ 
                         game.PlayBadSound()
+
+                    if self.__shouldKidding:
+                        time.sleep(0.5)
+                        game.Say(self.__kiddingSentence)
+                    self.__kiddingSentence = ""
+                    self.__shouldKidding = False
+                    self.__randomKidding = False
 
                     self.__currentRewardingPlayer += 1
                     self.__targetDone = False
@@ -950,7 +1033,7 @@ def CreateDummyPlayers():
 
 if __name__ == "__main__":
 
-    com = SerialCTR("COM8")
+    com = SerialCTR("COM6")
 
     display = PySimpleGUIDisplay()
     
