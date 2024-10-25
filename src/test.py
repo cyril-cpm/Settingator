@@ -9,8 +9,6 @@ import pyttsx3
 import pygame.mixer as mx
 import openai
 
-TESTING = True
-
 com:SerialCTR
 
 display:PySimpleGUIDisplay
@@ -20,6 +18,8 @@ STR:Settingator
 ###   GAME SYSTEM    ###
 
 NUMBER_PLAYER = 4
+QUESTION_FILENAME = "question.csv"
+TESTING = False
 
 GS_INIT = 0
 GS_WAITING_TO_START = 1
@@ -511,7 +511,7 @@ class Game():
 
         allQuestion = []
         
-        with open("question.csv", encoding="utf-8") as questionFile:
+        with open(QUESTION_FILENAME, encoding="utf-8") as questionFile:
             csvContent = csv.reader(questionFile, delimiter=';')
 
             for row in csvContent:
@@ -1033,7 +1033,7 @@ def CreateDummyPlayers():
 
 if __name__ == "__main__":
 
-    com = SerialCTR("COM6")
+    com = SerialCTR("COM8")
 
     display = PySimpleGUIDisplay()
     
@@ -1048,8 +1048,6 @@ if __name__ == "__main__":
     STR.SendBridgeInitRequest(1, b'Turret', TurretCallback)
     STR.SendBridgeInitRequest(2, b'Desk', DeskCallback, NUMBER_PLAYER)
 
-    display.AddPreLayout(startGameAutoButton)
-    display.AddPreLayout(startGameManualButton)
     display.AddPreLayout(InitPlayerButton)
 
     display.AddPreLayout(testDisplayScoreButton)
