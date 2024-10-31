@@ -47,6 +47,8 @@ class Player():
         self.__answeredCurrentQuestion = False
         self.__lastAnswer = None
         self.__name = "non défini"
+        self.__frameElementPtr:Pointer = Pointer()
+        self.__nameElementPtr:Pointer = Pointer()
 
     def GetName(self):
         return self.__name
@@ -112,6 +114,18 @@ class Player():
         self.__fail = bad
         self.__updateScore()
 
+    def GetFrameElementPtr(self):
+        return self.__frameElementPtr
+    
+    def SetFrameBGColor(self, color):
+        self.__frameElementPtr.GetValue().TKFrame.configure(background=color)
+
+    def GetNameElementPtr(self):
+        return self.__nameElementPtr
+    
+    def ReWriteName(self):
+        self.__nameElementPtr.GetValue().update(self.__name)
+
 class Players():
     def __init__(self):
         self.__playerList = dict()
@@ -152,8 +166,12 @@ class Players():
     
     def __AddToPreLayout(self, player:Player):
         frameName:str = "Player " + str(self.__numberOrderedPlayer) + " : Slave " + str(player.GetSlave().GetID())
-        display.AddPreLayout((IDP_FRAME, frameName, [(IDP_BUTTON, "target", lambda window : targetPlayer(window, player.GetOrder())),
-                                                     (IDP_PLAYER_NAME_INPUT, player, lambda name : player.SetName(name))]))
+        display.AddPreLayout(PreLayoutElement(IDP_FRAME, frameName,
+                                                [
+                                                    PreLayoutElement(IDP_BUTTON, "target", lambda window : targetPlayer(window, player.GetOrder())),
+                                                    PreLayoutElement(IDP_INPUT, player.GetName(), lambda name : player.SetName(name), player.GetNameElementPtr())
+                                                ],
+                                               player.GetFrameElementPtr()))
 
     def AllAnswered(self):
         allAnswered = True
@@ -173,6 +191,16 @@ class Players():
 
     def GetList(self):
         return self.__playerList
+    
+    def SetAllBGColor(self, color):
+
+        for player in self.__playerList:
+            self.__playerList[player].SetFrameBGColor(color)
+
+    def ReWriteName(self):
+
+        for player in self.__playerList:
+            self.__playerList[player].ReWriteName()
 
 playerList = Players()
 
@@ -198,13 +226,21 @@ def playerPressButton(slaveID:int, button:int):
         if player.CanAnswer() and game.CanAnswer():
             if button == RED_BUTTON:
                 player.SetLastAnswer(0)
+                player.SetFrameBGColor(RED_COLOR)
+
             elif button == GREEN_BUTTON:                
                 player.SetLastAnswer(1)
+                player.SetFrameBGColor(GREEN_COLOR)
+
             elif button == YELLOW_BUTTON:
                 player.SetLastAnswer(2)
+                player.SetFrameBGColor(YELLOW_COLOR)
+
             elif button == BLUE_BUTTON:
                 player.SetLastAnswer(3)
+                player.SetFrameBGColor(BLUE_COLOR)
 
+            display.Update()
             player.Send("BLUE FROZEN")
 
 
@@ -223,6 +259,7 @@ GOLD_COLOR = "#D3AF37"
 SILVER_COLOR = "#A8A9AD"
 BRONZE_COLOR = "#49371B"
 DARK_RED_COLOR = "#111111"
+DEFAULT_BG_COLOR = "#64778D"
 
 class AIVoice():
     def __init__(self):
@@ -513,6 +550,7 @@ class Game():
         display.RemovePreLayout(startGameAutoButton)
         display.RemovePreLayout(startGameManualButton)
         display.UpdateLayout(STR.GetSlaveSettings())
+        playerList.ReWriteName()
 
         allQuestion = []
         
@@ -540,6 +578,7 @@ class Game():
         if self.__mode == AUTO:
             if self.__gameStep.value == GS_ABOUT_TO_READ:
                 playerList.SendAll("BLUE LOADING")
+                playerList.SetAllBGColor(DEFAULT_BG_COLOR)
                 answerOrder = dict()
                 answerOrdered = False
                 index = 0
@@ -949,12 +988,12 @@ def notifLaser(slaveID:int):
 def startGameAuto(window:sg.Window):
     game.Start(AUTO)
 
-startGameAutoButton = (IDP_BUTTON, "startGameAuto", startGameAuto)
+startGameAutoButton = PreLayoutElement(IDP_BUTTON, "startGameAuto", startGameAuto)
 
 def startGameManual(window:sg.Window):
     game.Start(MANUAL)
 
-startGameManualButton = (IDP_BUTTON, "startGameManual", startGameManual)
+startGameManualButton = PreLayoutElement(IDP_BUTTON, "startGameManual", startGameManual)
 
 def initPlayer(window:sg.Window):
     STR.AddNotifCallback(0x05, initNotifLaser)
@@ -962,19 +1001,19 @@ def initPlayer(window:sg.Window):
     turret.SendSettingUpdateByName("SPEED", 255)
     turret.SendSettingUpdateByName("DROITE")
 
-InitPlayerButton = (IDP_BUTTON, "initPlayer", initPlayer)
+InitPlayerButton = PreLayoutElement(IDP_BUTTON, "initPlayer", initPlayer)
 
 #TEST#
 
 def testDisplayQuestion(window:sg.Window):
     game.SetQuestionDisplay("Quelle est la taille du continum espace temps dans la série blargblargblarg ?", "La réponse A", "La grosse réponse B", "repC", "Et non pas la D")
 
-testDisplayQuestionButton = (IDP_BUTTON, "testDisplayQuestion", testDisplayQuestion)
+testDisplayQuestionButton = PreLayoutElement(IDP_BUTTON, "testDisplayQuestion", testDisplayQuestion)
 
 def testDisplayScore(window:sg.Window):
     game.TestScoreAnnounce()
 
-testDisplayScoreButton = (IDP_BUTTON, "testDisplayScore", testDisplayScore)
+testDisplayScoreButton = PreLayoutElement(IDP_BUTTON, "testDisplayScore", testDisplayScore)
 
 ######
 
@@ -1047,6 +1086,13 @@ def CreateDummyPlayers():
     playerList.AddOrderedPlayer(playerList.GetPlayer(3))
     playerList.GetPlayer(3).SetScore(1, 2)
 
+def testButtonColor(window):
+    playerPressButton(0, RED_BUTTON)
+    playerPressButton(1, GREEN_BUTTON)
+    playerPressButton(2, BLUE_BUTTON)
+    playerPressButton(3, YELLOW_BUTTON)
+    display.Update()
+
 ########################
 
 if __name__ == "__main__":
@@ -1074,6 +1120,10 @@ if __name__ == "__main__":
     display.AddPreLayout(testDisplayScoreButton)
     display.AddPreLayout(testDisplayQuestionButton)
 
+    if TESTING:
+        display.AddPreLayout(PreLayoutElement(IDP_BUTTON, "test button Color", testButtonColor))
+
+
     display.UpdateLayout(None)
     
     game = Game()
@@ -1083,6 +1133,7 @@ if __name__ == "__main__":
 
     if TESTING:
         CreateDummyPlayers()
+
 
     while True:
         STR.Update()

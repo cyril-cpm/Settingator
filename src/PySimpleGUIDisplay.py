@@ -20,29 +20,43 @@ class PySimpleGUIDisplay(IDisplay):
     def RemovePreLayout(self, element:tuple) -> None:
         self.__PreLayout.remove(element)
 
+    def __UpdatePrelayout(self, layout, elementList):
+        
+        for element in elementList:
+            type:int = element.GetType()
+            name:str = element.GetName()
+            key = element.GetKey()
+            ret:Pointer = element.GetRet()
+
+            newElement:sg.Element
+
+            if type == IDP_BUTTON:
+                newElement = sg.Button(name, key=key)
+
+            elif type == IDP_INPUT:
+                newElement = sg.Input(name, key=key, enable_events=True, size=10)
+
+            elif type == IDP_TEXT:
+                newElement = sg.Text(name, key=key)
+
+            elif type == IDP_FRAME:
+                frameLayout = [[]]
+                
+                self.__UpdatePrelayout(frameLayout, key)
+
+                newElement = sg.Frame(name, frameLayout)
+
+            if ret != None:
+                ret.SetValue(newElement)
+
+            layout[0].append(newElement)
+
     def UpdateLayout(self, slaveSettings:dict = None) -> None:
         self.__PSGLayout = [[],[]]
 
         topFrameLayout = [[]]
 
-        for element in self.__PreLayout:
-            type, name, key = element
-            if type == IDP_BUTTON:
-                topFrameLayout[0].append(sg.Button(name, key=key))
-            elif type == IDP_INPUT:
-                topFrameLayout[0].append(sg.Input(name, key=key))
-            elif type == IDP_TEXT:
-                topFrameLayout[0].append(sg.Text(name, key=key))
-            elif type == IDP_FRAME:
-                frameLayout = [[]]
-                for frameElement in key:
-                    frameElementType, frameElementName, frameElementKey = frameElement
-                    if frameElementType == IDP_BUTTON:
-                        frameLayout[0].append(sg.Button(frameElementName, key=frameElementKey))
-                    elif frameElementType == IDP_PLAYER_NAME_INPUT:
-                        frameLayout[0].append(sg.Input(frameElementName.GetName(), key=frameElementKey, enable_events=True, size=10))
-
-                topFrameLayout[0].append(sg.Frame(name, frameLayout))
+        self.__UpdatePrelayout(topFrameLayout, self.__PreLayout)
         
         self.__PSGLayout[0].append(sg.Frame(title="", border_width=0, layout=topFrameLayout, vertical_alignment="top", expand_x=True, expand_y=True))
 
