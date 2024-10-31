@@ -40,7 +40,7 @@ class PySimpleGUIDisplay(IDisplay):
                     if frameElementType == IDP_BUTTON:
                         frameLayout[0].append(sg.Button(frameElementName, key=frameElementKey))
                     elif frameElementType == IDP_PLAYER_NAME_INPUT:
-                        frameLayout[0].append(sg.Input(frameElementName, key=frameElementKey, enable_events=True, size=10))
+                        frameLayout[0].append(sg.Input(frameElementName.GetName(), key=frameElementKey, enable_events=True, size=10))
 
                 topFrameLayout[0].append(sg.Frame(name, frameLayout))
         

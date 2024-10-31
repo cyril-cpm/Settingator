@@ -18,8 +18,8 @@ STR:Settingator
 ###   GAME SYSTEM    ###
 
 NUMBER_PLAYER = 4
-QUESTION_FILENAME = "QuestionsMakloufi.csv"
-TESTING = False
+QUESTION_FILENAME = "question.csv"
+TESTING = True
 
 GS_INIT = 0
 GS_WAITING_TO_START = 1
@@ -46,7 +46,7 @@ class Player():
         self.__order = 0
         self.__answeredCurrentQuestion = False
         self.__lastAnswer = None
-        self.__name = ""
+        self.__name = "non défini"
 
     def GetName(self):
         return self.__name
@@ -106,6 +106,11 @@ class Player():
     
     def GetBad(self):
         return self.__fail
+    
+    def SetScore(self, good, bad):
+        self.__good = good
+        self.__fail = bad
+        self.__updateScore()
 
 class Players():
     def __init__(self):
@@ -148,7 +153,7 @@ class Players():
     def __AddToPreLayout(self, player:Player):
         frameName:str = "Player " + str(self.__numberOrderedPlayer) + " : Slave " + str(player.GetSlave().GetID())
         display.AddPreLayout((IDP_FRAME, frameName, [(IDP_BUTTON, "target", lambda window : targetPlayer(window, player.GetOrder())),
-                                                     (IDP_PLAYER_NAME_INPUT, "playerName", lambda name : player.SetName(name))]))
+                                                     (IDP_PLAYER_NAME_INPUT, player, lambda name : player.SetName(name))]))
 
     def AllAnswered(self):
         allAnswered = True
@@ -671,6 +676,9 @@ class Game():
     def SetScoreDisplay(self, orderedPlayers):
         self.__questionAndScoreDisplay.SetScore(orderedPlayers)
 
+    def TestScoreAnnounce(self):
+        self.__scoreAnnounce(playerList)
+
     def SetQuestionDisplay(self, question, ansA, ansB, ansC, ansD):
         self.__questionAndScoreDisplay.SetQuestion(question, ansA, ansB, ansC, ansD)
 
@@ -687,13 +695,10 @@ class Game():
             thePlayer:Player = playerList.GetPlayer(index)
             unorderedPlayers.append(thePlayer)
 
-            requestString += thePlayer.GetName() + ": bonnes réponses: " + str(thePlayer.GetGood()) +\
-            " mauvaises réponses: " + str(thePlayer.GetBad()) + " total: " + str(thePlayer.GetScore()) + ". "
-
         orderedPlayers = []
 
         for index in range(0, NUMBER_PLAYER):
-            highestScore = 0
+            highestScore = -100
             highestScoreIndex = 0
 
             for secondIndex in range(0, unorderedPlayers.__len__()):
@@ -702,6 +707,12 @@ class Game():
                     highestScoreIndex = secondIndex
 
             orderedPlayers.append(unorderedPlayers[highestScoreIndex])
+
+            requestString += unorderedPlayers[highestScoreIndex].GetName() +\
+                    ": bonnes réponses: " + str(unorderedPlayers[highestScoreIndex].GetGood()) +\
+                    " mauvaises réponses: " + str(unorderedPlayers[highestScoreIndex].GetBad()) +\
+                    " total: " + str(unorderedPlayers[highestScoreIndex].GetScore()) + ". "
+
             unorderedPlayers.remove(unorderedPlayers[highestScoreIndex])
 
         annoucementString = self.__aiVoice.MakeRequest(requestString)
@@ -961,7 +972,7 @@ def testDisplayQuestion(window:sg.Window):
 testDisplayQuestionButton = (IDP_BUTTON, "testDisplayQuestion", testDisplayQuestion)
 
 def testDisplayScore(window:sg.Window):
-    game.SetScoreDisplay("Bernard", 1, -3, "Jean-Dom'", 2, 17, "Bapt", 4, 4, "SheitMan", 8, 0)
+    game.TestScoreAnnounce()
 
 testDisplayScoreButton = (IDP_BUTTON, "testDisplayScore", testDisplayScore)
 
@@ -1022,18 +1033,25 @@ def TurretCallback(slave:Slave):
 def CreateDummyPlayers():
     playerList.AddPlayer(Slave(STR, 0, dict()))
     playerList.AddOrderedPlayer(playerList.GetPlayer(0))
+    playerList.GetPlayer(0).SetScore(0, 3)
+
     playerList.AddPlayer(Slave(STR, 1, dict()))
     playerList.AddOrderedPlayer(playerList.GetPlayer(1))
+    playerList.GetPlayer(1).SetScore(2, 1)
+
     playerList.AddPlayer(Slave(STR, 2, dict()))
     playerList.AddOrderedPlayer(playerList.GetPlayer(2))
+    playerList.GetPlayer(2).SetScore(3, 0)
+
     playerList.AddPlayer(Slave(STR, 3, dict()))
     playerList.AddOrderedPlayer(playerList.GetPlayer(3))
+    playerList.GetPlayer(3).SetScore(1, 2)
 
 ########################
 
 if __name__ == "__main__":
 
-    com = SerialCTR("COM8")
+    com = SerialCTR("COM6")
 
     display = PySimpleGUIDisplay()
     
