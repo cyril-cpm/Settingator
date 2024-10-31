@@ -18,7 +18,7 @@ STR:Settingator
 ###   GAME SYSTEM    ###
 
 NUMBER_PLAYER = 4
-QUESTION_FILENAME = "question.csv"
+QUESTION_FILENAME = "QuestionsMakloufi.csv"
 TESTING = False
 
 GS_INIT = 0
@@ -1049,6 +1049,9 @@ if __name__ == "__main__":
     STR.SendBridgeInitRequest(2, b'Desk', DeskCallback, NUMBER_PLAYER)
 
     display.AddPreLayout(InitPlayerButton)
+    if TESTING:
+        display.AddPreLayout(startGameAutoButton)
+        display.AddPreLayout(startGameManualButton)
 
     display.AddPreLayout(testDisplayScoreButton)
     display.AddPreLayout(testDisplayQuestionButton)
