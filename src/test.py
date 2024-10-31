@@ -30,6 +30,8 @@ GS_REWARDING = 5
 GS_FINISHED = 6
 GS_FINISHED_READING = 7
 GS_FINISHED_REWARDING = 8
+GS_INTRODUCING = 9
+GS_SCORE_ANNOUNCING = 10
 
 RED_BUTTON = 13
 GREEN_BUTTON = 12
@@ -517,6 +519,7 @@ class Game():
         self.__accelDone = False
         self.__questionAndScoreDisplay = QuestionAndScoreDisplay()
         self.__aiVoice = AIVoice()
+        self.__nextStepAfterScore = 0
 
         ### Sound Management ###
         mx.init(channels=1)
@@ -566,12 +569,13 @@ class Game():
             questionNo = random.randint(0, allQuestion.__len__() - 1)
             self.__questionPool.append(allQuestion[questionNo])
 
-        self.__gameStep.value = GS_ABOUT_TO_READ
+        self.__gameStep.value = GS_INTRODUCING
 
         playerListString = ""
 
         for index in range(1, NUMBER_PLAYER + 1):
             playerListString += playerList.GetPlayerByOrder(index).GetName() + " "
+
         self.Say(self.__aiVoice.MakeRequest("Présentation: les joueurs sont " + playerListString))
 
     def Update(self):
@@ -605,9 +609,11 @@ class Game():
                 self.__questionAndScoreDisplay.SetQuestion(question[1], question[answerOrder[0]], question[answerOrder[1]], question[answerOrder[2]], question[answerOrder[3]])
                 questionStr = question[1] + " Réponse A: " + question[answerOrder[0]] + ", Réponse B: " + question[answerOrder[1]] + ", Réponse C: " + question[answerOrder[2]] + ", Réponse D: " + question[answerOrder[3]] + " ?"
                 self.Ask(questionStr)
+                self.__gameStep.value = GS_READING
 
             elif self.__gameStep.value == GS_READING:
-                pass
+                if self.__isSpeaking.value == False:
+                    self.__gameStep.value = GS_FINISHED_READING
 
             elif self.__gameStep.value == GS_FINISHED_READING:
                 self.PlayWaitingSound()
@@ -653,17 +659,29 @@ class Game():
 
                 if (self.__question + 1) == 3:
                     self.__scoreAnnounce(playerList)
-
-                if self.__question == 5:
-                    self.__gameStep.value = GS_FINISHED
+                    self.__gameStep.value = GS_SCORE_ANNOUNCING
+                    self.__nextStepAfterScore = GS_ABOUT_TO_READ
                 else:
-                    self.__question += 1
                     self.__gameStep.value = GS_ABOUT_TO_READ
 
+                if self.__question == 5:
+                    self.__scoreAnnounce(playerList, True)
+                    self.__gameStep.value = GS_SCORE_ANNOUNCING
+                    self.__nextStepAfterScore = GS_FINISHED
+                else:
+                    self.__question += 1
+
             elif self.__gameStep.value == GS_FINISHED:
-                self.__scoreAnnounce(playerList, True)
                 self.__gameStep.value = GS_INIT
             
+            elif self.__gameStep.value == GS_INTRODUCING:
+                if self.__isSpeaking.value == False:
+                    self.__gameStep.value = GS_ABOUT_TO_READ
+
+            elif self.__gameStep.value == GS_SCORE_ANNOUNCING:
+                if self.__isSpeaking.value == False:
+                    self.__gameStep.value = self.__nextStepAfterScore
+
         elif self.__mode == MANUAL:
             pass
 
@@ -699,17 +717,13 @@ class Game():
     def Say(self, sentence:str, wait:bool = True):
         self._Speak(sentence, False)
 
-        if wait:
-            time.sleep(0.1)
-            while (self.GetIsSpeakingValue()):
-                pass
-
     def CanAnswer(self):
         gameStep = self.GetGameStepValue()
 
         return (gameStep == GS_READING or gameStep == GS_FINISHED_READING or gameStep == GS_WAITING)
 
     def _Speak(self, sentence:str, isQuestion:bool = True):
+        self.__isSpeaking.value = True
         self.__speakingQueue.put((sentence, isQuestion))
 
     def SetScoreDisplay(self, orderedPlayers):
@@ -727,8 +741,10 @@ class Game():
         requestString = ""
         if final:
             requestString = "Score Final: "
+            self.__nextStepAfterScore = GS_ABOUT_TO_READ
         else:
             requestString = "Score: "
+            self.__nextStepAfterScore = GS_INIT
 
         for index in range(0, NUMBER_PLAYER):
             thePlayer:Player = playerList.GetPlayer(index)
@@ -758,6 +774,7 @@ class Game():
 
         self.SetScoreDisplay(orderedPlayers)
 
+        self.__gameStep.value = GS_SCORE_ANNOUNCING
         self.Say(annoucementString)
 
 
@@ -1050,13 +1067,9 @@ def speakingProcessFunction(queue:multiprocessing.Queue, gameStep, speaking):
     while True:
         sentence, isQuestion = queue.get()
         engine.say(sentence)
-        if isQuestion:
-            gameStep.value = GS_READING
         speaking.value = True
         engine.runAndWait()
         speaking.value = False
-        if isQuestion:
-            gameStep.value = GS_FINISHED_READING
 
 ########################
 
