@@ -43,7 +43,7 @@ class Player():
         self.__score = 0
         self.__good = 0
         self.__bonus = 0
-        self.__fail = 0
+        self.__bad = 0
         self.__slave = None
         self.__order = 0
         self.__answeredCurrentQuestion = False
@@ -51,6 +51,8 @@ class Player():
         self.__name = "non défini"
         self.__frameElementPtr:Pointer = Pointer()
         self.__nameElementPtr:Pointer = Pointer()
+        self.__goodTextPtr:Pointer = Pointer()
+        self.__badTextPtr:Pointer = Pointer()
 
     def GetName(self):
         return self.__name
@@ -96,11 +98,13 @@ class Player():
         self.__updateScore()
     
     def IncreaseFail(self):
-        self.__fail += 1
+        self.__bad += 1
         self.__updateScore()
 
     def __updateScore(self):
-        self.__score = self.__good - self.__fail
+        self.__score = self.__good - self.__bad
+        self.__goodTextPtr.GetValue().update("Good: " + str(self.__good))
+        self.__badTextPtr.GetValue().update("Bad: " + str(self.__bad))
 
     def GetScore(self):
         return self.__score
@@ -109,11 +113,11 @@ class Player():
         return self.__good
     
     def GetBad(self):
-        return self.__fail
+        return self.__bad
     
     def SetScore(self, good, bad):
         self.__good = good
-        self.__fail = bad
+        self.__bad = bad
         self.__updateScore()
 
     def GetFrameElementPtr(self):
@@ -127,6 +131,12 @@ class Player():
     
     def ReWriteName(self):
         self.__nameElementPtr.GetValue().update(self.__name)
+
+    def GetGoodTextPtr(self):
+        return self.__goodTextPtr
+    
+    def GetBadTextPtr(self):
+        return self.__badTextPtr
 
 class Players():
     def __init__(self):
@@ -171,7 +181,9 @@ class Players():
         display.AddPreLayout(PreLayoutElement(IDP_FRAME, frameName,
                                                 [
                                                     PreLayoutElement(IDP_BUTTON, "target", lambda window : targetPlayer(window, player.GetOrder())),
-                                                    PreLayoutElement(IDP_INPUT, player.GetName(), lambda name : player.SetName(name), player.GetNameElementPtr())
+                                                    PreLayoutElement(IDP_INPUT, player.GetName(), lambda name : player.SetName(name), player.GetNameElementPtr()),
+                                                    PreLayoutElement(IDP_TEXT, "Good: 0", None, player.GetGoodTextPtr()),
+                                                    PreLayoutElement(IDP_TEXT, "Bad: 0", None, player.GetBadTextPtr())
                                                 ],
                                                player.GetFrameElementPtr()))
 
