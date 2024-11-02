@@ -823,11 +823,23 @@ class Target():
         self.__targetDoneTimestamp = 0
         self.__allRewarded = False
         self.__currentRewardingPlayer = 0
+        self.__currentRewardingPlayerIncrementation = +1
         self.__kiddingSentence = ""
         self.__randomKidding = False
         self.__shouldKidding = False
 
     def Reward(self, goodAnswer:int) -> bool:
+        if self.__firstRewardCall:
+            self.__firstRewardCall = False
+
+            if self.__turretPos >= NUMBER_PLAYER / 2:
+                self.__currentRewardingPlayerIncrementation = -1
+                self.__currentRewardingPlayer = NUMBER_PLAYER - 1
+
+            else:
+                self.__currentRewardingPlayerIncrementation = +1
+                self.__currentRewardingPlayer = 0
+
         if not self.__allRewarded:
             if TESTING and self.__targetDone == False:
                 self.__targetDone = True
@@ -877,14 +889,18 @@ class Target():
                     self.__shouldKidding = False
                     self.__randomKidding = False
 
-                    self.__currentRewardingPlayer += 1
+                    self.__currentRewardingPlayer += self.__currentRewardingPlayerIncrementation
                     self.__targetDone = False
 
-                    if self.__currentRewardingPlayer == NUMBER_PLAYER:
+                    if self.__currentRewardingPlayer == NUMBER_PLAYER or self.__currentRewardingPlayer == -1:
                         self.__allRewarded = True
-                        self.__currentRewardingPlayer = 0
+
         else:
             self.__allRewarded = False
+
+
+        if self.__allRewarded:
+            self.__firstRewardCall = True
 
         return self.__allRewarded
 
