@@ -1137,11 +1137,10 @@ def testButtonColor(window):
 ########################
 
 if __name__ == "__main__":
-
-    com = SerialCTR("COM6")
+    com = SerialCTR(PySimpleGUIDisplay.SelectCOMPort(SerialCTR))
 
     display = PySimpleGUIDisplay()
-    
+
     STR = Settingator(com, display)
 
     STR.AddNotifCallback(RED_BUTTON, lambda slaveID : playerPressButton(slaveID, RED_BUTTON))

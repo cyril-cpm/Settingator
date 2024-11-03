@@ -137,3 +137,26 @@ class PySimpleGUIDisplay(IDisplay):
                 else:
                     event(self.__PSGWindow)
         return setting
+    
+    def SelectCOMPort(serialCTR) -> str:
+        portList = serialCTR.GetCOMPortList()
+
+        combo = sg.Combo(portList, default_value=portList[portList.__len__()-1] if portList.__len__() > 0 else "", expand_x=True, key="COM")
+        button = sg.Button("Sélectionner", key="select_button")
+
+        layout = [
+            [combo],
+            [button]
+            ]
+        
+        portSelectionWindow = sg.Window("COM port selection",  layout, finalize=True)
+
+        selecting = True
+
+        while selecting:
+            event, values = portSelectionWindow.read(0)
+
+            if event != sg.TIMEOUT_KEY:
+                if event == "select_button":
+                    portSelectionWindow.close()
+                    return values["COM"]

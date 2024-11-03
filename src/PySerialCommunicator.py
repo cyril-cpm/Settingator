@@ -4,10 +4,13 @@ import serial
 import serial.tools.list_ports
 
 
-def GetPortList():
+def GetCOMPortList() -> list:
     ports = list(serial.tools.list_ports.comports())
+    portList = []
     for port in ports:
-        print(port.device)
+        portList.append(port.device)
+
+    return portList
 
 class PySerial(ISerial):
     def __init__(self, port:str) -> None:
@@ -36,7 +39,7 @@ class PySerial(ISerial):
         return self.__readBuffer.__len__()
 
 class SerialCTR(ICTR):
-    def __init__(self, port:str) -> None:
+    def __init__(self, port:str="NULL") -> None:
         super().__init__()
         self.__port = port
         self.__serialBuffer = bytearray()
@@ -69,4 +72,7 @@ class SerialCTR(ICTR):
                     self._receive(Message(self.__serialBuffer[:msgSize]))
                     self.__serialBuffer = self.__serialBuffer[msgSize:]
         return
+    
+    def GetCOMPortList() -> list:
+        return GetCOMPortList()
     
