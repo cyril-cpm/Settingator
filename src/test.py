@@ -34,7 +34,7 @@ GS_FINISHED = 6
 GS_FINISHED_READING = 7
 GS_FINISHED_REWARDING = 8
 GS_INTRODUCING = 9
-GS_SCORE_ANNOUNCING = 10
+GS_SPEAKING = 10
 
 RED_BUTTON = 13
 GREEN_BUTTON = 12
@@ -257,6 +257,7 @@ class Players(IRefreshable):
 
     def ResetPlayer(self) -> None:
         for player in self.__playerList:
+            self.__playerList[player].Send("GREEN LOADING")
             display.RemovePreLayout(self.__playerList[player].GetPrelayout())
             self.__playerList[player].PrepareToDestroy()
 
@@ -585,7 +586,7 @@ class Game():
         self.__questionAndScoreDisplay = QuestionAndScoreDisplay()
         display.AddStuffToClose(self.__questionAndScoreDisplay)
         self.__aiVoice = AIVoice()
-        self.__nextStepAfterScore = 0
+        self.__nextStepAfterSpeak = 0
         self.__isRunning = True
 
         ### Sound Management ###
@@ -702,7 +703,7 @@ class Game():
                     print("starting rewarding")
 
                     if TESTING:
-                        self.__gameStep.value = GS_FINISHED_REWARDING #GS_REWARDING
+                        self.__gameStep.value = GS_REWARDING
                     else:
                         self.__gameStep.value = GS_REWARDING
                 
@@ -717,7 +718,11 @@ class Game():
 
             elif self.__gameStep.value == GS_REWARDING:
                 if target.Reward(self.__currentQuestionGoodAnswer):
-                    self.__gameStep.value = GS_FINISHED_REWARDING
+                    self.Say("La bonne réponse était: " + self.__questionPool[self.__question][2])
+
+                    self.__gameStep.value = GS_SPEAKING
+                    self.__nextStepAfterSpeak = GS_FINISHED_REWARDING
+                    #self.__gameStep.value = GS_FINISHED_REWARDING
 
             elif self.__gameStep.value == GS_FINISHED_REWARDING:
                 time.sleep(3)
@@ -728,15 +733,15 @@ class Game():
 
                 if (self.__question + 1) == 3:
                     self.__scoreAnnounce(playerList)
-                    self.__gameStep.value = GS_SCORE_ANNOUNCING
-                    self.__nextStepAfterScore = GS_ABOUT_TO_READ
+                    self.__gameStep.value = GS_SPEAKING
+                    self.__nextStepAfterSpeak = GS_ABOUT_TO_READ
                 else:
                     self.__gameStep.value = GS_ABOUT_TO_READ
 
                 if self.__question == 5:
                     self.__scoreAnnounce(playerList, True)
-                    self.__gameStep.value = GS_SCORE_ANNOUNCING
-                    self.__nextStepAfterScore = GS_FINISHED
+                    self.__gameStep.value = GS_SPEAKING
+                    self.__nextStepAfterSpeak = GS_FINISHED
                 else:
                     self.__question += 1
 
@@ -747,9 +752,9 @@ class Game():
                 if self.__isSpeaking.value == False:
                     self.__gameStep.value = GS_ABOUT_TO_READ
 
-            elif self.__gameStep.value == GS_SCORE_ANNOUNCING:
+            elif self.__gameStep.value == GS_SPEAKING:
                 if self.__isSpeaking.value == False:
-                    self.__gameStep.value = self.__nextStepAfterScore
+                    self.__gameStep.value = self.__nextStepAfterSpeak
 
         elif self.__mode == MANUAL:
             pass
@@ -810,10 +815,10 @@ class Game():
         requestString = ""
         if final:
             requestString = "Score Final: "
-            self.__nextStepAfterScore = GS_ABOUT_TO_READ
+            self.__nextStepAfterSpeak = GS_ABOUT_TO_READ
         else:
             requestString = "Score: "
-            self.__nextStepAfterScore = GS_INIT
+            self.__nextStepAfterSpeak = GS_INIT
 
         for index in range(0, NUMBER_PLAYER):
             thePlayer:Player = playerList.GetPlayer(index)
@@ -842,9 +847,12 @@ class Game():
         annoucementString = self.__aiVoice.MakeRequest(requestString)
 
         self.SetScoreDisplay(orderedPlayers)
-
-        self.__gameStep.value = GS_SCORE_ANNOUNCING
         self.Say(annoucementString)
+        
+        self.__gameStep.value = GS_SPEAKING
+
+    def SetNextStepAfterSpeak(self, step):
+        self.__nextStepAfterSpeak = step
 
 
 game:Game          
@@ -884,6 +892,7 @@ class Target():
         self.__kiddingSentence = ""
         self.__randomKidding = False
         self.__shouldKidding = False
+        self.__firstRewardCall = True
 
     def Reward(self, goodAnswer:int) -> bool:
         if self.__firstRewardCall:
@@ -938,10 +947,13 @@ class Target():
                             turret.SendSettingUpdateByName("SHOOT")
  
                         game.PlayBadSound()
+                        time.sleep(1)
 
                     if self.__shouldKidding:
-                        time.sleep(0.5)
                         game.Say(self.__kiddingSentence)
+                        game.SetGameStep(GS_SPEAKING)
+                        game.SetNextStepAfterSpeak(GS_REWARDING)
+
                     self.__kiddingSentence = ""
                     self.__shouldKidding = False
                     self.__randomKidding = False
