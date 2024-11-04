@@ -596,12 +596,20 @@ class Game():
         self.__badSound = mx.Sound("bad.wav")
         self.__waitingSound = mx.Sound("waiting.wav")
         self.__endWaitSound = mx.Sound("endWait.wav")
+        self.__countdownSound = mx.Sound("shotCountdown2.wav")
+        self.__aimingSound = mx.Sound("aiming2.wav")
 
     def isRunning(self):
         return self.__isRunning
 
     def MakeAIVoiceRequest(self, request:str):
         return self.__aiVoice.MakeRequest(request)
+
+    def PlayAimingSound(self):
+        self.__channel.play(self.__aimingSound, -1)
+
+    def PlayCountdownSound(self):
+        self.__channel.play(self.__countdownSound)
 
     def PlayGoodSound(self):
         self.__channel.play(self.__goodSound)
@@ -913,9 +921,11 @@ class Target():
 
             if not self.__targetDone and not self.__targetting:
                 targetPlayer(None, self.__currentRewardingPlayer+1)
+                game.PlayAimingSound()
             if self.__targetDone:
 
                 if self.__randomKidding == False:
+                    game.PlayCountdownSound()
                     self.__randomKidding = True
 
                     if random.randint(0, 2999) % 3 == 0:
@@ -932,7 +942,7 @@ class Target():
                         self.__kiddingSentence = game.MakeAIVoiceRequest(requestString)
 
 
-                if time.time() - self.__targetDoneTimestamp > 3:
+                if time.time() - self.__targetDoneTimestamp > 2:
                     playerToReward:Player = playerList.GetPlayerByOrder(self.__currentRewardingPlayer+1)
                     shoot = playerToReward.GetLastAnswer() != goodAnswer
 
@@ -1240,6 +1250,13 @@ if __name__ == "__main__":
     if TESTING:
         TestBugButton = PreLayoutElement(IDP_BUTTON, "Test Bug", lambda window : print(gc.get_referrers(playerList.GetPlayer(0))))
         ControlColumnPrelayout.AppendElement(TestBugButton)
+
+        AimingSoundButton = PreLayoutElement(IDP_BUTTON, "aiming", lambda window : game.PlayAimingSound())
+        CountdownSoundButton = PreLayoutElement(IDP_BUTTON, "countdown", lambda window : game.PlayCountdownSound())
+
+        ControlColumnPrelayout.AppendElement(AimingSoundButton)
+        ControlColumnPrelayout.AppendElement(CountdownSoundButton)
+                                                
 
 
     ControlColumnPrelayout.AppendElement(PreLayoutElement(IDP_BUTTON, "Reset Score", lambda window : playerList.ResetScore()))
