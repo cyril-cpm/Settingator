@@ -486,7 +486,7 @@ class QuestionAndScoreDisplay():
         event, values = self.__PSGWindow.read(0)
         if event == 'Escape:27':
             self.__PSGWindow.Close()
-            quit()
+            display.Close()
 
         if callable(event):
             event()
@@ -567,6 +567,9 @@ class QuestionAndScoreDisplay():
         self.__maximizeButton.update(visible=False)
         self.__PSGWindow.Maximize()
 
+    def Close(self):
+        self.__PSGWindow.Close()
+
 class Game():
     def __init__(self):
         self.__questionPool = []
@@ -580,8 +583,10 @@ class Game():
         self.__currentQuestionGoodAnswer = 0
         self.__accelDone = False
         self.__questionAndScoreDisplay = QuestionAndScoreDisplay()
+        display.AddStuffToClose(self.__questionAndScoreDisplay)
         self.__aiVoice = AIVoice()
         self.__nextStepAfterScore = 0
+        self.__isRunning = True
 
         ### Sound Management ###
         mx.init(channels=1)
@@ -590,6 +595,9 @@ class Game():
         self.__badSound = mx.Sound("bad.wav")
         self.__waitingSound = mx.Sound("waiting.wav")
         self.__endWaitSound = mx.Sound("endWait.wav")
+
+    def isRunning(self):
+        return self.__isRunning
 
     def MakeAIVoiceRequest(self, request:str):
         return self.__aiVoice.MakeRequest(request)
@@ -1132,7 +1140,7 @@ def initNotifLaser(slaveID:int):
 
 ### SPEAKING PROCESS ###
 
-def speakingProcessFunction(queue:multiprocessing.Queue, gameStep, speaking):
+def speakingProcessFunction(queue:multiprocessing.Queue, gameStep, speaking, shouldRun):
     engine = pyttsx3.init()
     engine.setProperty('volume', 1)
 
@@ -1143,7 +1151,7 @@ def speakingProcessFunction(queue:multiprocessing.Queue, gameStep, speaking):
             engine.setProperty("voice", voice.id)
             break
 
-    while True:
+    while shouldRun.value:
         sentence, isQuestion = queue.get()
         engine.say(sentence)
         speaking.value = True
@@ -1211,9 +1219,6 @@ if __name__ == "__main__":
         ControlColumnPrelayout.AppendElement(startGameAutoButton)
         ControlColumnPrelayout.AppendElement(startGameManualButton)
 
-    #display.AddPreLayout(testDisplayScoreButton)
-    #display.AddPreLayout(testDisplayQuestionButton)
-
     ControlColumnPrelayout.AppendElement(testDisplayQuestionButton)
     ControlColumnPrelayout.AppendElement(testDisplayScoreButton)
 
@@ -1235,12 +1240,17 @@ if __name__ == "__main__":
     
     game = Game()
 
-    speakingProcess = multiprocessing.Process(target=speakingProcessFunction, args=(game.GetSpeakingQueue(), game.GetGameStep(), game.GetIsSpeaking()))
+
+    shouldRun = multiprocessing.Value('i', True)
+    speakingProcess = multiprocessing.Process(target=speakingProcessFunction, args=(game.GetSpeakingQueue(), game.GetGameStep(), game.GetIsSpeaking(), shouldRun))
     speakingProcess.start()
 
     if TESTING:
         CreateDummyPlayers()
 
-    while True:
+    while display.isRunning():
         STR.Update()
         game.Update()
+
+    shouldRun.value = False
+    speakingProcess.terminate()

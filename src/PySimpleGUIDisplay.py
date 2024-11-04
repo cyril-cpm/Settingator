@@ -1,6 +1,7 @@
 from Display import *
 from Setting import *
 import PySimpleGUI as sg
+import sys
 
 class IRefreshable(ABC):
     def RefreshElementDisplay(self) -> None:
@@ -16,9 +17,17 @@ class PySimpleGUIDisplay(IDisplay):
         self.__PSGWindow = sg.Window('Settingator', self.__PSGLayout, element_justification='left', finalize=True)
 
         self.__elementToRefresh = []
+        self.__stuffToClose = []
+        self.__isRunning = True
+
+    def isRunning(self):
+        return self.__isRunning
 
     def AddElementToRefresh(self, element) -> None:
         self.__elementToRefresh.append(element)
+
+    def AddStuffToClose(self, stuffToClose) -> None:
+        self.__stuffToClose.append(stuffToClose)
 
     def GetPSGLayout(self):
         return self.__PSGLayout
@@ -149,7 +158,9 @@ class PySimpleGUIDisplay(IDisplay):
         setting:Setting = None
         if event != sg.TIMEOUT_KEY:
             if (event == sg.WIN_CLOSED):
-                quit()
+                for stuff in self.__stuffToClose:
+                    stuff.Close()
+                self.__isRunning = False
 
             if isinstance(event, tuple):
                 slaveID, ref = event
@@ -187,3 +198,7 @@ class PySimpleGUIDisplay(IDisplay):
                 if event == "select_button":
                     portSelectionWindow.close()
                     return values["COM"]
+                
+    def Close(self) -> None:
+        self.__PSGWindow.Close()
+        self.__isRunning = False
