@@ -1166,17 +1166,17 @@ def CreateDummyPlayers():
     playerList.AddOrderedPlayer(playerList.GetPlayer(0))
     playerList.GetPlayer(0).SetScore(0, 3)
 
-    #playerList.AddPlayer(Slave(STR, 1, dict()))
-    #playerList.AddOrderedPlayer(playerList.GetPlayer(1))
-    #playerList.GetPlayer(1).SetScore(2, 1)
+    playerList.AddPlayer(Slave(STR, 1, dict()))
+    playerList.AddOrderedPlayer(playerList.GetPlayer(1))
+    playerList.GetPlayer(1).SetScore(2, 1)
 
-    #playerList.AddPlayer(Slave(STR, 2, dict()))
-    #playerList.AddOrderedPlayer(playerList.GetPlayer(2))
-    #playerList.GetPlayer(2).SetScore(3, 0)
+    playerList.AddPlayer(Slave(STR, 2, dict()))
+    playerList.AddOrderedPlayer(playerList.GetPlayer(2))
+    playerList.GetPlayer(2).SetScore(3, 0)
 
-    #playerList.AddPlayer(Slave(STR, 3, dict()))
-    #playerList.AddOrderedPlayer(playerList.GetPlayer(3))
-    #playerList.GetPlayer(3).SetScore(1, 2)
+    playerList.AddPlayer(Slave(STR, 3, dict()))
+    playerList.AddOrderedPlayer(playerList.GetPlayer(3))
+    playerList.GetPlayer(3).SetScore(1, 2)
 
 def testButtonColor(window):
     playerPressButton(0, RED_BUTTON)
