@@ -8,6 +8,9 @@ import multiprocessing
 import pyttsx3
 import pygame.mixer as mx
 import openai
+import sys
+import gc
+
 
 com:SerialCTR
 
@@ -53,6 +56,16 @@ class Player():
         self.__nameElementPtr:Pointer = Pointer()
         self.__goodTextPtr:Pointer = Pointer()
         self.__badTextPtr:Pointer = Pointer()
+        self.__prelayout:PreLayoutElement = None
+
+    def __del__(self):
+        pass
+
+    def CreatePrelayout(self, preLayout:PreLayoutElement) -> None:
+        self.__prelayout = preLayout
+
+    def GetPrelayout(self) -> PreLayoutElement:
+        return self.__prelayout
 
     def GetName(self):
         return self.__name
@@ -95,13 +108,16 @@ class Player():
     
     def IncreaseGood(self):
         self.__good += 1
-        self.__updateScore()
+        self.UpdateScore()
     
     def IncreaseFail(self):
         self.__bad += 1
-        self.__updateScore()
+        self.UpdateScore()
 
-    def __updateScore(self):
+    def ResetScore(self):
+        self.SetScore(0, 0)
+
+    def UpdateScore(self):
         self.__score = self.__good - self.__bad
         self.__goodTextPtr.GetValue().update("Good: " + str(self.__good))
         self.__badTextPtr.GetValue().update("Bad: " + str(self.__bad))
@@ -118,7 +134,7 @@ class Player():
     def SetScore(self, good, bad):
         self.__good = good
         self.__bad = bad
-        self.__updateScore()
+        self.UpdateScore()
 
     def GetFrameElementPtr(self):
         return self.__frameElementPtr
@@ -137,8 +153,16 @@ class Player():
     
     def GetBadTextPtr(self):
         return self.__badTextPtr
+    
+    def PrepareToDestroy(self) -> None:
+        self.__prelayout = None
+        self.__nameElementPtr = None
+        self.__frameElementPtr = None
+        self.__goodTextPtr = None
+        self.__badTextPtr = None
 
-class Players():
+
+class Players(IRefreshable):
     def __init__(self):
         self.__playerList = dict()
         self.__nbPlayers = 0
@@ -178,14 +202,17 @@ class Players():
     
     def __AddToPreLayout(self, player:Player):
         frameName:str = "Player " + str(self.__numberOrderedPlayer) + " : Slave " + str(player.GetSlave().GetID())
-        display.AddPreLayout(PreLayoutElement(IDP_FRAME, frameName,
+        player.CreatePrelayout(PreLayoutElement(IDP_FRAME, frameName,
                                                 [
-                                                    PreLayoutElement(IDP_BUTTON, "target", lambda window : targetPlayer(window, player.GetOrder())),
-                                                    PreLayoutElement(IDP_INPUT, player.GetName(), lambda name : player.SetName(name), player.GetNameElementPtr()),
-                                                    PreLayoutElement(IDP_TEXT, "Good: 0", None, player.GetGoodTextPtr()),
-                                                    PreLayoutElement(IDP_TEXT, "Bad: 0", None, player.GetBadTextPtr())
+                                                    PreLayoutElement(IDP_COLUMN, "", [
+                                                        PreLayoutElement(IDP_BUTTON, "target", lambda window : targetPlayer(window, player.GetOrder())),
+                                                        PreLayoutElement(IDP_INPUT, player.GetName(), lambda name : player.SetName(name), player.GetNameElementPtr()),
+                                                        PreLayoutElement(IDP_TEXT, "Good: 0", None, player.GetGoodTextPtr()),
+                                                        PreLayoutElement(IDP_TEXT, "Bad: 0", None, player.GetBadTextPtr())
+                                                    ])
                                                 ],
                                                player.GetFrameElementPtr()))
+        display.AddPreLayout(player.GetPrelayout())
 
     def AllAnswered(self):
         allAnswered = True
@@ -215,6 +242,29 @@ class Players():
 
         for player in self.__playerList:
             self.__playerList[player].ReWriteName()
+
+    def ResetScore(self):
+        for player in self.__playerList:
+            self.__playerList[player].ResetScore()
+
+    def UpdateAllScore(self):
+        for player in self.__playerList:
+            self.__playerList[player].UpdateScore()
+
+    def RefreshElementDisplay(self) -> None:
+        self.UpdateAllScore()
+        self.ReWriteName()
+
+    def ResetPlayer(self) -> None:
+        for player in self.__playerList:
+            display.RemovePreLayout(self.__playerList[player].GetPrelayout())
+            self.__playerList[player].PrepareToDestroy()
+
+        self.__orderedPlayerList.clear()
+        self.__nbPlayers = 0
+        self.__playerList.clear()
+        display.UpdateLayout()
+        gc.collect()
 
 playerList = Players()
 
@@ -562,10 +612,9 @@ class Game():
     def Start(self, mode:int):
         self.__mode = mode
 
-        display.RemovePreLayout(startGameAutoButton)
-        display.RemovePreLayout(startGameManualButton)
+        ControlColumnPrelayout.RemoveElement(startGameAutoButton)
+        ControlColumnPrelayout.RemoveElement(startGameManualButton)
         display.UpdateLayout(STR.GetSlaveSettings())
-        playerList.ReWriteName()
 
         allQuestion = []
         
@@ -1072,8 +1121,10 @@ def initNotifLaser(slaveID:int):
         global gameStep
 
         target.SetTurretPos(TP_END)
-        display.AddPreLayout(startGameAutoButton)
-        display.AddPreLayout(startGameManualButton)
+        #display.AddPreLayout(startGameAutoButton)
+        #display.AddPreLayout(startGameManualButton)
+        ControlColumnPrelayout.AppendElement(startGameAutoButton)
+        ControlColumnPrelayout.AppendElement(startGameManualButton)
         game.SetGameStep(GS_WAITING_TO_START)
         display.UpdateLayout(STR.GetSlaveSettings())
 
@@ -1115,17 +1166,17 @@ def CreateDummyPlayers():
     playerList.AddOrderedPlayer(playerList.GetPlayer(0))
     playerList.GetPlayer(0).SetScore(0, 3)
 
-    playerList.AddPlayer(Slave(STR, 1, dict()))
-    playerList.AddOrderedPlayer(playerList.GetPlayer(1))
-    playerList.GetPlayer(1).SetScore(2, 1)
+    #playerList.AddPlayer(Slave(STR, 1, dict()))
+    #playerList.AddOrderedPlayer(playerList.GetPlayer(1))
+    #playerList.GetPlayer(1).SetScore(2, 1)
 
-    playerList.AddPlayer(Slave(STR, 2, dict()))
-    playerList.AddOrderedPlayer(playerList.GetPlayer(2))
-    playerList.GetPlayer(2).SetScore(3, 0)
+    #playerList.AddPlayer(Slave(STR, 2, dict()))
+    #playerList.AddOrderedPlayer(playerList.GetPlayer(2))
+    #playerList.GetPlayer(2).SetScore(3, 0)
 
-    playerList.AddPlayer(Slave(STR, 3, dict()))
-    playerList.AddOrderedPlayer(playerList.GetPlayer(3))
-    playerList.GetPlayer(3).SetScore(1, 2)
+    #playerList.AddPlayer(Slave(STR, 3, dict()))
+    #playerList.AddOrderedPlayer(playerList.GetPlayer(3))
+    #playerList.GetPlayer(3).SetScore(1, 2)
 
 def testButtonColor(window):
     playerPressButton(0, RED_BUTTON)
@@ -1140,6 +1191,7 @@ if __name__ == "__main__":
     com = SerialCTR(PySimpleGUIDisplay.SelectCOMPort(SerialCTR))
 
     display = PySimpleGUIDisplay()
+    display.AddElementToRefresh(playerList)
 
     STR = Settingator(com, display)
 
@@ -1152,17 +1204,32 @@ if __name__ == "__main__":
     STR.SendBridgeInitRequest(1, b'Turret', TurretCallback)
     STR.SendBridgeInitRequest(2, b'Desk', DeskCallback, NUMBER_PLAYER)
 
-    display.AddPreLayout(InitPlayerButton)
+    ControlColumnPrelayout = PreLayoutElement(IDP_COLUMN)
+
+    ControlColumnPrelayout.AppendElement(InitPlayerButton)
     if TESTING:
-        display.AddPreLayout(startGameAutoButton)
-        display.AddPreLayout(startGameManualButton)
+        ControlColumnPrelayout.AppendElement(startGameAutoButton)
+        ControlColumnPrelayout.AppendElement(startGameManualButton)
 
-    display.AddPreLayout(testDisplayScoreButton)
-    display.AddPreLayout(testDisplayQuestionButton)
+    #display.AddPreLayout(testDisplayScoreButton)
+    #display.AddPreLayout(testDisplayQuestionButton)
+
+    ControlColumnPrelayout.AppendElement(testDisplayQuestionButton)
+    ControlColumnPrelayout.AppendElement(testDisplayScoreButton)
 
     if TESTING:
-        display.AddPreLayout(PreLayoutElement(IDP_BUTTON, "test button Color", testButtonColor))
+        ControlColumnPrelayout.AppendElement(PreLayoutElement(IDP_BUTTON, "test button Color", testButtonColor))
 
+    if TESTING:
+        TestBugButton = PreLayoutElement(IDP_BUTTON, "Test Bug", lambda window : print(gc.get_referrers(playerList.GetPlayer(0))))
+        ControlColumnPrelayout.AppendElement(TestBugButton)
+
+
+    ControlColumnPrelayout.AppendElement(PreLayoutElement(IDP_BUTTON, "Reset Score", lambda window : playerList.ResetScore()))
+
+    ControlColumnPrelayout.AppendElement(PreLayoutElement(IDP_BUTTON, "Reset Player", lambda window : playerList.ResetPlayer()))
+
+    display.AddPreLayout(ControlColumnPrelayout)
 
     display.UpdateLayout(None)
     
@@ -1173,7 +1240,6 @@ if __name__ == "__main__":
 
     if TESTING:
         CreateDummyPlayers()
-
 
     while True:
         STR.Update()

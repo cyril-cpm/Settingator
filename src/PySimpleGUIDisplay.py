@@ -2,6 +2,10 @@ from Display import *
 from Setting import *
 import PySimpleGUI as sg
 
+class IRefreshable(ABC):
+    def RefreshElementDisplay(self) -> None:
+        pass
+
 class PySimpleGUIDisplay(IDisplay):
     def __init__(self) -> None:
         IDisplay.__init__(self)
@@ -11,20 +15,29 @@ class PySimpleGUIDisplay(IDisplay):
         
         self.__PSGWindow = sg.Window('Settingator', self.__PSGLayout, element_justification='left', finalize=True)
 
+        self.__elementToRefresh = []
+
+    def AddElementToRefresh(self, element) -> None:
+        self.__elementToRefresh.append(element)
+
     def GetPSGLayout(self):
         return self.__PSGLayout
 
-    def AddPreLayout(self, element:tuple) -> None:
+    def AddPreLayout(self, element:PreLayoutElement) -> None:
         self.__PreLayout.append(element)
 
-    def RemovePreLayout(self, element:tuple) -> None:
+    def RemovePreLayout(self, element:PreLayoutElement) -> None:
         self.__PreLayout.remove(element)
 
-    def __UpdatePrelayout(self, layout, elementList):
+    def __UpdatePrelayout(self, layout, elementList, isColumn:bool = False):
         
         for element in elementList:
             type:int = element.GetType()
-            name:str = element.GetName()
+            name = element.GetName()
+            
+            if isinstance(name, Pointer):
+                name = name.GetValue()
+
             key = element.GetKey()
             ret:Pointer = element.GetRet()
 
@@ -46,10 +59,20 @@ class PySimpleGUIDisplay(IDisplay):
 
                 newElement = sg.Frame(name, frameLayout)
 
+            elif type == IDP_COLUMN:
+                columnLayout = [[]]
+
+                self.__UpdatePrelayout(columnLayout, key, True)
+
+                newElement = sg.Frame(name, columnLayout, border_width=0)
+
             if ret != None:
                 ret.SetValue(newElement)
 
-            layout[0].append(newElement)
+            if isColumn:
+                layout.append([newElement])
+            else:
+                layout[0].append(newElement)
 
     def UpdateLayout(self, slaveSettings:dict = None) -> None:
         self.__PSGLayout = [[],[]]
@@ -108,6 +131,10 @@ class PySimpleGUIDisplay(IDisplay):
         self.__PSGWindow = window
         print(self.__PSGLayout)
 
+        for elementToRefresh in self.__elementToRefresh:
+            elementToRefresh.RefreshElementDisplay()
+        window.read(0)
+        
     def UpdateSetting(self, setting:Setting) -> None:
         slaveID = setting.GetSlaveID()
         ref = setting.GetRef()
