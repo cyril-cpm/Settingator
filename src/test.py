@@ -22,7 +22,7 @@ STR:Settingator
 
 NUMBER_PLAYER = 4
 QUESTION_FILENAME = "question.csv"
-TESTING = True
+TESTING = False
 
 GS_INIT = 0
 GS_WAITING_TO_START = 1
@@ -119,8 +119,12 @@ class Player():
 
     def UpdateScore(self):
         self.__score = self.__good - self.__bad
-        self.__goodTextPtr.GetValue().update("Good: " + str(self.__good))
-        self.__badTextPtr.GetValue().update("Bad: " + str(self.__bad))
+
+        if self.__goodTextPtr():
+            self.__goodTextPtr.GetValue().update("Good: " + str(self.__good))
+
+        if self.__badTextPtr():
+            self.__badTextPtr.GetValue().update("Bad: " + str(self.__bad))
 
     def GetScore(self):
         return self.__score
@@ -146,7 +150,8 @@ class Player():
         return self.__nameElementPtr
     
     def ReWriteName(self):
-        self.__nameElementPtr.GetValue().update(self.__name)
+        if (self.__nameElementPtr()):
+            self.__nameElementPtr.GetValue().update(self.__name)
 
     def GetGoodTextPtr(self):
         return self.__goodTextPtr
