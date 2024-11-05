@@ -22,7 +22,7 @@ STR:Settingator
 
 NUMBER_PLAYER = 4
 QUESTION_FILENAME = "question.csv"
-TESTING = False
+TESTING = True
 
 GS_INIT = 0
 GS_WAITING_TO_START = 1
@@ -269,7 +269,7 @@ class Players(IRefreshable):
         self.__orderedPlayerList.clear()
         self.__nbPlayers = 0
         self.__playerList.clear()
-        display.UpdateLayout()
+        display.UpdateLayout(STR.GetSlaveSettings())
         gc.collect()
 
 playerList = Players()
@@ -503,7 +503,8 @@ class QuestionAndScoreDisplay():
         self.__questionDisplayFrame.update(visible=True)
         self.__PSGWindow.read(0)
 
-        longestPart = ""
+        part1 = ""
+        part2 = ""
 
         questionCharLen = question.__len__()
         questionCharMid = int(questionCharLen / 2)
@@ -511,19 +512,25 @@ class QuestionAndScoreDisplay():
         for offset in range(0, questionCharMid):
             if question[questionCharMid + offset] == ' ':
                 question = question[:questionCharMid + offset] + '\n' + question[questionCharMid + offset + 1:]
-                longestPart = question[:questionCharMid + offset]
+                part1 = question[:questionCharMid + offset]
+                part2 = question[questionCharMid - offset + 1:]
                 print("+ offset")
                 break
             
             elif question[questionCharMid - offset] == ' ':
                 question = question[:questionCharMid - offset] + '\n' + question[questionCharMid - offset + 1:]
-                longestPart = question[questionCharMid - offset + 1:]
+                part1 = question[:questionCharMid + offset]
+                part2 = question[questionCharMid - offset + 1:]
                 print("- offset")
                 break
 
         print(question)
+        
+        part1Length = sg.Text.string_width_in_pixels("_ 3000", part1)
+        part2Length = sg.Text.string_width_in_pixels("_ 3000", part2)
 
-        questionLength = sg.Text.string_width_in_pixels("_ 3000", longestPart)
+        questionLength = part1Length if part1Length > part2Length else part2Length
+
         width = self.__screenWidth - 80
         fontSize = int(3000 * (width / questionLength))
         fontStr = "_ "+str(fontSize)
@@ -668,10 +675,12 @@ class Game():
                 allQuestion.append(row)
 
         random.seed(time.time())
+        numberQuestion = allQuestion.__len__()
 
-        for index in range(1, 10, 1):
+        for index in range(1, numberQuestion, 1):
             questionNo = random.randint(0, allQuestion.__len__() - 1)
             self.__questionPool.append(allQuestion[questionNo])
+            allQuestion.remove(allQuestion[questionNo])
 
         self.__gameStep.value = GS_INTRODUCING
 
@@ -685,35 +694,42 @@ class Game():
     def Update(self):
         if self.__mode == AUTO:
             if self.__gameStep.value == GS_ABOUT_TO_READ:
-                playerList.SendAll("BLUE LOADING")
-                playerList.SetAllBGColor(DEFAULT_BG_COLOR)
-                answerOrder = dict()
-                answerOrdered = False
-                index = 0
-                alreadyPulled = dict()
 
-                while not answerOrdered:
-                    newIndex = random.randint(2, 5)
+                if self.__question < self.__questionPool.__len__():
+                    playerList.SendAll("BLUE LOADING")
+                    playerList.SetAllBGColor(DEFAULT_BG_COLOR)
+                    answerOrder = dict()
+                    answerOrdered = False
+                    index = 0
+                    alreadyPulled = dict()
 
-                    if not newIndex in alreadyPulled:
-                        answerOrder[index] = newIndex
-                        alreadyPulled[newIndex] = True
+                    while not answerOrdered:
+                        newIndex = random.randint(2, 5)
 
-                        if newIndex == 2:
-                            self.__currentQuestionGoodAnswer = index
+                        if not newIndex in alreadyPulled:
+                            answerOrder[index] = newIndex
+                            alreadyPulled[newIndex] = True
 
-                        index += 1
-                        
-                        if index >= 4:
-                            answerOrdered = True
+                            if newIndex == 2:
+                                self.__currentQuestionGoodAnswer = index
+
+                            index += 1
+                            
+                            if index >= 4:
+                                answerOrdered = True
+                    
+                    question = self.__questionPool[self.__question]
+
+                    
+                    self.__questionAndScoreDisplay.SetQuestion(question[1], question[answerOrder[0]], question[answerOrder[1]], question[answerOrder[2]], question[answerOrder[3]])
+                    questionStr = question[1] + " Réponse A: " + question[answerOrder[0]] + ", Réponse B: " + question[answerOrder[1]] + ", Réponse C: " + question[answerOrder[2]] + ", Réponse D: " + question[answerOrder[3]] + " ?"
+                    self.Ask(questionStr)
+                    self.__gameStep.value = GS_READING
                 
-                question = self.__questionPool[self.__question]
-
-                
-                self.__questionAndScoreDisplay.SetQuestion(question[1], question[answerOrder[0]], question[answerOrder[1]], question[answerOrder[2]], question[answerOrder[3]])
-                questionStr = question[1] + " Réponse A: " + question[answerOrder[0]] + ", Réponse B: " + question[answerOrder[1]] + ", Réponse C: " + question[answerOrder[2]] + ", Réponse D: " + question[answerOrder[3]] + " ?"
-                self.Ask(questionStr)
-                self.__gameStep.value = GS_READING
+                else:
+                    self.Say("Il n'y a plus de questions")
+                    self.__gameStep.value = GS_SPEAKING
+                    self.__nextStepAfterSpeak = GS_INIT
 
             elif self.__gameStep.value == GS_READING:
                 if self.__isSpeaking.value == False:
@@ -756,7 +772,6 @@ class Game():
 
                     self.__gameStep.value = GS_SPEAKING
                     self.__nextStepAfterSpeak = GS_FINISHED_REWARDING
-                    #self.__gameStep.value = GS_FINISHED_REWARDING
 
             elif self.__gameStep.value == GS_FINISHED_REWARDING:
                 time.sleep(3)
@@ -765,21 +780,24 @@ class Game():
                     for playerIndex in range(1, NUMBER_PLAYER + 1):
                         playerList.GetPlayerByOrder(playerIndex).ResetAnswered()
 
-                if (self.__question + 1) == 3:
+                if  (self.__question + 4) % 6 == 0:
                     self.__scoreAnnounce(playerList)
                     self.__gameStep.value = GS_SPEAKING
                     self.__nextStepAfterSpeak = GS_ABOUT_TO_READ
                 else:
                     self.__gameStep.value = GS_ABOUT_TO_READ
 
-                if self.__question == 5:
+                if (self.__question + 1) % 6 == 0:
                     self.__scoreAnnounce(playerList, True)
                     self.__gameStep.value = GS_SPEAKING
                     self.__nextStepAfterSpeak = GS_FINISHED
-                else:
-                    self.__question += 1
+                
+                self.__question += 1
 
             elif self.__gameStep.value == GS_FINISHED:
+                ControlColumnPrelayout.AppendElement(NouvelleMancheButton)
+                display.UpdateLayout(STR.GetSlaveSettings())
+
                 self.__gameStep.value = GS_INIT
             
             elif self.__gameStep.value == GS_INTRODUCING:
@@ -1153,10 +1171,17 @@ def initPlayer(window:sg.Window):
 
 InitPlayerButton = PreLayoutElement(IDP_BUTTON, "initPlayer", initPlayer)
 
+def nouvelleManche(window:sg.Window):
+    ControlColumnPrelayout.RemoveElement(NouvelleMancheButton)
+    display.UpdateLayout(STR.GetSlaveSettings())
+    game.SetGameStep(GS_ABOUT_TO_READ)
+
+NouvelleMancheButton = PreLayoutElement(IDP_BUTTON, "Nouvelle Manche", nouvelleManche)
+
 #TEST#
 
 def testDisplayQuestion(window:sg.Window):
-    game.SetQuestionDisplay("Quelle est la taille du continum espace temps dans la série blargblargblarg ?", "La réponse A", "La grosse réponse B", "repC", "Et non pas la D")
+    game.SetQuestionDisplay("Combien de fois par seconde un colibri peut-il battre des ailes ?", "La réponse A", "La grosse réponse B", "repC", "Et non pas la D")
 
 testDisplayQuestionButton = PreLayoutElement(IDP_BUTTON, "testDisplayQuestion", testDisplayQuestion)
 
