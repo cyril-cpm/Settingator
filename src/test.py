@@ -492,17 +492,38 @@ class QuestionAndScoreDisplay():
         if callable(event):
             event()
 
-    def SetQuestion(self, question, ansA, ansB, ansC, ansD):
+    def SetQuestion(self, question:str, ansA:str, ansB:str, ansC:str, ansD:str):
 
         self.__scoreDisplayFrame.update(visible=False)
         self.__questionDisplayFrame.update(visible=True)
         self.__PSGWindow.read(0)
 
-        questionLength = sg.Text.string_width_in_pixels("_ 3000", question)
+        longestPart = ""
+
+        questionCharLen = question.__len__()
+        questionCharMid = int(questionCharLen / 2)
+
+        for offset in range(0, questionCharMid):
+            if question[questionCharMid + offset] == ' ':
+                question = question[:questionCharMid + offset] + '\n' + question[questionCharMid + offset + 1:]
+                longestPart = question[:questionCharMid + offset]
+                print("+ offset")
+                break
+            
+            elif question[questionCharMid - offset] == ' ':
+                question = question[:questionCharMid - offset] + '\n' + question[questionCharMid - offset + 1:]
+                longestPart = question[questionCharMid - offset + 1:]
+                print("- offset")
+                break
+
+        print(question)
+
+        questionLength = sg.Text.string_width_in_pixels("_ 3000", longestPart)
         width = self.__screenWidth - 80
         fontSize = int(3000 * (width / questionLength))
-        fontStr = "_ "+str(fontSize
-                           )
+        fontStr = "_ "+str(fontSize)
+        print(fontStr)
+
         self.__questionText.update(value=question, font=fontStr)
 
         lengthA = sg.Text.string_width_in_pixels("_ 3000", ansA)
