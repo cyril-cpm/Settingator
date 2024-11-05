@@ -406,8 +406,8 @@ class QuestionAndScoreDisplay():
 
         #### SCORE DISPLAY #####
 
-        self.__labelWidth = int(self.__screenWidth/3)
-        self.__labelHeight = int(self.__screenHeight/10)
+        self.__labelWidth = int(self.__screenWidth/1)
+        self.__labelHeight = int(self.__screenHeight/4 - 20)
 
         length = sg.Text.string_width_in_pixels("_ 3000", "WWWWWWWWWWWWWWW")
         
