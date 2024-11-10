@@ -36,7 +36,10 @@ class PySimpleGUIDisplay(IDisplay):
         self.__PreLayout.append(element)
 
     def RemovePreLayout(self, element:PreLayoutElement) -> None:
-        self.__PreLayout.remove(element)
+        if element in self.__PreLayout:
+            self.__PreLayout.remove(element)
+        else:
+            print("error removing prelayout")
 
     def __UpdatePrelayout(self, layout, elementList, isColumn:bool = False):
         

@@ -22,7 +22,7 @@ STR:Settingator
 
 NUMBER_PLAYER = 4
 QUESTION_FILENAME = "question.csv"
-TESTING = True
+TESTING = False
 
 GS_INIT = 0
 GS_WAITING_TO_START = 1
@@ -195,12 +195,13 @@ class Players(IRefreshable):
         return None
     
     def AddOrderedPlayer(self, player:Player):
-        self.__numberOrderedPlayer += 1
-        self.__orderedPlayerList[self.__numberOrderedPlayer] = player
-        player.Send("GREEN GOOD")
-        player.SetOrder(self.__numberOrderedPlayer)
-        self.__AddToPreLayout(player)
-        display.UpdateLayout(STR.GetSlaveSettings())
+        if player:
+            self.__numberOrderedPlayer += 1
+            self.__orderedPlayerList[self.__numberOrderedPlayer] = player
+            player.Send("GREEN GOOD")
+            player.SetOrder(self.__numberOrderedPlayer)
+            self.__AddToPreLayout(player)
+            display.UpdateLayout(STR.GetSlaveSettings())
 
     def GetNumberOfOrderedPlayer(self):
         return self.__numberOrderedPlayer
@@ -750,6 +751,7 @@ class Game():
                 if time.time() - self.__finishedReadingTimestamp >= 10 or playerList.AllAnswered():
                     self.PlayEndWaitSound()
                     playerList.SendAll("BLUE FROZEN")
+                    time.sleep(1)
                     print("starting rewarding")
 
                     if TESTING:
@@ -966,10 +968,11 @@ class Target():
             if not self.__targetDone and not self.__targetting:
                 targetPlayer(None, self.__currentRewardingPlayer+1)
                 game.PlayAimingSound()
-            if self.__targetDone:
 
+            if self.__targetDone:
                 if self.__randomKidding == False:
                     game.PlayCountdownSound()
+
                     self.__randomKidding = True
 
                     if random.randint(0, 2999) % 3 == 0:
@@ -1001,7 +1004,8 @@ class Target():
                             turret.SendSettingUpdateByName("SHOOT")
  
                         game.PlayBadSound()
-                        time.sleep(1)
+                    
+                    time.sleep(1)
 
                     if self.__shouldKidding:
                         game.Say(self.__kiddingSentence)
@@ -1028,32 +1032,37 @@ class Target():
         return self.__allRewarded
 
     def TargetPlayer(self, orderedPlayer:int):
-        self.__targetDone = False
-        STR.AddNotifCallback(LASER_NOTIF, self._notifLaser)
-         
-        self.__targetedPlayer = playerList.GetPlayerByOrder(orderedPlayer)
-        self.__targetedPlayer.GetSlave().ConfigDirectSettingUpdate(turret, LASER_DETECTED)
+        if self.__turretPos == orderedPlayer:
+            self.__targetDone = True
+            self.__targetDoneTimestamp = time.time()
+        
+        else:
+            self.__targetDone = False
+            STR.AddNotifCallback(LASER_NOTIF, self._notifLaser)
+            
+            self.__targetedPlayer = playerList.GetPlayerByOrder(orderedPlayer)
+            self.__targetedPlayer.GetSlave().ConfigDirectSettingUpdate(turret, LASER_DETECTED)
 
-        print("targetting player " + str(self.__targetedPlayer.GetOrder()))
-        print("turretPos : " + str(self.__turretPos))
+            print("targetting player " + str(self.__targetedPlayer.GetOrder()))
+            print("turretPos : " + str(self.__turretPos))
 
-        self.__step = 0
+            self.__step = 0
 
-        turret.SendSettingUpdateByName("SPEED", 255)
+            turret.SendSettingUpdateByName("SPEED", 255)
 
-        if self.__turretPos < orderedPlayer:
-            self.__targetting = True
-            self.__target_side = "R"
-            turret.SendSettingUpdateByName("DROITE")
-            print("turning right")
+            if self.__turretPos < orderedPlayer:
+                self.__targetting = True
+                self.__target_side = "R"
+                turret.SendSettingUpdateByName("DROITE")
+                print("turning right")
 
-        elif orderedPlayer < self.__turretPos:
-            self.__targetting = True
-            self.__target_side = "L"
-            turret.SendSettingUpdateByName("GAUCHE")
-            print("turning left")
+            elif orderedPlayer < self.__turretPos:
+                self.__targetting = True
+                self.__target_side = "L"
+                turret.SendSettingUpdateByName("GAUCHE")
+                print("turning left")
 
-        display.UpdateSetting(turret.GetSettingByName("SPEED"))
+            display.UpdateSetting(turret.GetSettingByName("SPEED"))
     
     def _notifLaser(self, slaveID):
         print("___notifLaser")
@@ -1197,7 +1206,7 @@ def initNotifLaser(slaveID:int):
 
     if playerList.GetNumberOfOrderedPlayer() >= NUMBER_PLAYER:
         turret.SendSettingUpdateByName("STOP")
-        display.RemovePreLayout(InitPlayerButton)
+        ControlColumnPrelayout.RemoveElement(InitPlayerButton)
         global turretPos
         global gameStep
 
