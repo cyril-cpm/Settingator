@@ -1,6 +1,7 @@
 from Settingator import *
 from PySerialCommunicator import *
 from PySimpleGUIDisplay import *
+from DearPyGUIDisplay import *
 import csv
 import random
 import time
@@ -14,7 +15,7 @@ import gc
 
 com:SerialCTR
 
-display:PySimpleGUIDisplay
+display:DearPyGUIDisplay
 
 STR:Settingator
 
@@ -222,7 +223,7 @@ class Players(IRefreshable):
             player.Send("GREEN GOOD")
             player.SetOrder(self.__numberOrderedPlayer)
             self.__AddToPreLayout(player)
-            display.UpdateLayout(STR.GetSlaveSettings())
+            #display.UpdateLayout(STR.GetSlaveSettings())
 
     def IsOrderedPlayer(self, slaveID:int) -> bool:
         player = self.GetPlayerBySlaveID(slaveID)
@@ -299,7 +300,7 @@ class Players(IRefreshable):
     def ResetPlayer(self) -> None:
         for player in self.__playerList:
             self.__playerList[player].Send("GREEN LOADING")
-            display.RemovePreLayout(self.__playerList[player].GetPrelayout())
+            #display.RemovePreLayout(self.__playerList[player].GetPrelayout())
             self.__playerList[player].PrepareToDestroy()
 
         self.__orderedPlayerList.clear()
@@ -528,7 +529,7 @@ class QuestionAndScoreDisplay():
         event, values = self.__PSGWindow.read(0)
         if event == 'Escape:27':
             self.__PSGWindow.Close()
-            display.Close()
+            #display.Close()
 
         if callable(event):
             event()
@@ -653,7 +654,7 @@ class Game():
         self.__currentQuestionGoodAnswer = 0
         self.__accelDone = False
         self.__questionAndScoreDisplay = QuestionAndScoreDisplay()
-        display.AddStuffToClose(self.__questionAndScoreDisplay)
+        #display.AddStuffToClose(self.__questionAndScoreDisplay)
         self.__aiVoice = AIVoice()
         self.__nextStepAfterSpeak = 0
         self.__isRunning = True
@@ -1174,8 +1175,6 @@ def initNotifLaser(slaveID:int):
         global gameStep
 
         target.SetTurretPos(TP_END)
-        #display.AddPreLayout(startGameAutoButton)
-        #display.AddPreLayout(startGameManualButton)
         ControlColumnPrelayout.AppendElement(startGameAutoButton)
         ControlColumnPrelayout.AppendElement(startGameManualButton)
         game.SetGameStep(GS_WAITING_TO_START)
@@ -1243,13 +1242,18 @@ def testButtonColor(window):
     playerPressButton(3, YELLOW_BUTTON)
     display.Update()
 
+def testButtonCB():
+    print("CB")
+    ControlColumnPrelayout.RemoveElement(startGameAutoButton)
+
 ########################
 
 if __name__ == "__main__":
     com = SerialCTR(PySimpleGUIDisplay.SelectCOMPort(SerialCTR))
 
-    display = PySimpleGUIDisplay()
-    display.AddElementToRefresh(playerList)
+    display = DearPyGUIDisplay()
+    #display = PySimpleGUIDisplay()
+    #display.AddElementToRefresh(playerList)
 
     STR = Settingator(com, display)
 
@@ -1259,6 +1263,7 @@ if __name__ == "__main__":
     if TESTING:
         ControlColumnPrelayout.AppendElement(startGameAutoButton)
         ControlColumnPrelayout.AppendElement(startGameManualButton)
+        pass
 
     ControlColumnPrelayout.AppendElement(testDisplayQuestionButton)
     ControlColumnPrelayout.AppendElement(testDisplayScoreButton)
@@ -1283,8 +1288,6 @@ if __name__ == "__main__":
     ControlColumnPrelayout.AppendElement(PreLayoutElement(IDP_BUTTON, "Reset Player", lambda window : playerList.ResetPlayer()))
 
     display.AddPreLayout(ControlColumnPrelayout)
-
-    display.UpdateLayout(None)
     
     game = Game()
 
@@ -1295,6 +1298,8 @@ if __name__ == "__main__":
 
     if TESTING:
         CreateDummyPlayers()
+        
+    display.AddPreLayout(PreLayoutElement(IDP_BUTTON, "Test", testButtonCB))
 
     #STR.SendInitRequest(1)
     STR.SendBridgeInitRequest(1, b'Turret', TurretCallback)
@@ -1306,3 +1311,5 @@ if __name__ == "__main__":
 
     shouldRun.value = False
     speakingProcess.terminate()
+    
+    dpg.destroy_context()

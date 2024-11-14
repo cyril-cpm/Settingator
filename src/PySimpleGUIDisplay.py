@@ -12,7 +12,6 @@ class PySimpleGUIDisplay(IDisplay):
         IDisplay.__init__(self)
 
         self.__PSGLayout = [[]]
-        self.__PreLayout = []
         
         self.__PSGWindow = sg.Window('Settingator', self.__PSGLayout, element_justification='left', finalize=True)
 
@@ -20,7 +19,7 @@ class PySimpleGUIDisplay(IDisplay):
         self.__stuffToClose = []
         self.__isRunning = True
 
-    def isRunning(self):
+    def IsRunning(self):
         return self.__isRunning
 
     def AddElementToRefresh(self, element) -> None:
@@ -31,15 +30,6 @@ class PySimpleGUIDisplay(IDisplay):
 
     def GetPSGLayout(self):
         return self.__PSGLayout
-
-    def AddPreLayout(self, element:PreLayoutElement) -> None:
-        self.__PreLayout.append(element)
-
-    def RemovePreLayout(self, element:PreLayoutElement) -> None:
-        if element in self.__PreLayout:
-            self.__PreLayout.remove(element)
-        else:
-            print("error removing prelayout")
 
     def __UpdatePrelayout(self, layout, elementList, isColumn:bool = False):
         
@@ -91,7 +81,7 @@ class PySimpleGUIDisplay(IDisplay):
 
         topFrameLayout = [[]]
 
-        self.__UpdatePrelayout(topFrameLayout, self.__PreLayout)
+        self.__UpdatePrelayout(topFrameLayout, self._PreLayout.GetKey())
         
         self.__PSGLayout[0].append(sg.Frame(title="", border_width=0, layout=topFrameLayout, vertical_alignment="top", expand_x=True, expand_y=True))
 
