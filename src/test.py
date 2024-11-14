@@ -1241,6 +1241,10 @@ def testButtonColor(value):
     playerPressButton(3, YELLOW_BUTTON)
     display.Update()
 
+def testButtonCB():
+    print("CB")
+    ControlColumnPrelayout.RemoveElement(startGameAutoButton)
+
 ########################
 
 if __name__ == "__main__":
