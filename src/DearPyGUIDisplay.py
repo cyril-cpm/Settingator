@@ -38,11 +38,16 @@ class DPGElement(IElement):
         dpg.set_value(self._value, value)
 
 =======
+<<<<<<< HEAD
 >>>>>>> 44af4f1 (Start implementing DearPyGUI)
+=======
+>>>>>>> 8cbc806 (Start implementing DearPyGUI)
+>>>>>>> 075c465 (Start implementing DearPyGUI)
 class DearPyGUIDisplay(IDisplay):
     def __init__(self) -> None:
         IDisplay.__init__(self)
 
+<<<<<<< HEAD
         dpg.create_viewport(title="Settingator", width=1200, height=1200)
         dpg.setup_dearpygui()
         dpg.toggle_viewport_fullscreen()
@@ -50,7 +55,21 @@ class DearPyGUIDisplay(IDisplay):
 
         self.__mainWindow = dpg.add_window(tag="Main Window", width=600, height=600, no_background=True, no_title_bar=True, pos=[0, 0])
         self.__mainGroup = dpg.add_group(tag="Main Group", parent=self.__mainWindow)
+<<<<<<< HEAD
         dpg.add_viewport_drawlist(tag="VPDrawList", front=False)
+=======
+        #dpg.add_viewport_drawlist(tag="VPDrawList", front=False)
+=======
+        dpg.create_viewport(title="Settingator")
+        dpg.setup_dearpygui()
+        dpg.show_viewport()
+
+        with dpg.window(tag="Main Window") as mainWindow:
+                        pass
+
+        self.__mainWindow = mainWindow
+>>>>>>> 8cbc806 (Start implementing DearPyGUI)
+>>>>>>> 075c465 (Start implementing DearPyGUI)
 
         #dpg.set_primary_window("Main Window", True)
 
@@ -61,6 +80,7 @@ class DearPyGUIDisplay(IDisplay):
         self.UpdateLayout(None)
         dpg.render_dearpygui_frame()
 
+<<<<<<< HEAD
     def __UpdateChildLayout(self, parentElement:LayoutElement, columnTag = None) -> None:
         
         if isinstance(parentElement.GetKey(), list):
@@ -82,6 +102,14 @@ class DearPyGUIDisplay(IDisplay):
             dpg.delete_item(elementsToRemove[0])
             element.GetElementsToRemoveFromView().remove(elementsToRemove[0])
 =======
+<<<<<<< HEAD
+=======
+    def __UpdateChildLayout(self, parentElement:PreLayoutElement, columnTag = None) -> None:
+        
+        if isinstance(parentElement.GetKey(), list):
+            childElement:PreLayoutElement
+
+>>>>>>> 075c465 (Start implementing DearPyGUI)
             for childElement in parentElement.GetKey():
 
                 if childElement.IsModified():
@@ -93,19 +121,35 @@ class DearPyGUIDisplay(IDisplay):
             print("item to delete")
             dpg.delete_item(elementToRemove)
             element.GetElementsToRemoveFromView().remove(elementToRemove)
+<<<<<<< HEAD
 >>>>>>> 44af4f1 (Start implementing DearPyGUI)
+=======
+>>>>>>> 8cbc806 (Start implementing DearPyGUI)
+>>>>>>> 075c465 (Start implementing DearPyGUI)
 
         if element.IsNew():
             element.SetNew(False)
 
             type:int = element.GetType()
             name = element.GetName()
+<<<<<<< HEAD
             
             if isinstance(name, Mutable):
                 name = name.GetValue()
 
             key = element.GetKey()
             ret:Mutable = element.GetRet()
+=======
+<<<<<<< HEAD
+=======
+            
+            if isinstance(name, Pointer):
+                name = name.GetValue()
+
+            key = element.GetKey()
+            ret:Pointer = element.GetRet()
+>>>>>>> 8cbc806 (Start implementing DearPyGUI)
+>>>>>>> 075c465 (Start implementing DearPyGUI)
 
             parentTag = parent=str(element.GetParent()) if element.GetParent() else columnTag
                 
@@ -166,6 +210,37 @@ class DearPyGUIDisplay(IDisplay):
                     if name != '':
                         dpg.add_text(default_value=name, tag=str(element)+"label", parent=str(element))
 
+<<<<<<< HEAD
+=======
+                self.__UpdateChildLayout(element, str(element)+"cell")
+=======
+
+            elif type == IDP_TEXT:
+                dpg.add_text(default_value=name, tag=str(element), parent=columnTag)
+
+            elif type == IDP_INPUT:
+                dpg.add_input_text(default_value=name, tag=str(element), parent=columnTag)
+
+            elif type == IDP_COLUMN:
+                dpg.add_table_cell(tag=str(element), parent=columnTag)
+                #self.__UpdateChildLayout(element, str(element))
+            
+            elif type == IDP_FRAME:
+                if columnTag == self.__mainWindow:
+                    dpg.add_table(tag=str(element), parent=columnTag, header_row=False)
+
+                    for x in range(0, key.__len__()):
+                        dpg.add_table_column(tag=str(element)+str(x), parent=str(element))
+                    
+                    dpg.add_table_row(tag=str(element)+"row", parent=str(element))
+
+                else:
+                    dpg.add_table_cell(tag=str(element), parent=columnTag)
+
+                    if name != '':
+                        dpg.add_text(default_value=name, tag=str(element)+"label", parent=str(element))
+
+>>>>>>> 075c465 (Start implementing DearPyGUI)
                     dpg.add_table(tag=str(element)+"table", parent=str(element), header_row=False)
 
 
@@ -174,6 +249,7 @@ class DearPyGUIDisplay(IDisplay):
 
                     dpg.add_table_row(tag=str(element)+"row", parent=str(element)+"table")
 
+<<<<<<< HEAD
 <<<<<<< HEAD
                     if ret:
                         ret.SetValue(DPGElement(columnTag[:-3], IDP_FRAME, childIndex))
@@ -185,20 +261,29 @@ class DearPyGUIDisplay(IDisplay):
                 #self.__UpdateChildLayout(element, str(element)+"row")
         
 >>>>>>> 44af4f1 (Start implementing DearPyGUI)
+=======
+                #self.__UpdateChildLayout(element, str(element)+"row")
+        
+>>>>>>> 075c465 (Start implementing DearPyGUI)
         if element.GetType() == IDP_FRAME:
             self.__UpdateChildLayout(element, str(element)+"row")
 
         elif element.GetType() == IDP_COLUMN:
             self.__UpdateChildLayout(element, str(element))
+<<<<<<< HEAD
 =======
                 self.__UpdateChildLayout(element, str(element)+"frameBody")
 >>>>>>> 73839b3 (big trouble)
+=======
+>>>>>>> 8cbc806 (Start implementing DearPyGUI)
+>>>>>>> 075c465 (Start implementing DearPyGUI)
 
         element.SetModified(False)
 
                     
 
     def UpdateLayout(self, slaveSettings:dict) -> None:
+<<<<<<< HEAD
         if self._Layout.IsModified():
             self.__UpdateLayout(self._Layout, self.__mainGroup)
 
@@ -206,6 +291,14 @@ class DearPyGUIDisplay(IDisplay):
             pass
 
 
+<<<<<<< HEAD
+=======
+=======
+        if self._PreLayout.IsModified():
+            self.__UpdatePrelayout(self._PreLayout, self.__mainWindow)
+>>>>>>> 8cbc806 (Start implementing DearPyGUI)
+
+>>>>>>> 075c465 (Start implementing DearPyGUI)
     def UpdateSetting(self, setting:Setting) -> None:
         pass
         
