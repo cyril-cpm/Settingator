@@ -32,6 +32,11 @@ class PreLayoutElement(ABC):
     def __init__(self, type, name="", key=None, ret:Pointer=None) -> None:
         self.__type = type
         self.__name = name
+        self.__parent:PreLayoutElement = None
+        self.__isModified = True
+        self.__toRemoveFromView = []
+        self.__toAddInView = []
+        self.__isNew = True
 
         self.__key = key
 
@@ -43,6 +48,18 @@ class PreLayoutElement(ABC):
     def __del__(self):
         self.__key = None
         print("delete")
+
+    def IsNew(self):
+        return self.__isNew
+    
+    def SetNew(self, value:bool):
+        self.__isNew = value
+
+    def GetElementsToRemoveFromView(self):
+        return self.__toRemoveFromView
+    
+    def GetElementsToAddInView(self):
+        return self.__toAddInView
 
     def GetType(self):
         return self.__type
@@ -56,9 +73,31 @@ class PreLayoutElement(ABC):
     def GetRet(self):
         return self.__ret
     
+    def SetParent(self, parent = None) -> None:
+        self.__parent = parent
+    
+    def GetParent(self):
+        return self.__parent
+    
+    def SetModified(self, modified:bool = True):
+        self.__isModified = modified
+        print("modified")
+
+
+        if modified and self.__parent:
+            self.__parent.SetModified()
+
+    def IsModified(self) -> bool:
+        return self.__isModified
+    
     def AppendElement(self, element) -> None:
         if isinstance(self.__key, list):
             self.__key.append(element)
+            element.SetParent(self)
+
+            self.__toAddInView.append(element)
+            self.SetModified()
+            
         else:
             print("Can't append element to " + IDPTypeToStr(self.__type) + ", name is \"" + self.__name + "\"")
             print("Key:")
@@ -67,7 +106,13 @@ class PreLayoutElement(ABC):
 
     def RemoveElement(self, element) -> None:
         if isinstance(self.__key, list):
-            self.__key.remove(element)
+
+            if element in self.__key:
+                element.SetParent()
+                self.__key.remove(element)
+                
+                self.__toRemoveFromView.append(str(element))
+                self.SetModified()
         else:
             print("Can't remove element to " + IDPTypeToStr(self.__type) + ", name is \"" + self.__name + "\"")
             print("Key:")
@@ -76,6 +121,7 @@ class PreLayoutElement(ABC):
 class IDisplay(ABC):
     def __init__(self) -> None:
         self.__slaveSettings = dict
+        self._PreLayout = PreLayoutElement(IDP_FRAME, "Main Frame")
 
     def SetSlaveSettingsRef(self, slaveSettings:dict) -> None:
         self.__slaveSettings = slaveSettings
@@ -94,3 +140,16 @@ class IDisplay(ABC):
     @abstractmethod
     def UpdateSetting(self,setting:Setting) -> None:
         pass
+
+    @abstractmethod
+    def IsRunning(self) -> bool:
+        pass
+
+    def AddPreLayout(self, element:PreLayoutElement) -> None:
+        self._PreLayout.AppendElement(element)
+
+    def RemovePreLayout(self, element:PreLayoutElement) -> None:
+        self._PreLayout.RemoveElement(element)
+
+    def GetPrelayout(self) -> list:
+        return self._PreLayout
