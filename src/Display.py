@@ -93,6 +93,7 @@ class PreLayoutElement(ABC):
     
     def SetModified(self, modified:bool = True):
         self.__isModified = modified
+        print("modified")
 
 
         if modified and self.__parent:

@@ -1243,6 +1243,10 @@ def testButtonColor(window):
     playerPressButton(3, YELLOW_BUTTON)
     display.Update()
 
+def testButtonCB():
+    print("CB")
+    ControlColumnPrelayout.RemoveElement(startGameAutoButton)
+
 ########################
 
 if __name__ == "__main__":
@@ -1296,7 +1300,13 @@ if __name__ == "__main__":
     if TESTING:
         CreateDummyPlayers()
         
-    while display.IsRunning():
+    display.AddPreLayout(PreLayoutElement(IDP_BUTTON, "Test", testButtonCB))
+
+    #STR.SendInitRequest(1)
+    STR.SendBridgeInitRequest(1, b'Turret', TurretCallback)
+    STR.SendBridgeInitRequest(2, b'Desk', DeskCallback, NUMBER_PLAYER)
+
+    while display.isRunning():
         STR.Update()
         game.Update()
 
