@@ -59,7 +59,6 @@ class DPGElement(IElement):
     def SetBGColor(self, color):
         
         if self.__type == IDP_FRAME:
-            dpg.highlight_table_cell(self._value, 0, self.__index, hexColorToList(color))
 
     def UpdateValue(self, value):
         dpg.set_value(self._value, value)
@@ -293,7 +292,7 @@ class DearPyGUIDisplay(IDisplay):
 >>>>>>> 44af4f1 (Start implementing DearPyGUI)
 
             elif type == IDP_INPUT:
-                dpg.add_input_text(default_value=name, tag=str(element), parent=columnTag)
+                dpg.add_input_text(default_value=name, tag=str(element), parent=columnTag, width=200)
 
                 if ret:
                     ret.SetValue(DPGElement(str(element), IDP_INPUT))
@@ -303,12 +302,12 @@ class DearPyGUIDisplay(IDisplay):
 
             elif type == IDP_COLUMN:
                 dpg.add_table_cell(tag=str(element), parent=columnTag)
+                dpg.add_group(tag=str(element), parent=columnTag)
 
                 if ret:
                     ret.SetValue(DPGElement(str(element), IDP_COLUMN))
 =======
             elif type == IDP_COLUMN:
-                dpg.add_table_cell(tag=str(element), parent=columnTag)
                 #self.__UpdateChildLayout(element, str(element))
 >>>>>>> 44af4f1 (Start implementing DearPyGUI)
                 #self.__UpdateChildLayout(element, str(element))
@@ -322,14 +321,24 @@ class DearPyGUIDisplay(IDisplay):
                     ret.SetValue(DPGElement(str(element), IDP_COLUMN))
             
             elif type == IDP_FRAME:
-                if columnTag == self.__mainWindow:
-                    dpg.add_table(tag=str(element), parent=columnTag, header_row=False)
+                dpg.add_group(tag=str(element), parent=columnTag, label=name)
+                
+                if name != '':
+                    dpg.add_text(tag=str(element) + "label", parent=str(element), default_value=name)
+
+                dpg.add_group(tag=str(element)+"frameBody", parent=str(element), horizontal=True)
+
+                else:
+                    dpg.add_table_cell(tag=str(element), parent=columnTag)
+
+                    if name != '':
+                        dpg.add_text(default_value=name, tag=str(element)+"label", parent=str(element))
+
+                    dpg.add_table(tag=str(element)+"table", parent=str(element), header_row=False)
+
 
                     for x in range(0, key.__len__()):
-                        dpg.add_table_column(tag=str(element)+str(x), parent=str(element))
-                    
-                    dpg.add_table_row(tag=str(element)+"row", parent=str(element))
-
+                        dpg.add_table_column(tag=str(element)+str(x), parent=str(element)+"table")
                 else:
                     dpg.add_table_cell(tag=str(element), parent=columnTag)
 
@@ -342,6 +351,14 @@ class DearPyGUIDisplay(IDisplay):
 
                     for x in range(0, key.__len__()):
                         dpg.add_table_column(tag=str(element)+str(x), parent=str(element)+"table")
+                if ret:
+                    ret.SetValue(DPGElement(str(element), IDP_FRAME, childIndex))
+
+                    dpg.add_table_row(tag=str(element)+"row", parent=str(element)+"table")
+
+<<<<<<< HEAD
+                    if ret:
+                        ret.SetValue(DPGElement(columnTag[:-3], IDP_FRAME, childIndex))
 
                     dpg.add_table_row(tag=str(element)+"row", parent=str(element)+"table")
 
@@ -358,7 +375,7 @@ class DearPyGUIDisplay(IDisplay):
         
 >>>>>>> 075c465 (Start implementing DearPyGUI)
         if element.GetType() == IDP_FRAME:
-            self.__UpdateChildLayout(element, str(element)+"row")
+            self.__UpdateChildLayout(element, str(element)+"frameBody")
 
         elif element.GetType() == IDP_COLUMN:
             self.__UpdateChildLayout(element, str(element))
@@ -391,6 +408,7 @@ class DearPyGUIDisplay(IDisplay):
 >>>>>>> 8cbc806 (Start implementing DearPyGUI)
 
 >>>>>>> 075c465 (Start implementing DearPyGUI)
+
     def UpdateSetting(self, setting:Setting) -> None:
         pass
         
