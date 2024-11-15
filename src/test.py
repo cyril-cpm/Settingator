@@ -132,10 +132,10 @@ class Player():
         self.__score = self.__good - self.__bad
 
         if self.__goodTextPtr():
-            self.__goodTextPtr.GetValue().update("Good: " + str(self.__good))
+            self.__goodTextPtr.GetValue().UpdateValue("Good: " + str(self.__good))
 
         if self.__badTextPtr():
-            self.__badTextPtr.GetValue().update("Bad: " + str(self.__bad))
+            self.__badTextPtr.GetValue().UpdateValue("Bad: " + str(self.__bad))
 
     def GetScore(self):
         return self.__score
@@ -155,7 +155,8 @@ class Player():
         return self.__frameElementPtr
     
     def SetFrameBGColor(self, color):
-        self.__frameElementPtr.GetValue().TKFrame.configure(background=color)
+        #self.__frameElementPtr.GetValue().TKFrame.configure(background=color)
+        self.__frameElementPtr.GetValue().SetBGColor(color)
 
     def GetNameElementPtr(self):
         return self.__nameElementPtr
@@ -165,7 +166,7 @@ class Player():
     
     def ReWriteName(self):
         if (self.__nameElementPtr()):
-            self.__nameElementPtr.GetValue().update(self.__name)
+            self.__nameElementPtr.GetValue().UpdateValue(self.__name)
 
     def ReWritePosition(self):
         if (self.__positionElementPtr()):
@@ -1242,10 +1243,6 @@ def testButtonColor(window):
     playerPressButton(3, YELLOW_BUTTON)
     display.Update()
 
-def testButtonCB():
-    print("CB")
-    ControlColumnPrelayout.RemoveElement(startGameAutoButton)
-
 ########################
 
 if __name__ == "__main__":
@@ -1299,8 +1296,6 @@ if __name__ == "__main__":
     if TESTING:
         CreateDummyPlayers()
         
-    display.AddPreLayout(PreLayoutElement(IDP_BUTTON, "Test", testButtonCB))
-
     #STR.SendInitRequest(1)
     STR.SendBridgeInitRequest(1, b'Turret', TurretCallback)
     STR.SendBridgeInitRequest(2, b'Desk', DeskCallback, NUMBER_PLAYER)
