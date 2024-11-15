@@ -132,7 +132,7 @@ class PreLayoutElement(ABC):
 class IDisplay(ABC):
     def __init__(self) -> None:
         self.__slaveSettings = dict
-        self._PreLayout = PreLayoutElement(IDP_FRAME, "Main Frame")
+        self._PreLayout = PreLayoutElement(IDP_FRAME)
 
     def SetSlaveSettingsRef(self, slaveSettings:dict) -> None:
         self.__slaveSettings = slaveSettings
