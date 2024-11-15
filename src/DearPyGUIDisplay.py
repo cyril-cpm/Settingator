@@ -36,6 +36,29 @@ class DPGElement(IElement):
 
 =======
 >>>>>>> 8cbc806 (Start implementing DearPyGUI)
+def hexColorToList(color:str) -> list:
+    r = color [1:3]
+    g = color [3:5]
+    b = color [5:7]
+
+    ret = [int(r, 16), int(g, 16), int(b, 16)]
+
+    return ret
+
+class DPGElement(IElement):
+    def __init__(self, value, type, index = 0):
+        IElement.__init__(self, value)
+        self.__type = type
+        self.__index = index
+
+    def SetBGColor(self, color):
+        
+        if self.__type == IDP_FRAME:
+            dpg.highlight_table_cell(self._value, 0, self.__index, hexColorToList(color))
+
+    def UpdateValue(self, value):
+        dpg.set_value(self._value, value)
+
 class DearPyGUIDisplay(IDisplay):
     def __init__(self) -> None:
         IDisplay.__init__(self)
@@ -95,18 +118,29 @@ class DearPyGUIDisplay(IDisplay):
         if isinstance(parentElement.GetKey(), list):
             childElement:PreLayoutElement
 
+            childIndex = 0
             for childElement in parentElement.GetKey():
 
                 if childElement.IsModified():
-                    self.__UpdatePrelayout(childElement, columnTag)
+                    self.__UpdatePrelayout(childElement, columnTag, childIndex)
+                
+                childIndex += 1
 
-    def __UpdatePrelayout(self, element:PreLayoutElement, columnTag=None):
+    def __UpdatePrelayout(self, element:PreLayoutElement, columnTag=None, childIndex=0):
 
         for elementToRemove in element.GetElementsToRemoveFromView():
             print("item to delete")
             dpg.delete_item(elementToRemove)
             element.GetElementsToRemoveFromView().remove(elementToRemove)
+        for elementToRemove in element.GetElementsToRemoveFromView():
+            print("item to delete")
+            dpg.delete_item(elementToRemove)
+            element.GetElementsToRemoveFromView().remove(elementToRemove)
 >>>>>>> 8cbc806 (Start implementing DearPyGUI)
+        elementsToRemove = element.GetElementsToRemoveFromView()
+        while elementsToRemove.__len__():
+            dpg.delete_item(elementsToRemove[0])
+            element.GetElementsToRemoveFromView().remove(elementsToRemove[0])
 
         if element.IsNew():
             element.SetNew(False)
@@ -129,10 +163,15 @@ class DearPyGUIDisplay(IDisplay):
                 dpg.add_button(label=name, tag=str(element), parent=columnTag, callback=key)
 <<<<<<< HEAD
                 
+                
+                if ret:
+                    ret.SetValue(DPGElement(str(element), IDP_BUTTON))
 
             elif type == IDP_TEXT:
                 dpg.add_text(default_value=name, tag=str(element), parent=columnTag)
                 
+                if ret:
+                    ret.SetValue(DPGElement(str(element), IDP_TEXT))
 
             elif type == IDP_INPUT:
                 dpg.add_input_text(default_value=name, tag=str(element), parent=columnTag, width=200)
@@ -183,9 +222,14 @@ class DearPyGUIDisplay(IDisplay):
             elif type == IDP_INPUT:
                 dpg.add_input_text(default_value=name, tag=str(element), parent=columnTag)
 
+                if ret:
+                    ret.SetValue(DPGElement(str(element), IDP_INPUT))
+
             elif type == IDP_COLUMN:
                 dpg.add_table_cell(tag=str(element), parent=columnTag)
-                #self.__UpdateChildLayout(element, str(element))
+
+                if ret:
+                    ret.SetValue(DPGElement(str(element), IDP_COLUMN))
             
             elif type == IDP_FRAME:
                 if columnTag == self.__mainWindow:
@@ -210,8 +254,11 @@ class DearPyGUIDisplay(IDisplay):
 
                     dpg.add_table_row(tag=str(element)+"row", parent=str(element)+"table")
 
+                    if ret:
+                        ret.SetValue(DPGElement(columnTag[:-3], IDP_FRAME, childIndex))
+
                 #self.__UpdateChildLayout(element, str(element)+"row")
-        
+
         if element.GetType() == IDP_FRAME:
             self.__UpdateChildLayout(element, str(element)+"row")
 
