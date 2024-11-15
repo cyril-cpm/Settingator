@@ -28,6 +28,18 @@ def IDPTypeToStr(IDPType:int = IDP_NONE):
         return "IDP_UNKNOWN"
         
 
+class IElement(ABC):
+    def __init__(self, value):
+        self._value = value
+
+    @abstractmethod
+    def SetBGColor(self, color):
+        pass
+
+    @abstractmethod
+    def UpdateValue(self, value):
+        pass
+
 class PreLayoutElement(ABC):
     def __init__(self, type, name="", key=None, ret:Pointer=None) -> None:
         self.__type = type
@@ -81,7 +93,6 @@ class PreLayoutElement(ABC):
     
     def SetModified(self, modified:bool = True):
         self.__isModified = modified
-        print("modified")
 
 
         if modified and self.__parent:
