@@ -23,7 +23,11 @@ class DPGElement(IElement):
     def SetBGColor(self, color):
         
         if self.__type == IDP_FRAME:
-            dpg.highlight_table_cell(self._value, 0, self.__index, hexColorToList(color))
+            #dpg.highlight_table_cell(self._value, 0, self.__index, hexColorToList(color))
+            pos = dpg.get_item_pos(self._value)
+            size = dpg.get_item_rect_size(self._value)
+            cornerPos = [pos[0] + size[0], pos[1] + size[1]]
+            dpg.draw_rectangle(pos, cornerPos, fill=hexColorToList(color), parent="Main Window")
 
     def UpdateValue(self, value):
         dpg.set_value(self._value, value)
@@ -97,47 +101,32 @@ class DearPyGUIDisplay(IDisplay):
                     ret.SetValue(DPGElement(str(element), IDP_TEXT))
 
             elif type == IDP_INPUT:
-                dpg.add_input_text(default_value=name, tag=str(element), parent=columnTag)
+                dpg.add_input_text(default_value=name, tag=str(element), parent=columnTag, width=200)
 
                 if ret:
                     ret.SetValue(DPGElement(str(element), IDP_INPUT))
 
             elif type == IDP_COLUMN:
-                dpg.add_table_cell(tag=str(element), parent=columnTag)
+                dpg.add_group(tag=str(element), parent=columnTag)
 
                 if ret:
                     ret.SetValue(DPGElement(str(element), IDP_COLUMN))
             
             elif type == IDP_FRAME:
-                if columnTag == self.__mainWindow:
-                    dpg.add_table(tag=str(element), parent=columnTag, header_row=False)
+                dpg.add_group(tag=str(element), parent=columnTag, label=name)
+                
+                if name != '':
+                    dpg.add_text(tag=str(element) + "label", parent=str(element), default_value=name)
 
-                    for x in range(0, key.__len__()):
-                        dpg.add_table_column(tag=str(element)+str(x), parent=str(element))
-                    
-                    dpg.add_table_row(tag=str(element)+"row", parent=str(element))
+                dpg.add_group(tag=str(element)+"frameBody", parent=str(element), horizontal=True)
 
-                else:
-                    dpg.add_table_cell(tag=str(element), parent=columnTag)
-
-                    if name != '':
-                        dpg.add_text(default_value=name, tag=str(element)+"label", parent=str(element))
-
-                    dpg.add_table(tag=str(element)+"table", parent=str(element), header_row=False)
-
-
-                    for x in range(0, key.__len__()):
-                        dpg.add_table_column(tag=str(element)+str(x), parent=str(element)+"table")
-
-                    dpg.add_table_row(tag=str(element)+"row", parent=str(element)+"table")
-
-                    if ret:
-                        ret.SetValue(DPGElement(columnTag[:-3], IDP_FRAME, childIndex))
+                if ret:
+                    ret.SetValue(DPGElement(str(element), IDP_FRAME, childIndex))
 
                 #self.__UpdateChildLayout(element, str(element)+"row")
 
         if element.GetType() == IDP_FRAME:
-            self.__UpdateChildLayout(element, str(element)+"row")
+            self.__UpdateChildLayout(element, str(element)+"frameBody")
 
         elif element.GetType() == IDP_COLUMN:
             self.__UpdateChildLayout(element, str(element))
@@ -149,6 +138,7 @@ class DearPyGUIDisplay(IDisplay):
     def UpdateLayout(self, slaveSettings:dict) -> None:
         if self._PreLayout.IsModified():
             self.__UpdatePrelayout(self._PreLayout, self.__mainWindow)
+
 
     def UpdateSetting(self, setting:Setting) -> None:
         pass
