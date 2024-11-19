@@ -24,7 +24,15 @@ class DPGElement(IElement):
     def SetBGColor(self, color):
         
         if self.__type == IDP_FRAME:
+<<<<<<< HEAD
             dpg.highlight_table_cell(self._value, 0, self.__index, hexColorToList(color))
+=======
+            #dpg.highlight_table_cell(self._value, 0, self.__index, hexColorToList(color))
+            pos = dpg.get_item_pos(self._value)
+            size = dpg.get_item_rect_size(self._value)
+            cornerPos = [pos[0] + size[0], pos[1] + size[1]]
+            dpg.draw_rectangle(pos, cornerPos, fill=hexColorToList(color), parent="VPDrawList")
+>>>>>>> 73839b3 (big trouble)
 
     def UpdateValue(self, value):
         dpg.set_value(self._value, value)
@@ -35,16 +43,16 @@ class DearPyGUIDisplay(IDisplay):
     def __init__(self) -> None:
         IDisplay.__init__(self)
 
-        dpg.create_viewport(title="Settingator")
+        dpg.create_viewport(title="Settingator", width=1200, height=1200)
         dpg.setup_dearpygui()
+        dpg.toggle_viewport_fullscreen()
         dpg.show_viewport()
 
-        with dpg.window(tag="Main Window") as mainWindow:
-                        pass
+        self.__mainWindow = dpg.add_window(tag="Main Window", width=600, height=600, no_background=True, no_title_bar=True, pos=[0, 0])
+        self.__mainGroup = dpg.add_group(tag="Main Group", parent=self.__mainWindow)
+        dpg.add_viewport_drawlist(tag="VPDrawList", front=False)
 
-        self.__mainWindow = mainWindow
-
-        dpg.set_primary_window("Main Window", True)
+        #dpg.set_primary_window("Main Window", True)
 
     def Update(self) -> Setting:
         jobs = dpg.get_callback_queue() # retrieves and clears queue
@@ -131,12 +139,18 @@ class DearPyGUIDisplay(IDisplay):
 
                 if ret:
                     ret.SetValue(DPGElement(str(element), IDP_COLUMN))
+<<<<<<< HEAD
 =======
             elif type == IDP_COLUMN:
                 dpg.add_table_cell(tag=str(element), parent=columnTag)
                 #self.__UpdateChildLayout(element, str(element))
 >>>>>>> 44af4f1 (Start implementing DearPyGUI)
             
+=======
+
+                self.__UpdateChildLayout(element, str(element))
+
+>>>>>>> 73839b3 (big trouble)
             elif type == IDP_FRAME:
                 if columnTag == self.__mainWindow:
                     dpg.add_table(tag=str(element), parent=columnTag, header_row=False)
@@ -164,6 +178,7 @@ class DearPyGUIDisplay(IDisplay):
                     if ret:
                         ret.SetValue(DPGElement(columnTag[:-3], IDP_FRAME, childIndex))
 
+<<<<<<< HEAD
                 #self.__UpdateChildLayout(element, str(element)+"row")
 
 =======
@@ -175,6 +190,9 @@ class DearPyGUIDisplay(IDisplay):
 
         elif element.GetType() == IDP_COLUMN:
             self.__UpdateChildLayout(element, str(element))
+=======
+                self.__UpdateChildLayout(element, str(element)+"frameBody")
+>>>>>>> 73839b3 (big trouble)
 
         element.SetModified(False)
 
@@ -182,7 +200,11 @@ class DearPyGUIDisplay(IDisplay):
 
     def UpdateLayout(self, slaveSettings:dict) -> None:
         if self._PreLayout.IsModified():
-            self.__UpdatePrelayout(self._PreLayout, self.__mainWindow)
+            self.__UpdatePrelayout(self._PreLayout, self.__mainGroup)
+
+        if slaveSettings:
+            pass
+
 
     def UpdateSetting(self, setting:Setting) -> None:
         pass
