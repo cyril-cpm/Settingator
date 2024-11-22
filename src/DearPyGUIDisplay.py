@@ -23,11 +23,12 @@ class DPGElement(IElement):
     def SetBGColor(self, color):
         
         if self.__type == IDP_FRAME:
-            #dpg.highlight_table_cell(self._value, 0, self.__index, hexColorToList(color))
-            pos = dpg.get_item_pos(self._value)
-            size = dpg.get_item_rect_size(self._value)
-            cornerPos = [pos[0] + size[0], pos[1] + size[1]]
-            dpg.draw_rectangle(pos, cornerPos, fill=hexColorToList(color), parent="VPDrawList")
+            dpg.highlight_table_cell(self._value+"table", 0, self.__index, hexColorToList(color))
+            
+            #pos = dpg.get_item_pos(self._value)
+            #size = dpg.get_item_rect_size(self._value)
+            #cornerPos = [pos[0] + size[0], pos[1] + size[1]]
+            #dpg.draw_rectangle(pos, cornerPos, fill=hexColorToList(color), parent="VPDrawList")
 
     def UpdateValue(self, value):
         dpg.set_value(self._value, value)
@@ -38,14 +39,14 @@ class DearPyGUIDisplay(IDisplay):
 
         dpg.create_viewport(title="Settingator", width=1200, height=1200)
         dpg.setup_dearpygui()
-        dpg.toggle_viewport_fullscreen()
+        #dpg.toggle_viewport_fullscreen()
         dpg.show_viewport()
 
-        self.__mainWindow = dpg.add_window(tag="Main Window", width=600, height=600, no_background=True, no_title_bar=True, pos=[0, 0])
+        self.__mainWindow = dpg.add_window(tag="Main Window", width=600, height=600, no_background=False, no_title_bar=True, pos=[0, 0])
         self.__mainGroup = dpg.add_group(tag="Main Group", parent=self.__mainWindow)
-        dpg.add_viewport_drawlist(tag="VPDrawList", front=False)
+        #dpg.add_viewport_drawlist(tag="VPDrawList", front=False)
 
-        #dpg.set_primary_window("Main Window", True)
+        dpg.set_primary_window("Main Window", True)
 
     def Update(self) -> Setting:
         jobs = dpg.get_callback_queue() # retrieves and clears queue
@@ -107,25 +108,42 @@ class DearPyGUIDisplay(IDisplay):
                     ret.SetValue(DPGElement(str(element), IDP_INPUT))
 
             elif type == IDP_COLUMN:
-                dpg.add_group(tag=str(element), parent=columnTag)
+                dpg.add_group(tag=str(element)+"columnBody", parent=columnTag, label=name, horizontal=False)
+                
+                #dpg.add_table(tag=str(element)+"table", parent=columnTag, header_row=False, policy=dpg.mvTable_SizingFixedFit)
+                #dpg.add_table_column(tag=str(element)+"column", parent=str(element)+"table")
+                #dpg.add_table_row(tag=str(element)+"row", parent=str(element)+"table")
+                #dpg.add_table_cell(tag=str(element)+"cell", parent=str(element)+"row")
+                #dpg.highlight_table_cell(str(element)+"table", 0, 0, hexColorToList("#00FF00"))
+                #dpg.add_group(tag=str(element)+"columnBody", parent=str(element)+"cell")
 
                 if ret:
                     ret.SetValue(DPGElement(str(element), IDP_COLUMN))
 
-                self.__UpdateChildLayout(element, str(element))
+                self.__UpdateChildLayout(element, str(element)+"columnBody")
 
             elif type == IDP_FRAME:
-                dpg.add_group(tag=str(element), parent=columnTag, label=name)
+                #dpg.add_group(tag=str(element), parent=columnTag, label=name)
                 
-                if name != '':
-                    dpg.add_text(tag=str(element) + "label", parent=str(element), default_value=name)
+                #dpg.add_group(tag=str(element)+"preGroup", parent=columnTag, horizontal=False)
 
-                dpg.add_group(tag=str(element)+"frameBody", parent=str(element), horizontal=True)
+                dpg.add_table(tag=str(element)+"table", parent=columnTag, header_row=False, policy=dpg.mvTable_SizingFixedFit)
+                dpg.add_table_column(tag=str(element)+"column", parent=str(element)+"table")
+                dpg.add_table_row(tag=str(element)+"row", parent=str(element)+"table")
+                dpg.add_table_cell(tag=str(element)+"cell", parent=str(element)+"row")
+                #dpg.add_group(tag=str(element)+"cellGroup", parent=str(element)+"cell")
+
+                if name != '':
+                    dpg.add_text(tag=str(element) + "label", parent=str(element)+"cell", default_value=name)
+                    
+                    dpg.highlight_table_cell(str(element)+"table", 0, 0, hexColorToList("#0000FF"))
+
+                #dpg.add_group(tag=str(element)+"frameBody", parent=str(element)+"cell", horizontal=True)
 
                 if ret:
-                    ret.SetValue(DPGElement(str(element), IDP_FRAME, childIndex))
+                    ret.SetValue(DPGElement(str(element), IDP_FRAME, 0))
 
-                self.__UpdateChildLayout(element, str(element)+"frameBody")
+                self.__UpdateChildLayout(element, str(element)+"cell")
 
         element.SetModified(False)
 
