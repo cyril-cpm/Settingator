@@ -11,6 +11,7 @@ import pygame.mixer as mx
 import openai
 import sys
 import gc
+from TKDisplay import *
 
 
 com:SerialCTR
@@ -1248,11 +1249,22 @@ def testButtonColor(window):
 if __name__ == "__main__":
     com = SerialCTR(PySimpleGUIDisplay.SelectCOMPort(SerialCTR))
 
-    display = DearPyGUIDisplay()
+    #display = DearPyGUIDisplay()
     #display = PySimpleGUIDisplay()
+    display = TKDisplay()
     #display.AddElementToRefresh(playerList)
 
     STR = Settingator(com, display)
+
+    STR.AddNotifCallback(RED_BUTTON, lambda slaveID : playerPressButton(slaveID, RED_BUTTON))
+    STR.AddNotifCallback(GREEN_BUTTON, lambda slaveID : playerPressButton(slaveID, GREEN_BUTTON))
+    STR.AddNotifCallback(BLUE_BUTTON, lambda slaveID : playerPressButton(slaveID, BLUE_BUTTON))
+    STR.AddNotifCallback(YELLOW_BUTTON, lambda slaveID : playerPressButton(slaveID, YELLOW_BUTTON))
+
+    STR.AddNotifCallback(LASER_NOTIF, notifLaser)
+    #STR.SendBridgeInitRequest(1, b'Turret', TurretCallback)
+    #STR.SendBridgeInitRequest(2, b'Desk', DeskCallback, NUMBER_PLAYER)
+    STR.SendInitRequest(1)
 
     ControlColumnPrelayout = PreLayoutElement(IDP_COLUMN)
 
@@ -1283,6 +1295,9 @@ if __name__ == "__main__":
     ControlColumnPrelayout.AppendElement(PreLayoutElement(IDP_BUTTON, "Reset Score", lambda window : playerList.ResetScore()))
 
     ControlColumnPrelayout.AppendElement(PreLayoutElement(IDP_BUTTON, "Reset Player", lambda window : playerList.ResetPlayer()))
+
+    if TESTING:
+        ControlColumnPrelayout.AppendElement(PreLayoutElement(IDP_BUTTON, "Test BG", lambda x : playerList.SetAllBGColor(RED_COLOR)))
 
     display.AddPreLayout(ControlColumnPrelayout)
     

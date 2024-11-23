@@ -52,6 +52,10 @@ class PreLayoutElement(ABC):
 
         self.__key = key
 
+        if isinstance(self.__key, list):
+            for element in self.__key:
+                element.SetParentRecursively(self)
+
         if (type == IDP_COLUMN or type == IDP_FRAME) and key == None:
             self.__key = []
 
@@ -87,6 +91,13 @@ class PreLayoutElement(ABC):
     
     def SetParent(self, parent = None) -> None:
         self.__parent = parent
+
+    def SetParentRecursively(self, parent = None) -> None:
+        self.__parent = parent
+
+        if isinstance(self.__key, list):
+            for element in self.__key:
+                element.SetParentRecursively(self)
     
     def GetParent(self):
         return self.__parent
