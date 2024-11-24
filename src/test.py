@@ -1,7 +1,7 @@
 from Settingator import *
 from PySerialCommunicator import *
 from PySimpleGUIDisplay import *
-from DearPyGUIDisplay import *
+#from DearPyGUIDisplay import *
 import csv
 import random
 import time
@@ -16,7 +16,7 @@ from TKDisplay import *
 
 com:SerialCTR
 
-display:DearPyGUIDisplay
+display:TKDisplay
 
 STR:Settingator
 
@@ -655,7 +655,7 @@ class Game():
         self.__finishedReadingTimestamp = 0
         self.__currentQuestionGoodAnswer = 0
         self.__accelDone = False
-        self.__questionAndScoreDisplay = QuestionAndScoreDisplay()
+        #self.__questionAndScoreDisplay = QuestionAndScoreDisplay()
         #display.AddStuffToClose(self.__questionAndScoreDisplay)
         self.__aiVoice = AIVoice()
         self.__nextStepAfterSpeak = 0
@@ -851,7 +851,7 @@ class Game():
         elif self.__mode == MANUAL:
             pass
 
-        self.__questionAndScoreDisplay.Update()
+        #self.__questionAndScoreDisplay.Update()
 
     def GetSpeakingQueue(self):
         return self.__speakingQueue
@@ -1301,7 +1301,7 @@ if __name__ == "__main__":
     ControlColumnPrelayout.AppendElement(PreLayoutElement(IDP_BUTTON, "Reset Player", lambda window : playerList.ResetPlayer()))
 
     if TESTING:
-        ControlColumnPrelayout.AppendElement(PreLayoutElement(IDP_BUTTON, "Test BG", lambda x : playerList.SetAllBGColor(RED_COLOR)))
+        ControlColumnPrelayout.AppendElement(PreLayoutElement(IDP_BUTTON, "Test BG", lambda : playerList.SetAllBGColor(RED_COLOR)))
 
     display.AddPreLayout(ControlColumnPrelayout)
     
@@ -1328,4 +1328,4 @@ if __name__ == "__main__":
     shouldRun.value = False
     speakingProcess.terminate()
     
-    dpg.destroy_context()
+    #dpg.destroy_context()

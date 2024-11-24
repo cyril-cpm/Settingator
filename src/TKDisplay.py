@@ -25,9 +25,14 @@ class TKDisplay(IDisplay):
 
         self.__mainFrame = ttk.Frame(self.__root)
         self.__mainFrame.grid(column=0, row=0, sticky=(N, W, E, S))
+        
+        #self.__root.columnconfigure(0, weight=1)
+        #self.__root.rowconfigure(0, weight=1)
+
         #testBUtton = ttk.Button(self.__mainFrame, text="Test", command=lambda : print("yolo")).grid(column=0, row=0)
 
     def Update(self) -> Setting:
+        self.__root.update()
         self.UpdateLayout(None)
 
     def __UpdatePrelayout(self, element:PreLayoutElement, parent, childIndex=0):
@@ -49,20 +54,17 @@ class TKDisplay(IDisplay):
             key = element.GetKey()
             ret:Pointer = element.GetRet()
                 
-
-            row = 0
-            column = 0
+            row = 1
+            column = 1
 
             newElement:ttk.Widget
 
             if element.GetParent():
                 if element.GetParent().GetType() == IDP_FRAME:
-                    row = 0
-                    column = childIndex
+                    column = childIndex + 1
 
                 elif element.GetParent().GetType() == IDP_COLUMN:
-                    row = childIndex
-                    column = 0
+                    row = childIndex + 1
 
             if type == IDP_BUTTON:
                 newElement = ttk.Button(parent, text=name, command=key)
@@ -72,35 +74,39 @@ class TKDisplay(IDisplay):
 
             elif type == IDP_TEXT:
                 
-                newElement = ttk.Label(self.__mainFrame, textvariable=name)
+                newElement = ttk.Label(parent, text=name)
                 
                 if ret:
                     ret.SetValue(TKElement(newElement, IDP_TEXT))
 
             elif type == IDP_INPUT:
-                inputVar=StringVar()
-                newElement = ttk.Entry(self.__mainFrame, textvariable=inputVar)
+                inputVar=StringVar(value=name)
+                newElement = ttk.Entry(parent, textvariable=inputVar)
 
                 if ret:
                     ret.SetValue(TKElement(newElement, IDP_INPUT))
 
             elif type == IDP_COLUMN:
-                newElement = ttk.Frame(self.__mainFrame)
+                newElement = ttk.Frame(parent)
 
                 if ret:
                     ret.SetValue(TKElement(newElement, IDP_COLUMN))
 
-                self.__UpdateChildLayout(element, newElement)
 
             elif type == IDP_FRAME:
-                newElement = ttk.Frame(self.__mainFrame)
+
+                if name == '':
+                    newElement = ttk.Frame(parent)
+                else:
+                    newElement = ttk.LabelFrame(parent, text=name)
 
                 if ret:
                     ret.SetValue(TKElement(newElement, IDP_FRAME))
+ 
+            newElement.grid(column=column, row=row, sticky=(N,S,E,W), padx=5, pady=5)
 
-                self.__UpdateChildLayout(element, newElement)
-            
-            newElement.grid(column=column, row=row, sticky=(N, W, E, S))
+            self.__UpdateChildLayout(element, newElement)
+
 
         element.SetModified(False)
 
