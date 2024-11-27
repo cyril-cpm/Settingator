@@ -218,9 +218,9 @@ class Players(IRefreshable):
                                                         PreLayoutElement(IDP_INPUT, player.GetName(), lambda name : player.SetName(name), player.GetNameElementPtr()),
                                                         PreLayoutElement(IDP_TEXT, "Good: 0", None, player.GetGoodTextPtr()),
                                                         PreLayoutElement(IDP_TEXT, "Bad: 0", None, player.GetBadTextPtr())
-                                                    ])
-                                                ],
-                                               player.GetFrameElementPtr()))
+                                                    ],
+                                               player.GetFrameElementPtr())
+                                                ]))
         display.AddPreLayout(player.GetPrelayout())
 
     def AllAnswered(self):
