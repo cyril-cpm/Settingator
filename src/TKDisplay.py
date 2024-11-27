@@ -4,13 +4,16 @@ from tkinter import *
 from tkinter import ttk
 
 class TKElement(IElement):
-    def __init__(self, value, type, index = 0):
+    def __init__(self, value, type, style = None, styleName = "", index = 0):
         IElement.__init__(self, value)
         self.__type = type
         self.__index = index
+        self.__style:ttk.Style = style
+        self.__styleName:str = styleName
 
     def SetBGColor(self, color):
-        print("Change BG Color")
+        if self.__style and self.__styleName != "":
+            self.__style.configure(self.__styleName, background=color)
 
     def UpdateValue(self, value):
         print("Update Value")
@@ -20,12 +23,13 @@ class TKDisplay(IDisplay):
         IDisplay.__init__(self)
 
         self.__root = Tk()
+        self.__style = ttk.Style(self.__root)
 
         self.__root.title("Settingator")
 
         self.__mainFrame = ttk.Frame(self.__root)
         self.__mainFrame.grid(column=0, row=0, sticky=(N, W, E, S))
-        
+
         #self.__root.columnconfigure(0, weight=1)
         #self.__root.rowconfigure(0, weight=1)
 
@@ -87,23 +91,30 @@ class TKDisplay(IDisplay):
                     ret.SetValue(TKElement(newElement, IDP_INPUT))
 
             elif type == IDP_COLUMN:
-                newElement = ttk.Frame(parent)
+
+                styleName = str(element)+".TFrame"
+                self.__style.configure(styleName)
+                newElement = ttk.Frame(parent, style=styleName)
 
                 if ret:
-                    ret.SetValue(TKElement(newElement, IDP_COLUMN))
+                    ret.SetValue(TKElement(newElement, IDP_COLUMN, self.__style, styleName))
 
 
             elif type == IDP_FRAME:
 
+                styleName =str(element)
+
                 if name == '':
                     newElement = ttk.Frame(parent)
                 else:
-                    newElement = ttk.LabelFrame(parent, text=name)
+                    styleName += ".TLabelframe"
+                    self.__style.configure(styleName)
+                    newElement = ttk.Labelframe(parent, text=name, style=styleName)
 
                 if ret:
-                    ret.SetValue(TKElement(newElement, IDP_FRAME))
+                    ret.SetValue(TKElement(newElement, IDP_FRAME, self.__style, styleName))
  
-            newElement.grid(column=column, row=row, sticky=(N,S,E,W), padx=5, pady=5)
+            newElement.grid(column=column, row=row, sticky=(N, W, E), padx=5, pady=5)
 
             self.__UpdateChildLayout(element, newElement)
 
