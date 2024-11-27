@@ -23,7 +23,11 @@ class TKDisplay(IDisplay):
         IDisplay.__init__(self)
 
         self.__root = Tk()
+
+        self.__root.tk.call('source', 'Forest-ttk-theme-master/forest-dark.tcl')
+
         self.__style = ttk.Style(self.__root)
+        self.__style.theme_use('forest-dark')
 
         self.__root.title("Settingator")
 
