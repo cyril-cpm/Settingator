@@ -72,5 +72,5 @@ class Setting():
 
     def SetValue(self, value):
         if (IsNumericalTypeValue(self.__type)):
-            self.__value = value
+            self.__value = int(value)
 

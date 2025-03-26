@@ -190,6 +190,9 @@ class Settingator:
     def AddNotifCallback(self, notifByte:int, callback) -> None:
         self.__notifCallback[notifByte] = callback
 
+    def RemoveNotifCallback(self, notifByte:int) -> None:
+        None
+        
     def ConfigDirectNotf(self, srcSlaveID:int, dstSlaveID:int, notifByte:int) -> None:
         buffer = bytearray()
         buffer.append(MessageControlFrame.START.value)

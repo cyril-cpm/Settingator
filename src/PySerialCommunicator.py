@@ -64,13 +64,13 @@ class SerialCTR(ICTR):
         if (startFrameIndex >= 0):
             self.__serialBuffer = self.__serialBuffer[startFrameIndex:]
 
-        if (self.__serialBuffer.__len__() >= 5):
-            msgSize = (self.__serialBuffer[1] << 8) + self.__serialBuffer[2]
+            if (self.__serialBuffer.__len__() >= 5):
+                msgSize = (self.__serialBuffer[1] << 8) + self.__serialBuffer[2]
 
-            if (self.__serialBuffer.__len__() >= msgSize):
-                if (self.__serialBuffer[msgSize - 1] == MessageControlFrame.END.value):
-                    self._receive(Message(self.__serialBuffer[:msgSize]))
-                    self.__serialBuffer = self.__serialBuffer[msgSize:]
+                if (self.__serialBuffer.__len__() >= msgSize):
+                    if (self.__serialBuffer[msgSize - 1] == MessageControlFrame.END.value):
+                        self._receive(Message(self.__serialBuffer[:msgSize]))
+                        self.__serialBuffer = self.__serialBuffer[msgSize:]
         return
     
     def GetCOMPortList() -> list:
