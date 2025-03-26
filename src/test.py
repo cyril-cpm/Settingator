@@ -53,8 +53,10 @@ class Player():
         self.__answeredCurrentQuestion = False
         self.__lastAnswer = None
         self.__name = "non défini"
+        self.__position = 0
         self.__frameElementPtr:Pointer = Pointer()
         self.__nameElementPtr:Pointer = Pointer()
+        self.__positionElementPtr:Pointer = Pointer()
         self.__goodTextPtr:Pointer = Pointer()
         self.__badTextPtr:Pointer = Pointer()
         self.__prelayout:PreLayoutElement = None
@@ -73,6 +75,12 @@ class Player():
     
     def SetName(self, name):
         self.__name = name
+
+    def GetPosition(self):
+        return self.__position
+    
+    def SetPosition(self, position):
+        self.__position = position
 
     def SetSlave(self, slave:Slave):
         self.__slave = slave
@@ -151,9 +159,16 @@ class Player():
     def GetNameElementPtr(self):
         return self.__nameElementPtr
     
+    def GetPositionElementPtr(self):
+        return self.__positionElementPtr
+    
     def ReWriteName(self):
         if (self.__nameElementPtr()):
             self.__nameElementPtr.GetValue().UpdateValue(self.__name)
+
+    def ReWritePosition(self):
+        if (self.__positionElementPtr()):
+            self.__positionElementPtr.GetValue().update(self.__position)
 
     def GetGoodTextPtr(self):
         return self.__goodTextPtr
@@ -164,6 +179,7 @@ class Player():
     def PrepareToDestroy(self) -> None:
         self.__prelayout = None
         self.__nameElementPtr = None
+        self.__positionElementPtr = None
         self.__frameElementPtr = None
         self.__goodTextPtr = None
         self.__badTextPtr = None
@@ -177,9 +193,12 @@ class Players(IRefreshable):
         self.__numberOrderedPlayer = 0
 
     def AddPlayer(self, slave:Slave):
+        print("Adding a player")
         newPlayer = Player()
+        print("player created");
         newPlayer.SetSlave(slave)
         newPlayer.Send("GREEN LOADING")
+        print("Green loading sended")
         self.__playerList[self.__nbPlayers] = newPlayer
         self.__nbPlayers += 1
 
@@ -205,6 +224,13 @@ class Players(IRefreshable):
             self.__AddToPreLayout(player)
             #display.UpdateLayout(STR.GetSlaveSettings())
 
+    def IsOrderedPlayer(self, slaveID:int) -> bool:
+        player = self.GetPlayerBySlaveID(slaveID)
+
+        if player in self.__orderedPlayerList.values():
+            return True
+        return False
+
     def GetNumberOfOrderedPlayer(self):
         return self.__numberOrderedPlayer
     
@@ -215,6 +241,7 @@ class Players(IRefreshable):
                                                     PreLayoutElement(IDP_COLUMN, "", [
                                                         PreLayoutElement(IDP_BUTTON, "target", lambda window : targetPlayer(window, player.GetOrder())),
                                                         PreLayoutElement(IDP_INPUT, player.GetName(), lambda name : player.SetName(name), player.GetNameElementPtr()),
+                                                        PreLayoutElement(IDP_INPUT, player.GetPosition(), lambda position : player.SetPosition(position), player.GetPositionElementPtr()),
                                                         PreLayoutElement(IDP_TEXT, "Good: 0", None, player.GetGoodTextPtr()),
                                                         PreLayoutElement(IDP_TEXT, "Bad: 0", None, player.GetBadTextPtr())
                                                     ])
@@ -251,6 +278,11 @@ class Players(IRefreshable):
         for player in self.__playerList:
             self.__playerList[player].ReWriteName()
 
+    def ReWritePosition(self):
+
+        for player in self.__playerList:
+            self.__playerList[player].ReWritePosition()
+
     def ResetScore(self):
         for player in self.__playerList:
             self.__playerList[player].ResetScore()
@@ -262,6 +294,7 @@ class Players(IRefreshable):
     def RefreshElementDisplay(self) -> None:
         self.UpdateAllScore()
         self.ReWriteName()
+        self.ReWritePosition
 
     def ResetPlayer(self) -> None:
         for player in self.__playerList:
@@ -919,16 +952,7 @@ game:Game
 ### TARGETING SYSTEM ###
 
 TP_START = 0
-TP_END = 5
-
-turretPos = TP_START
-
-targetting = False
-step = 0
-target_side = ""
-targetedPlayer:Player = None
-targetDone = False
-targetDoneTimestamp = 0
+TP_END = 180
 
 LASER_DETECTED = 2
 LASER_NOTIF = 0x05
@@ -1034,77 +1058,9 @@ class Target():
         return self.__allRewarded
 
     def TargetPlayer(self, orderedPlayer:int):
-        if self.__turretPos == orderedPlayer:
-            self.__targetDone = True
-            self.__targetDoneTimestamp = time.time()
-        
-        else:
-            self.__targetDone = False
-            STR.AddNotifCallback(LASER_NOTIF, self._notifLaser)
-            
-            self.__targetedPlayer = playerList.GetPlayerByOrder(orderedPlayer)
-            self.__targetedPlayer.GetSlave().ConfigDirectSettingUpdate(turret, LASER_DETECTED)
-
-            print("targetting player " + str(self.__targetedPlayer.GetOrder()))
-            print("turretPos : " + str(self.__turretPos))
-
-            self.__step = 0
-
-            turret.SendSettingUpdateByName("SPEED", 255)
-
-            if self.__turretPos < orderedPlayer:
-                self.__targetting = True
-                self.__target_side = "R"
-                turret.SendSettingUpdateByName("DROITE")
-                print("turning right")
-
-            elif orderedPlayer < self.__turretPos:
-                self.__targetting = True
-                self.__target_side = "L"
-                turret.SendSettingUpdateByName("GAUCHE")
-                print("turning left")
-
-            display.UpdateSetting(turret.GetSettingByName("SPEED"))
-    
-    def _notifLaser(self, slaveID):
-        print("___notifLaser")
-        if self.__targetting and slaveID == self.__targetedPlayer.GetSlave().GetID():
-            print("targetedPlayer is " + str(self.__targetedPlayer.GetOrder()))
-            if self.__step == 0:
-                turret.SendSettingUpdateByName("SPEED", 128)
-
-                if self.__target_side == "R":
-                    turret.SendSettingUpdateByName("GAUCHE")
-                elif self.__target_side == "L":
-                    turret.SendSettingUpdateByName("DROITE")
-                self.__step = 1
-
-            elif self.__step == 1:
-                turret.SendSettingUpdateByName("SPEED", 64)
-
-                if self.__target_side == "R":
-                    turret.SendSettingUpdateByName("DROITE")
-                elif self.__target_side == "L":
-                    turret.SendSettingUpdateByName("GAUCHE")
-                self.__step = 2
-
-            elif self.__step == 2:
-                self.__step = 0
-                self.__target_side = ""
-                self.__targetting = False
-
-                self.__targetedPlayer.GetSlave().RemoveDirectSettingUpdateConfig(turret, LASER_DETECTED)
-                turret.SendSettingUpdateByName("STOP")
-                self.__targetedPlayer = None
-                self.__targetDone = True
-                self.__targetDoneTimestamp = time.time()
-
-            display.UpdateSetting(turret.GetSettingByName("SPEED"))
-
-        print("Laser Detected")
-        print(slaveID)
-
-        self.__turretPos = playerList.GetPlayerBySlaveID(slaveID).GetOrder()
+        global turret
+        self.__targetedPlayer = playerList.GetPlayerByOrder(orderedPlayer)
+        turret.SendSettingUpdateByName("POSITION", self.__targetedPlayer.GetPosition())
 
     def SetTurretPos(self, turretPos):
         self.__turretPos = turretPos
@@ -1175,10 +1131,7 @@ def startGameManual(window:sg.Window):
 startGameManualButton = PreLayoutElement(IDP_BUTTON, "startGameManual", startGameManual)
 
 def initPlayer(window:sg.Window):
-    STR.AddNotifCallback(0x05, initNotifLaser)
-
-    turret.SendSettingUpdateByName("SPEED", 255)
-    turret.SendSettingUpdateByName("DROITE")
+    STR.AddNotifCallback(RED_BUTTON, initNotifLaser)
 
 InitPlayerButton = PreLayoutElement(IDP_BUTTON, "initPlayer", initPlayer)
 
@@ -1204,10 +1157,12 @@ testDisplayScoreButton = PreLayoutElement(IDP_BUTTON, "testDisplayScore", testDi
 ######
 
 def initNotifLaser(slaveID:int):
+    if playerList.IsOrderedPlayer(slaveID):
+        return
     playerList.AddOrderedPlayer(playerList.GetPlayerBySlaveID(slaveID))
 
     if playerList.GetNumberOfOrderedPlayer() >= NUMBER_PLAYER:
-        turret.SendSettingUpdateByName("STOP")
+        STR.RemoveNotifCallback(RED_BUTTON)
         ControlColumnPrelayout.RemoveElement(InitPlayerButton)
         global turretPos
         global gameStep
@@ -1217,6 +1172,11 @@ def initNotifLaser(slaveID:int):
         ControlColumnPrelayout.AppendElement(startGameManualButton)
         game.SetGameStep(GS_WAITING_TO_START)
         display.UpdateLayout(STR.GetSlaveSettings())
+
+        STR.AddNotifCallback(RED_BUTTON, lambda slaveID : playerPressButton(slaveID, RED_BUTTON))
+        STR.AddNotifCallback(GREEN_BUTTON, lambda slaveID : playerPressButton(slaveID, GREEN_BUTTON))
+        STR.AddNotifCallback(BLUE_BUTTON, lambda slaveID : playerPressButton(slaveID, BLUE_BUTTON))
+        STR.AddNotifCallback(YELLOW_BUTTON, lambda slaveID : playerPressButton(slaveID, YELLOW_BUTTON))
 
 ########################
 
@@ -1285,15 +1245,6 @@ if __name__ == "__main__":
     #display.AddElementToRefresh(playerList)
 
     STR = Settingator(com, display)
-
-    STR.AddNotifCallback(RED_BUTTON, lambda slaveID : playerPressButton(slaveID, RED_BUTTON))
-    STR.AddNotifCallback(GREEN_BUTTON, lambda slaveID : playerPressButton(slaveID, GREEN_BUTTON))
-    STR.AddNotifCallback(BLUE_BUTTON, lambda slaveID : playerPressButton(slaveID, BLUE_BUTTON))
-    STR.AddNotifCallback(YELLOW_BUTTON, lambda slaveID : playerPressButton(slaveID, YELLOW_BUTTON))
-
-    STR.AddNotifCallback(LASER_NOTIF, notifLaser)
-    STR.SendBridgeInitRequest(1, b'Turret', TurretCallback)
-    STR.SendBridgeInitRequest(2, b'Desk', DeskCallback, NUMBER_PLAYER)
 
     ControlColumnPrelayout = PreLayoutElement(IDP_COLUMN)
 
