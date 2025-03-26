@@ -1253,9 +1253,24 @@ if __name__ == "__main__":
 
     STR = Settingator(com, display)
 
+    STR.AddNotifCallback(RED_BUTTON, lambda slaveID : playerPressButton(slaveID, RED_BUTTON))
+    STR.AddNotifCallback(GREEN_BUTTON, lambda slaveID : playerPressButton(slaveID, GREEN_BUTTON))
+    STR.AddNotifCallback(BLUE_BUTTON, lambda slaveID : playerPressButton(slaveID, BLUE_BUTTON))
+    STR.AddNotifCallback(YELLOW_BUTTON, lambda slaveID : playerPressButton(slaveID, YELLOW_BUTTON))
+
+    STR.AddNotifCallback(LASER_NOTIF, notifLaser)
+    STR.SendBridgeInitRequest(1, b'Turret', TurretCallback)
+    STR.SendBridgeInitRequest(2, b'Desk', DeskCallback, NUMBER_PLAYER)
+
+    ControlColumnPrelayout = PreLayoutElement(IDP_COLUMN)
+
+    ControlColumnPrelayout.AppendElement(InitPlayerButton)
     ControlColumnLayout = LayoutElement(IDP_COLUMN)
 
     ControlColumnLayout.AppendElement(InitPlayerButton)
+    ControlColumnPrelayout = PreLayoutElement(IDP_COLUMN)
+
+    ControlColumnPrelayout.AppendElement(InitPlayerButton)
     if TESTING:
         ControlColumnLayout.AppendElement(startGameAutoButton)
         ControlColumnLayout.AppendElement(startGameManualButton)
@@ -1298,11 +1313,15 @@ if __name__ == "__main__":
     if TESTING:
         CreateDummyPlayers()
         
+        
     STR.SendInitRequest(1)
     #STR.SendBridgeInitRequest(1, b'Turret', TurretCallback)
     #STR.SendBridgeInitRequest(2, b'Desk', DeskCallback, NUMBER_PLAYER)
 
-    while display.IsRunning():
+    STR.SendBridgeInitRequest(1, b'Turret', TurretCallback)
+    STR.SendBridgeInitRequest(2, b'Desk', DeskCallback, NUMBER_PLAYER)
+
+    while display.isRunning():
         STR.Update()
         game.Update()
 
