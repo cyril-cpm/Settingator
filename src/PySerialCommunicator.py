@@ -16,7 +16,7 @@ class PySerial(ISerial):
     def __init__(self, port:str) -> None:
         super().__init__()
         self.__port = port
-        self.__serial = serial.Serial(port=port, baudrate=9600)
+        self.__serial = serial.Serial(port=port, baudrate=115200)
         self.__readBuffer = bytearray()
 
     def read(self) -> bytearray:

@@ -31,7 +31,7 @@ class Settingator:
                 if slaveID in self.__slaveSettings:
                     if ref in self.__slaveSettings[slaveID]:
                         setting = self.__slaveSettings[slaveID][ref]
-                        setting.SetValue(value)
+                        setting.SetBinaryValue(value)
                         self.__shouldUpdateSetting = setting
 
             elif msg.GetType() == MessageType.NOTIF.value:
@@ -175,8 +175,9 @@ class Settingator:
             buffer.append(setting.GetSlaveID())
             buffer.append(type)
             buffer.append(setting.GetRef())
-            buffer.append(0x01)
-            buffer.append(setting.GetValue())
+
+            setting.AppendValueToBuffer(buffer)
+            
             buffer.append(MessageControlFrame.END.value)
             size = buffer.__len__()
             buffer[1] = size >> 8

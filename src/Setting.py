@@ -1,12 +1,16 @@
 from abc import ABC, abstractmethod
 from typing import Type
 from enum import Enum
+import struct
 
 class SettingType(Enum):
     SLIDER = 1
     TRIGGER = 2
     SWITCH = 3
     LABEL = 4
+
+    #TESTING 
+    CUSTOM_FLOAT = 254
 
 def IsNumericalTypeValue(settingType:int) -> bool:
     if (settingType == SettingType.SLIDER.value):
@@ -17,6 +21,13 @@ def IsNumericalTypeValue(settingType:int) -> bool:
     
     if (settingType == SettingType.SWITCH.value):
         return True
+    
+    return False
+    
+def IsFloatTypeValue(settingType:int) -> bool:
+    if (settingType == SettingType.CUSTOM_FLOAT.value):
+        return True
+    return False
 
 def GetNumericalValueFromBuffer(value:bytearray) -> tuple:
     valueLen = value.__len__()
@@ -29,6 +40,9 @@ def GetNumericalValueFromBuffer(value:bytearray) -> tuple:
         index += 1
     
     return (retValue, valueLen)
+
+def GetFloatValueFromBuffer(value:bytearray) -> tuple:
+    return(struct.unpack('<f', value)[0], value.__len__())
 
 def GetStringValueFromBuffer(value:bytearray) -> tuple:
     string = str()
@@ -49,6 +63,8 @@ class Setting():
 
         if (IsNumericalTypeValue(type)):
             self.__value, self.__valueLen = GetNumericalValueFromBuffer(value)
+        elif (IsFloatTypeValue(type)):
+            self.__value, self.__valueLen = GetFloatValueFromBuffer(value)
         else:
             self.__value, self.__valueLen = GetStringValueFromBuffer(value)
 
@@ -56,6 +72,17 @@ class Setting():
         return self.__name
 
     def GetValue(self):
+        return self.__value
+    
+    def GetBinaryValue(self):
+        
+        if (IsFloatTypeValue(self.__type)):
+            data = struct.pack("<f", self.__value)
+            return data
+        
+        if (IsNumericalTypeValue(self.__type)):
+            return struct.pack("<B", self.__value)
+        
         return self.__value
 
     def GetValueLen(self):
@@ -73,4 +100,24 @@ class Setting():
     def SetValue(self, value):
         if (IsNumericalTypeValue(self.__type)):
             self.__value = int(value)
+        
+        elif (IsFloatTypeValue(self.__type)):
+            if value == '':
+                value = 0.0
+            self.__value = float(value)
+
+    def SetBinaryValue(self, value):
+        if (IsNumericalTypeValue(self.__type)):
+            self.__value = struct.unpack('<I', value)[0]
+
+        elif (IsFloatTypeValue(self.__type)):
+            self.__value = struct.unpack('<f', value)[0]
+
+    def AppendValueToBuffer(self, buffer:bytearray):
+        value = self.GetBinaryValue()
+
+        buffer.append(value.__len__())
+
+        for i in range(0, value.__len__()):
+            buffer.append(value[i])
 
