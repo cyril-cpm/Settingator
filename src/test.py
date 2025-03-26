@@ -171,7 +171,7 @@ class Player():
 
     def ReWritePosition(self):
         if (self.__positionElementPtr()):
-            self.__positionElementPtr.GetValue().update(self.__position)
+            self.__positionElementPtr.GetValue().UpdateValue(self.__position)
 
     def GetGoodTextPtr(self):
         return self.__goodTextPtr
@@ -297,7 +297,7 @@ class Players(IRefreshable):
     def RefreshElementDisplay(self) -> None:
         self.UpdateAllScore()
         self.ReWriteName()
-        self.ReWritePosition
+        self.ReWritePosition()
 
     def ResetPlayer(self) -> None:
         for player in self.__playerList:
@@ -1255,16 +1255,6 @@ if __name__ == "__main__":
     #display.AddElementToRefresh(playerList)
 
     STR = Settingator(com, display)
-
-    STR.AddNotifCallback(RED_BUTTON, lambda slaveID : playerPressButton(slaveID, RED_BUTTON))
-    STR.AddNotifCallback(GREEN_BUTTON, lambda slaveID : playerPressButton(slaveID, GREEN_BUTTON))
-    STR.AddNotifCallback(BLUE_BUTTON, lambda slaveID : playerPressButton(slaveID, BLUE_BUTTON))
-    STR.AddNotifCallback(YELLOW_BUTTON, lambda slaveID : playerPressButton(slaveID, YELLOW_BUTTON))
-
-    STR.AddNotifCallback(LASER_NOTIF, notifLaser)
-    #STR.SendBridgeInitRequest(1, b'Turret', TurretCallback)
-    #STR.SendBridgeInitRequest(2, b'Desk', DeskCallback, NUMBER_PLAYER)
-    STR.SendInitRequest(1)
 
     ControlColumnPrelayout = PreLayoutElement(IDP_COLUMN)
 
