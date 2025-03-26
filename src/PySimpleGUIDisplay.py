@@ -113,6 +113,11 @@ class PySimpleGUIDisplay(IDisplay):
                     elif (settingType == SettingType.LABEL.value):
                         element=sg.Text(setting.GetName() + " : " + setting.GetValue(), key=(setting.GetSlaveID(), setting.GetRef()))
 
+                    elif (settingType == SettingType.CUSTOM_FLOAT.value):
+                        element=sg.Column([[sg.Slider(range=(0.0, 180.0), default_value=setting.GetValue(), key=(setting.GetSlaveID(), setting.GetRef()), change_submits=True)],
+                                            [sg.Input(str(setting.GetValue()), key=(setting.GetSlaveID(), setting.GetRef(), 'INPUT'), enable_events=True, size=10)],
+                                            [sg.Text(setting.GetName())]])
+
                     else:
                         element=sg.Text("Not Supported Setting")
                     
@@ -143,6 +148,9 @@ class PySimpleGUIDisplay(IDisplay):
 
         if setting.GetType() == SettingType.LABEL.value:
             self.__PSGWindow.Element((slaveID, ref)).update(setting.GetName() + " : " + setting.GetValue())
+        elif setting.GetType() == SettingType.CUSTOM_FLOAT.value:
+            self.__PSGWindow.Element((slaveID, ref)).update(setting.GetValue())
+            self.__PSGWindow.Element((slaveID, ref, 'INPUT')).update(setting.GetValue())
         else:    
             self.__PSGWindow.Element((slaveID, ref)).update(setting.GetValue())
 
@@ -156,11 +164,16 @@ class PySimpleGUIDisplay(IDisplay):
                 self.__isRunning = False
 
             if isinstance(event, tuple):
-                slaveID, ref = event
+                slaveID, ref, *info = event
                 setting = self.GetSlaveSettings()[slaveID][ref]
 
                 if (setting.GetType() != SettingType.TRIGGER.value):
-                    setting.SetValue(int(values[event]))
+                    setting.SetValue(values[event])
+
+                    if info.__len__():
+                        self.__PSGWindow.Element((slaveID, ref)).update(setting.GetValue())
+                    else:
+                        self.UpdateSetting(setting)
 
             if callable(event):
                 if event in values:
