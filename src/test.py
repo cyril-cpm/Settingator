@@ -1318,6 +1318,7 @@ if __name__ == "__main__":
     #STR.SendBridgeInitRequest(1, b'Turret', TurretCallback)
     #STR.SendBridgeInitRequest(2, b'Desk', DeskCallback, NUMBER_PLAYER)
 
+    #STR.SendInitRequest(1)
     STR.SendBridgeInitRequest(1, b'Turret', TurretCallback)
     STR.SendBridgeInitRequest(2, b'Desk', DeskCallback, NUMBER_PLAYER)
 
