@@ -118,6 +118,10 @@ class PySimpleGUIDisplay(IDisplay):
                                             [sg.Input(str(setting.GetValue()), key=(setting.GetSlaveID(), setting.GetRef(), 'INPUT'), enable_events=True, size=10)],
                                             [sg.Text(setting.GetName())]])
 
+                    elif (settingType == SettingType.UINT32.value):
+                        element=sg.Column([[sg.Input(setting.GetValue(), key=(setting.GetSlaveID(), setting.GetRef()), enable_events=False, size=30)],
+                                           [sg.Button(button_text="Validate", key=(setting.GetSlaveID(), setting.GetRef(), 'BUTTON'))]])
+
                     else:
                         element=sg.Text("Not Supported Setting")
                     
@@ -168,7 +172,13 @@ class PySimpleGUIDisplay(IDisplay):
                 setting = self.GetSlaveSettings()[slaveID][ref]
 
                 if (setting.GetType() != SettingType.TRIGGER.value):
-                    setting.SetValue(values[event])
+
+                    if info.__len__() and info[0] == 'BUTTON':
+                        setting.SetValue(values[(slaveID, ref)])
+                        self.UpdateSetting(setting)
+                    else:
+                        setting.SetValue(values[event])
+                        
 
                     if info.__len__():
                         self.__PSGWindow.Element((slaveID, ref)).update(setting.GetValue())

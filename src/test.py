@@ -53,7 +53,7 @@ class Player():
         self.__answeredCurrentQuestion = False
         self.__lastAnswer = None
         self.__name = "non défini"
-        self.__position = 0
+        self.__position = 5.0
         self.__frameElementPtr:Pointer = Pointer()
         self.__nameElementPtr:Pointer = Pointer()
         self.__positionElementPtr:Pointer = Pointer()
@@ -76,11 +76,13 @@ class Player():
     def SetName(self, name):
         self.__name = name
 
-    def GetPosition(self):
+    def GetPosition(self) -> float:
         return self.__position
     
     def SetPosition(self, position):
-        self.__position = position
+        if position == '':
+            position = 0
+        self.__position = float(position)
 
     def SetSlave(self, slave:Slave):
         self.__slave = slave
@@ -951,8 +953,8 @@ game:Game
 
 ### TARGETING SYSTEM ###
 
-TP_START = 0
-TP_END = 180
+TP_START = 0.0
+TP_END = 180.0
 
 LASER_DETECTED = 2
 LASER_NOTIF = 0x05
@@ -1060,7 +1062,13 @@ class Target():
     def TargetPlayer(self, orderedPlayer:int):
         global turret
         self.__targetedPlayer = playerList.GetPlayerByOrder(orderedPlayer)
-        turret.SendSettingUpdateByName("POSITION", self.__targetedPlayer.GetPosition())
+
+        distance = abs(self.__targetedPlayer.GetPosition() - self.__turretPos)
+
+        time = distance / 5.0
+        turret.SendSettingUpdateByName("UInt32", int(time * 1000) )
+        turret.SendSettingUpdateByName("CUSTOM FLOAT", self.__targetedPlayer.GetPosition())
+        self.__turretPos = self.__targetedPlayer.GetPosition()
 
     def SetTurretPos(self, turretPos):
         self.__turretPos = turretPos
