@@ -165,6 +165,9 @@ class Setting():
         if (IsNumericalTypeValue(self.__type)):
             self.__value = (struct.unpack(PACK_TAB[self.__type], value)[0])
 
+        elif (IsUInt32TypeValue(self.__type)):
+            self.__value = struct.unpack('<I', value)[0]
+
     def AppendValueToBuffer(self, buffer:bytearray):
         value = self.GetBinaryValue()
 
