@@ -9,6 +9,8 @@ class SettingType(Enum):
     SWITCH = 3
     LABEL = 4
 
+    UINT32 = 0x20
+
     #TESTING 
     CUSTOM_FLOAT = 254
 
@@ -29,6 +31,9 @@ def IsFloatTypeValue(settingType:int) -> bool:
         return True
     return False
 
+def IsUInt32TypeValue(settingType:int) -> bool:
+    return (settingType == SettingType.UINT32.value)
+
 def GetNumericalValueFromBuffer(value:bytearray) -> tuple:
     valueLen = value.__len__()
 
@@ -43,6 +48,9 @@ def GetNumericalValueFromBuffer(value:bytearray) -> tuple:
 
 def GetFloatValueFromBuffer(value:bytearray) -> tuple:
     return(struct.unpack('<f', value)[0], value.__len__())
+
+def GetUInt32ValueFromBuffer(value:bytearray) -> tuple:
+    return(struct.unpack('<I', value)[0], value.__len__())
 
 def GetStringValueFromBuffer(value:bytearray) -> tuple:
     string = str()
@@ -65,6 +73,8 @@ class Setting():
             self.__value, self.__valueLen = GetNumericalValueFromBuffer(value)
         elif (IsFloatTypeValue(type)):
             self.__value, self.__valueLen = GetFloatValueFromBuffer(value)
+        elif (IsUInt32TypeValue(type)):
+            self.__value, self.__valueLen = GetUInt32ValueFromBuffer(value)
         else:
             self.__value, self.__valueLen = GetStringValueFromBuffer(value)
 
@@ -80,6 +90,9 @@ class Setting():
             data = struct.pack("<f", self.__value)
             return data
         
+        if (IsUInt32TypeValue(self.__type)):
+            return struct.pack("<I", self.__value)
+
         if (IsNumericalTypeValue(self.__type)):
             return struct.pack("<B", self.__value)
         
@@ -106,12 +119,20 @@ class Setting():
                 value = 0.0
             self.__value = float(value)
 
+        elif (IsUInt32TypeValue(self.__type)):
+            if value == '':
+                value = 0
+            self.__value = int(value)
+
     def SetBinaryValue(self, value):
         if (IsNumericalTypeValue(self.__type)):
             self.__value = struct.unpack('<I', value)[0]
 
         elif (IsFloatTypeValue(self.__type)):
             self.__value = struct.unpack('<f', value)[0]
+
+        elif (IsUInt32TypeValue(self.__type)):
+            self.__value = struct.unpack('<I', value)[0]
 
     def AppendValueToBuffer(self, buffer:bytearray):
         value = self.GetBinaryValue()
