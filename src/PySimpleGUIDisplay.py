@@ -31,17 +31,17 @@ class PySimpleGUIDisplay(IDisplay):
     def GetPSGLayout(self):
         return self.__PSGLayout
 
-    def __UpdatePrelayout(self, layout, elementList, isColumn:bool = False):
+    def __UpdateLayout(self, layout, elementList, isColumn:bool = False):
         
         for element in elementList:
             type:int = element.GetType()
             name = element.GetName()
             
-            if isinstance(name, Pointer):
+            if isinstance(name, Mutable):
                 name = name.GetValue()
 
             key = element.GetKey()
-            ret:Pointer = element.GetRet()
+            ret:Mutable = element.GetRet()
 
             newElement:sg.Element
 
@@ -57,14 +57,14 @@ class PySimpleGUIDisplay(IDisplay):
             elif type == IDP_FRAME:
                 frameLayout = [[]]
                 
-                self.__UpdatePrelayout(frameLayout, key)
+                self.__UpdateLayout(frameLayout, key)
 
                 newElement = sg.Frame(name, frameLayout)
 
             elif type == IDP_COLUMN:
                 columnLayout = [[]]
 
-                self.__UpdatePrelayout(columnLayout, key, True)
+                self.__UpdateLayout(columnLayout, key, True)
 
                 newElement = sg.Frame(name, columnLayout, border_width=0)
 
@@ -81,7 +81,7 @@ class PySimpleGUIDisplay(IDisplay):
 
         topFrameLayout = [[]]
 
-        self.__UpdatePrelayout(topFrameLayout, self._PreLayout.GetKey())
+        self.__UpdateLayout(topFrameLayout, self._Layout.GetKey())
         
         self.__PSGLayout[0].append(sg.Frame(title="", border_width=0, layout=topFrameLayout, vertical_alignment="top", expand_x=True, expand_y=True))
 

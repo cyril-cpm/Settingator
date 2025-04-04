@@ -2,34 +2,56 @@ from abc import ABC, abstractmethod
 from typing import Type
 from enum import Enum
 import struct
+from Utils import *
 
 class SettingType(Enum):
-    SLIDER = 1
-    TRIGGER = 2
-    SWITCH = 3
-    LABEL = 4
+    SLIDER = 0x01
+    TRIGGER = 0x02
+    SWITCH = 0x03
+    LABEL = 0x04
 
     UINT32 = 0x20
+    UINT8 = 0x21
+    UINT16 = 0x22
+    FLOAT = 0x23
+    BOOL = 0x24
 
     #TESTING 
     CUSTOM_FLOAT = 254
 
+PACK_TAB = {
+    SettingType.UINT8.value : '<B',
+    SettingType.BOOL.value : '<B',
+    SettingType.UINT16.value : '<H',
+    SettingType.UINT32.value : '<I',
+    SettingType.FLOAT.value : '<f'
+}
+
 def IsNumericalTypeValue(settingType:int) -> bool:
-    if (settingType == SettingType.SLIDER.value):
-        return True
-    
-    if (settingType == SettingType.TRIGGER.value):
-        return True
-    
-    if (settingType == SettingType.SWITCH.value):
-        return True
-    
-    return False
-    
+    return (settingType == SettingType.UINT8.value) or \
+        (settingType == SettingType.UINT16.value) or \
+        (settingType == SettingType.UINT32.value) or \
+        (settingType == SettingType.FLOAT.value) or \
+        (settingType == SettingType.BOOL.value)
+
+def IsIntegerTypeValue(settingType:int) -> bool:
+    return (settingType == SettingType.UINT8.value) or \
+        (settingType == SettingType.UINT16.value) or \
+        (settingType == SettingType.UINT32.value)
+
 def IsFloatTypeValue(settingType:int) -> bool:
-    if (settingType == SettingType.CUSTOM_FLOAT.value):
-        return True
-    return False
+    return (settingType == SettingType.CUSTOM_FLOAT.value) or \
+        (settingType == SettingType.FLOAT.value)
+
+def IsBoolTypeValue(settingType:int) -> bool:
+    return (settingType == SettingType.BOOL.value) or \
+        (settingType == SettingType.SWITCH.value)
+
+def IsUInt8TypeValue(settingType:int) -> bool:
+    return (settingType == SettingType.UINT8.value)
+
+def IsUInt16TypeValue(settingType:int) -> bool:
+    return (settingType == SettingType.UINT16.value)
 
 def IsUInt32TypeValue(settingType:int) -> bool:
     return (settingType == SettingType.UINT32.value)
@@ -47,10 +69,19 @@ def GetNumericalValueFromBuffer(value:bytearray) -> tuple:
     return (retValue, valueLen)
 
 def GetFloatValueFromBuffer(value:bytearray) -> tuple:
-    return(struct.unpack('<f', value)[0], value.__len__())
+    return(Mutable(struct.unpack('<f', value)[0]), value.__len__())
+
+def GetBoolValueFromBuffer(value:bytearray) -> tuple:
+    return (Mutable(struct.unpack('<B', value)[0]), value.__len__())
+
+def GetUInt8ValueFromBuffer(value:bytearray) -> tuple:
+    return (Mutable(struct.unpack('<B', value)[0]), value.__len__())
+
+def GetUInt16ValueFromBuffer(value:bytearray) -> tuple:
+    return (Mutable(struct.unpack('<H', value)[0]), value.__len__())
 
 def GetUInt32ValueFromBuffer(value:bytearray) -> tuple:
-    return(struct.unpack('<I', value)[0], value.__len__())
+    return(Mutable(struct.unpack('<I', value)[0]), value.__len__())
 
 def GetStringValueFromBuffer(value:bytearray) -> tuple:
     string = str()
@@ -68,13 +99,19 @@ class Setting():
         self.__name = name
         self.__type = type
         self.__slaveID = slaveID
+        self.__value = None#:Mutable
+        self.__valueLen:int
 
-        if (IsNumericalTypeValue(type)):
-            self.__value, self.__valueLen = GetNumericalValueFromBuffer(value)
-        elif (IsFloatTypeValue(type)):
+        if (IsFloatTypeValue(type)):
             self.__value, self.__valueLen = GetFloatValueFromBuffer(value)
+        elif (IsUInt8TypeValue(type)):
+            self.__value, self.__valueLen = GetUInt32ValueFromBuffer(value)
+        elif (IsUInt16TypeValue(type)):
+            self.__value, self.__valueLen = GetUInt32ValueFromBuffer(value)
         elif (IsUInt32TypeValue(type)):
             self.__value, self.__valueLen = GetUInt32ValueFromBuffer(value)
+        elif (IsBoolTypeValue(type)):
+            self.__value, self.__valueLen = GetBoolValueFromBuffer(value)
         else:
             self.__value, self.__valueLen = GetStringValueFromBuffer(value)
 
@@ -84,17 +121,9 @@ class Setting():
     def GetValue(self):
         return self.__value
     
-    def GetBinaryValue(self):
-        
-        if (IsFloatTypeValue(self.__type)):
-            data = struct.pack("<f", self.__value)
-            return data
-        
-        if (IsUInt32TypeValue(self.__type)):
-            return struct.pack("<I", self.__value)
-
+    def GetBinaryValue(self) -> bytearray: 
         if (IsNumericalTypeValue(self.__type)):
-            return struct.pack("<B", self.__value)
+            return struct.pack(PACK_TAB[self.__type], self.__value)
         
         return self.__value
 
@@ -111,7 +140,14 @@ class Setting():
         return self.__slaveID
 
     def SetValue(self, value):
-        if (IsNumericalTypeValue(self.__type)):
+        #if (IsNumericalTypeValue(self.__type)):
+        #    if value == '':
+        #        value = 0
+        #    self.__value = float(value)
+
+        if (IsIntegerTypeValue(self.__type)):
+            if value == '':
+                value = 0
             self.__value = int(value)
         
         elif (IsFloatTypeValue(self.__type)):
@@ -119,20 +155,15 @@ class Setting():
                 value = 0.0
             self.__value = float(value)
 
-        elif (IsUInt32TypeValue(self.__type)):
+        elif (IsBoolTypeValue(self.__type)):
             if value == '':
-                value = 0
-            self.__value = int(value)
+                value = False
+            self.__value = bool(value)
+            
 
-    def SetBinaryValue(self, value):
+    def SetBinaryValue(self, value:bytearray):
         if (IsNumericalTypeValue(self.__type)):
-            self.__value = struct.unpack('<I', value)[0]
-
-        elif (IsFloatTypeValue(self.__type)):
-            self.__value = struct.unpack('<f', value)[0]
-
-        elif (IsUInt32TypeValue(self.__type)):
-            self.__value = struct.unpack('<I', value)[0]
+            self.__value = (struct.unpack(PACK_TAB[self.__type], value)[0])
 
     def AppendValueToBuffer(self, buffer:bytearray):
         value = self.GetBinaryValue()

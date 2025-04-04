@@ -55,21 +55,34 @@ class Player():
         self.__lastAnswer = None
         self.__name = "non défini"
         self.__position = 5.0
-        self.__frameElementPtr:Pointer = Pointer()
-        self.__nameElementPtr:Pointer = Pointer()
-        self.__positionElementPtr:Pointer = Pointer()
-        self.__goodTextPtr:Pointer = Pointer()
-        self.__badTextPtr:Pointer = Pointer()
-        self.__prelayout:PreLayoutElement = None
+        self.__positionElement:LayoutElement
+        self.__goodElement:LayoutElement
+        self.__badElement:LayoutElement
+        self.__playerLayout:LayoutElement = None
 
     def __del__(self):
         pass
 
-    def CreatePrelayout(self, preLayout:PreLayoutElement) -> None:
-        self.__prelayout = preLayout
+    def CreateLayout(self) -> None:
+        frameName:str = "Player " + str(self.__order) + " : Slave " + str(self.GetSlave().GetID())
 
-    def GetPrelayout(self) -> PreLayoutElement:
-        return self.__prelayout
+        self.__positionElement = LayoutElement(IDP_INPUT, self.GetPosition(), "Target Position", callback=lambda value : self.SetPosition(value))
+        self.__goodElement = LayoutElement(IDP_TEXT, "Good: " + str(self.__good))
+        self.__badElement = LayoutElement(IDP_TEXT, "Bad: " + str(self.__bad))
+
+        self.__playerLayout = LayoutElement(IDP_COLUMN, None, frameName, [
+                                                        LayoutElement(IDP_BUTTON, None, "target", callback=lambda value : targetPlayer(self.GetOrder())),
+                                                        LayoutElement(IDP_TEXT, "Player Name"),
+                                                        LayoutElement(IDP_INPUT, self.GetName(), "Player Name", callback=lambda value : self.SetName(value)),
+                                                        LayoutElement(IDP_TEXT, "Target Position :"),
+                                                        self.__positionElement,
+                                                        self.__goodElement,
+                                                        self.__badElement
+                                                    ])
+        STR.AddToPreLayout(self.__playerLayout)
+                                                
+    def GetLayout(self) -> LayoutElement:
+        return self.__playerLayout
 
     def GetName(self):
         return self.__name
@@ -132,11 +145,11 @@ class Player():
     def UpdateScore(self):
         self.__score = self.__good - self.__bad
 
-        if self.__goodTextPtr():
-            self.__goodTextPtr.GetValue().UpdateValue("Good: " + str(self.__good))
+        if self.__goodElement != None:
+            self.__goodElement.UpdateValue("Good: " + str(self.__good))
 
-        if self.__badTextPtr():
-            self.__badTextPtr.GetValue().UpdateValue("Bad: " + str(self.__bad))
+        if self.__badElement != None:
+            self.__badElement.UpdateValue("Bad: " + str(self.__bad))
 
     def GetScore(self):
         return self.__score
@@ -152,40 +165,39 @@ class Player():
         self.__bad = bad
         self.UpdateScore()
 
-    def GetFrameElementPtr(self):
-        return self.__frameElementPtr
+    def GetFrameElement(self):
+        return self.__frameElement
     
     def SetFrameBGColor(self, color):
-        #self.__frameElementPtr.GetValue().TKFrame.configure(background=color)
-        self.__frameElementPtr.GetValue().SetBGColor(color)
+        self.__playerLayout.GetIElement().SetBGColor(color)
 
-    def GetNameElementPtr(self):
-        return self.__nameElementPtr
+    def GetNameElement(self):
+        return self.__nameElement
     
-    def GetPositionElementPtr(self):
-        return self.__positionElementPtr
+    def GetPositionElement(self):
+        return self.__positionElement
     
     def ReWriteName(self):
-        if (self.__nameElementPtr()):
-            self.__nameElementPtr.GetValue().UpdateValue(self.__name)
+        if (self.__nameElement()):
+            self.__nameElement.GetValue().UpdateValue(self.__name)
 
     def ReWritePosition(self):
-        if (self.__positionElementPtr()):
-            self.__positionElementPtr.GetValue().UpdateValue(self.__position)
+        if (self.__positionElement()):
+            self.__positionElement.GetValue().UpdateValue(self.__position)
 
-    def GetGoodTextPtr(self):
-        return self.__goodTextPtr
+    def GetGoodText(self):
+        return self.__goodText
     
-    def GetBadTextPtr(self):
-        return self.__badTextPtr
+    def GetBadText(self):
+        return self.__badText
     
     def PrepareToDestroy(self) -> None:
         self.__prelayout = None
-        self.__nameElementPtr = None
-        self.__positionElementPtr = None
-        self.__frameElementPtr = None
-        self.__goodTextPtr = None
-        self.__badTextPtr = None
+        self.__nameElement = None
+        self.__positionElement = None
+        self.__frameElement = None
+        self.__goodText = None
+        self.__badText = None
 
 
 class Players(IRefreshable):
@@ -224,7 +236,7 @@ class Players(IRefreshable):
             self.__orderedPlayerList[self.__numberOrderedPlayer] = player
             player.Send("GREEN GOOD")
             player.SetOrder(self.__numberOrderedPlayer)
-            self.__AddToPreLayout(player)
+            player.CreateLayout()
             #display.UpdateLayout(STR.GetSlaveSettings())
 
     def IsOrderedPlayer(self, slaveID:int) -> bool:
@@ -236,21 +248,6 @@ class Players(IRefreshable):
 
     def GetNumberOfOrderedPlayer(self):
         return self.__numberOrderedPlayer
-    
-    def __AddToPreLayout(self, player:Player):
-        frameName:str = "Player " + str(self.__numberOrderedPlayer) + " : Slave " + str(player.GetSlave().GetID())
-        player.CreatePrelayout(PreLayoutElement(IDP_FRAME, frameName,
-                                                [
-                                                    PreLayoutElement(IDP_COLUMN, "", [
-                                                        PreLayoutElement(IDP_BUTTON, "target", lambda window : targetPlayer(window, player.GetOrder())),
-                                                        PreLayoutElement(IDP_INPUT, player.GetName(), lambda name : player.SetName(name), player.GetNameElementPtr()),
-                                                        PreLayoutElement(IDP_INPUT, player.GetPosition(), lambda position : player.SetPosition(position), player.GetPositionElementPtr()),
-                                                        PreLayoutElement(IDP_TEXT, "Good: 0", None, player.GetGoodTextPtr()),
-                                                        PreLayoutElement(IDP_TEXT, "Bad: 0", None, player.GetBadTextPtr())
-                                                    ],
-                                               player.GetFrameElementPtr())
-                                                ]))
-        display.AddPreLayout(player.GetPrelayout())
 
     def AllAnswered(self):
         allAnswered = True
@@ -302,13 +299,13 @@ class Players(IRefreshable):
     def ResetPlayer(self) -> None:
         for player in self.__playerList:
             self.__playerList[player].Send("GREEN LOADING")
-            #display.RemovePreLayout(self.__playerList[player].GetPrelayout())
+            #display.RemoveLayout(self.__playerList[player].GetLayout())
             self.__playerList[player].PrepareToDestroy()
 
         self.__orderedPlayerList.clear()
         self.__nbPlayers = 0
         self.__playerList.clear()
-        display.UpdateLayout(STR.GetSlaveSettings())
+        display.UpdateLayout()
         gc.collect()
 
 playerList = Players()
@@ -701,9 +698,9 @@ class Game():
     def Start(self, mode:int):
         self.__mode = mode
 
-        ControlColumnPrelayout.RemoveElement(startGameAutoButton)
-        ControlColumnPrelayout.RemoveElement(startGameManualButton)
-        display.UpdateLayout(STR.GetSlaveSettings())
+        ControlColumnLayout.RemoveElement(startGameAutoButton)
+        ControlColumnLayout.RemoveElement(startGameManualButton)
+        display.UpdateLayout()
 
         allQuestion = []
         
@@ -835,8 +832,8 @@ class Game():
                 self.__question += 1
 
             elif self.__gameStep.value == GS_FINISHED:
-                ControlColumnPrelayout.AppendElement(NouvelleMancheButton)
-                display.UpdateLayout(STR.GetSlaveSettings())
+                ControlColumnLayout.AppendElement(NouvelleMancheButton)
+                display.UpdateLayout()
 
                 self.__gameStep.value = GS_INIT
             
@@ -1076,7 +1073,7 @@ class Target():
 
 target = Target()
 
-def targetPlayer(windows:sg.Window, orderedPlayer:int):
+def targetPlayer(orderedPlayer:int):
     target.TargetPlayer(orderedPlayer)
 
 def notifLaser(slaveID:int):
@@ -1129,39 +1126,39 @@ def notifLaser(slaveID:int):
 
 ###   INIT SYSTEM    ###
 
-def startGameAuto(window:sg.Window):
+def startGameAuto(value):
     game.Start(AUTO)
 
-startGameAutoButton = PreLayoutElement(IDP_BUTTON, "startGameAuto", startGameAuto)
+startGameAutoButton = LayoutElement(IDP_BUTTON, None, "startGameAuto", callback=startGameAuto)
 
-def startGameManual(window:sg.Window):
+def startGameManual(wvalue):
     game.Start(MANUAL)
 
-startGameManualButton = PreLayoutElement(IDP_BUTTON, "startGameManual", startGameManual)
+startGameManualButton = LayoutElement(IDP_BUTTON, None, "startGameManual", callback=startGameManual)
 
-def initPlayer(window:sg.Window):
+def initPlayer(value):
     STR.AddNotifCallback(RED_BUTTON, initNotifLaser)
 
-InitPlayerButton = PreLayoutElement(IDP_BUTTON, "initPlayer", initPlayer)
+InitPlayerButton = LayoutElement(IDP_BUTTON, None, "initPlayer", callback=initPlayer)
 
-def nouvelleManche(window:sg.Window):
-    ControlColumnPrelayout.RemoveElement(NouvelleMancheButton)
-    display.UpdateLayout(STR.GetSlaveSettings())
+def nouvelleManche(value):
+    ControlColumnLayout.RemoveElement(NouvelleMancheButton)
+    display.UpdateLayout()
     game.SetGameStep(GS_ABOUT_TO_READ)
 
-NouvelleMancheButton = PreLayoutElement(IDP_BUTTON, "Nouvelle Manche", nouvelleManche)
+NouvelleMancheButton = LayoutElement(IDP_BUTTON, None, "Nouvelle Manche", callback=nouvelleManche)
 
 #TEST#
 
-def testDisplayQuestion(window:sg.Window):
+def testDisplayQuestion(value):
     game.SetQuestionDisplay("Combien de fois par seconde un colibri peut-il battre des ailes ?", "La réponse A", "La grosse réponse B", "repC", "Et non pas la D")
 
-testDisplayQuestionButton = PreLayoutElement(IDP_BUTTON, "testDisplayQuestion", testDisplayQuestion)
+testDisplayQuestionButton = LayoutElement(IDP_BUTTON, None, "testDisplayQuestion", callback=testDisplayQuestion)
 
-def testDisplayScore(window:sg.Window):
+def testDisplayScore(value):
     game.TestScoreAnnounce()
 
-testDisplayScoreButton = PreLayoutElement(IDP_BUTTON, "testDisplayScore", testDisplayScore)
+testDisplayScoreButton = LayoutElement(IDP_BUTTON, None, "testDisplayScore", callback=testDisplayScore)
 
 ######
 
@@ -1172,15 +1169,15 @@ def initNotifLaser(slaveID:int):
 
     if playerList.GetNumberOfOrderedPlayer() >= NUMBER_PLAYER:
         STR.RemoveNotifCallback(RED_BUTTON)
-        ControlColumnPrelayout.RemoveElement(InitPlayerButton)
+        ControlColumnLayout.RemoveElement(InitPlayerButton)
         global turretPos
         global gameStep
 
         target.SetTurretPos(TP_END)
-        ControlColumnPrelayout.AppendElement(startGameAutoButton)
-        ControlColumnPrelayout.AppendElement(startGameManualButton)
+        ControlColumnLayout.AppendElement(startGameAutoButton)
+        ControlColumnLayout.AppendElement(startGameManualButton)
         game.SetGameStep(GS_WAITING_TO_START)
-        display.UpdateLayout(STR.GetSlaveSettings())
+        display.UpdateLayout()
 
         STR.AddNotifCallback(RED_BUTTON, lambda slaveID : playerPressButton(slaveID, RED_BUTTON))
         STR.AddNotifCallback(GREEN_BUTTON, lambda slaveID : playerPressButton(slaveID, GREEN_BUTTON))
@@ -1237,7 +1234,7 @@ def CreateDummyPlayers():
     playerList.AddOrderedPlayer(playerList.GetPlayer(3))
     playerList.GetPlayer(3).SetScore(1, 2)
 
-def testButtonColor(window):
+def testButtonColor(value):
     playerPressButton(0, RED_BUTTON)
     playerPressButton(1, GREEN_BUTTON)
     playerPressButton(2, BLUE_BUTTON)
@@ -1260,40 +1257,40 @@ if __name__ == "__main__":
 
     STR = Settingator(com, display)
 
-    ControlColumnPrelayout = PreLayoutElement(IDP_COLUMN)
+    ControlColumnLayout = LayoutElement(IDP_COLUMN)
 
-    ControlColumnPrelayout.AppendElement(InitPlayerButton)
+    ControlColumnLayout.AppendElement(InitPlayerButton)
     if TESTING:
-        ControlColumnPrelayout.AppendElement(startGameAutoButton)
-        ControlColumnPrelayout.AppendElement(startGameManualButton)
+        ControlColumnLayout.AppendElement(startGameAutoButton)
+        ControlColumnLayout.AppendElement(startGameManualButton)
         pass
 
-    ControlColumnPrelayout.AppendElement(testDisplayQuestionButton)
-    ControlColumnPrelayout.AppendElement(testDisplayScoreButton)
+    ControlColumnLayout.AppendElement(testDisplayQuestionButton)
+    ControlColumnLayout.AppendElement(testDisplayScoreButton)
 
     if TESTING:
-        ControlColumnPrelayout.AppendElement(PreLayoutElement(IDP_BUTTON, "test button Color", testButtonColor))
+        ControlColumnLayout.AppendElement(LayoutElement(IDP_BUTTON, None, "test button Color", callback=testButtonColor))
 
     if TESTING:
-        TestBugButton = PreLayoutElement(IDP_BUTTON, "Test Bug", lambda window : print(gc.get_referrers(playerList.GetPlayer(0))))
-        ControlColumnPrelayout.AppendElement(TestBugButton)
+        TestBugButton = LayoutElement(IDP_BUTTON, None, "Test Bug", callback=lambda value : print(gc.get_referrers(playerList.GetPlayer(0))))
+        ControlColumnLayout.AppendElement(TestBugButton)
 
-        AimingSoundButton = PreLayoutElement(IDP_BUTTON, "aiming", lambda window : game.PlayAimingSound())
-        CountdownSoundButton = PreLayoutElement(IDP_BUTTON, "countdown", lambda window : game.PlayCountdownSound())
+        AimingSoundButton = LayoutElement(IDP_BUTTON, None, "aiming", callback=lambda value : game.PlayAimingSound())
+        CountdownSoundButton = LayoutElement(IDP_BUTTON, None, "countdown", callback=lambda value : game.PlayCountdownSound())
 
-        ControlColumnPrelayout.AppendElement(AimingSoundButton)
-        ControlColumnPrelayout.AppendElement(CountdownSoundButton)
+        ControlColumnLayout.AppendElement(AimingSoundButton)
+        ControlColumnLayout.AppendElement(CountdownSoundButton)
                                                 
 
 
-    ControlColumnPrelayout.AppendElement(PreLayoutElement(IDP_BUTTON, "Reset Score", lambda window : playerList.ResetScore()))
+    ControlColumnLayout.AppendElement(LayoutElement(IDP_BUTTON, None, "Reset Score", callback=lambda value : playerList.ResetScore()))
 
-    ControlColumnPrelayout.AppendElement(PreLayoutElement(IDP_BUTTON, "Reset Player", lambda window : playerList.ResetPlayer()))
+    ControlColumnLayout.AppendElement(LayoutElement(IDP_BUTTON, None, "Reset Player", callback=lambda value : playerList.ResetPlayer()))
 
     if TESTING:
-        ControlColumnPrelayout.AppendElement(PreLayoutElement(IDP_BUTTON, "Test BG", lambda : playerList.SetAllBGColor(RED_COLOR)))
+        ControlColumnLayout.AppendElement(LayoutElement(IDP_BUTTON, None, "Test BG", callback=lambda value : playerList.SetAllBGColor(RED_COLOR)))
 
-    display.AddPreLayout(ControlColumnPrelayout)
+    STR.AddToPreLayout(ControlColumnLayout)
     
     game = Game()
 
@@ -1305,13 +1302,12 @@ if __name__ == "__main__":
     if TESTING:
         CreateDummyPlayers()
         
-    display.AddPreLayout(PreLayoutElement(IDP_BUTTON, "Test", testButtonCB))
+    STR.SendInitRequest(1)
+    #STR.SendBridgeInitRequest(1, b'Turret', TurretCallback)
+    #STR.SendBridgeInitRequest(2, b'Desk', DeskCallback, NUMBER_PLAYER)
 
-    #STR.SendInitRequest(1)
-    STR.SendBridgeInitRequest(1, b'Turret', TurretCallback)
-    STR.SendBridgeInitRequest(2, b'Desk', DeskCallback, NUMBER_PLAYER)
 
-    while display.isRunning():
+    while display.IsRunning():
         STR.Update()
         game.Update()
 

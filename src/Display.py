@@ -10,6 +10,8 @@ IDP_INPUT = 0x02
 IDP_TEXT = 0x03
 IDP_FRAME = 0x04
 IDP_COLUMN = 0x05
+IDP_CHECK = 0x06
+IDP_SLIDER = 0x07
 
 def IDPTypeToStr(IDPType:int = IDP_NONE):
     if IDPType == IDP_NONE:
@@ -29,8 +31,8 @@ def IDPTypeToStr(IDPType:int = IDP_NONE):
         
 
 class IElement(ABC):
-    def __init__(self, value):
-        self._value = value
+    def __init__(self):
+        pass
 
     @abstractmethod
     def SetBGColor(self, color):
@@ -40,29 +42,39 @@ class IElement(ABC):
     def UpdateValue(self, value):
         pass
 
-class PreLayoutElement(ABC):
-    def __init__(self, type, name="", key=None, ret:Pointer=None) -> None:
+    @abstractmethod
+    def GetValue(self):
+        pass
+
+    @abstractmethod
+    def GetElement(self):
+        pass
+
+class LayoutElement(ABC):
+    def __init__(self, type, value=None, name="", children=None, callback=None) -> None:
         self.__type = type
         self.__name = name
-        self.__parent:PreLayoutElement = None
+        self.__value = value
+        self.__parent:LayoutElement = None
         self.__isModified = True
         self.__toRemoveFromView = []
         self.__toAddInView = []
         self.__isNew = True
+        self.__callback = callback
 
-        self.__key = key
+        self.__iElement:IElement = None
 
-        if isinstance(self.__key, list):
-            for element in self.__key:
+        self.__children = children
+
+        if isinstance(self.__children, list):
+            for element in self.__children:
                 element.SetParentRecursively(self)
 
-        if (type == IDP_COLUMN or type == IDP_FRAME) and key == None:
-            self.__key = []
-
-        self.__ret = ret
+        if (type == IDP_COLUMN or type == IDP_FRAME) and children == None:
+            self.__children = []
 
     def __del__(self):
-        self.__key = None
+        self.__children = None
         print("delete")
 
     def IsNew(self):
@@ -83,20 +95,35 @@ class PreLayoutElement(ABC):
     def GetName(self):
         return self.__name
     
-    def GetKey(self):
-        return self.__key
+    def GetValue(self):
+        return self.__value
     
-    def GetRet(self):
-        return self.__ret
+    def SetValue(self, value):
+        self.__value = value
+
+    def UpdateValue(self, value):
+        self.SetValue(value)
+        
+        if not self.IsNew():
+            self.__iElement.UpdateValue(value)
     
+    def GetChildren(self):
+        return self.__children
+    
+    def GetIElement(self) -> IElement:
+        return self.__iElement
+    
+    def SetIElement(self, element:IElement) -> None:
+        self.__iElement = element
+
     def SetParent(self, parent = None) -> None:
         self.__parent = parent
 
     def SetParentRecursively(self, parent = None) -> None:
         self.__parent = parent
 
-        if isinstance(self.__key, list):
-            for element in self.__key:
+        if isinstance(self.__children, list):
+            for element in self.__children:
                 element.SetParentRecursively(self)
     
     def GetParent(self):
@@ -114,8 +141,8 @@ class PreLayoutElement(ABC):
         return self.__isModified
     
     def AppendElement(self, element) -> None:
-        if isinstance(self.__key, list):
-            self.__key.append(element)
+        if isinstance(self.__children, list):
+            self.__children.append(element)
             element.SetParent(self)
 
             self.__toAddInView.append(element)
@@ -123,28 +150,31 @@ class PreLayoutElement(ABC):
             
         else:
             print("Can't append element to " + IDPTypeToStr(self.__type) + ", name is \"" + self.__name + "\"")
-            print("Key:")
-            print(str(self.__key))
-
+            print("children:")
+            print(str(self.__children))
 
     def RemoveElement(self, element) -> None:
-        if isinstance(self.__key, list):
+        if isinstance(self.__children, list):
 
-            if element in self.__key:
+            if element in self.__children:
                 element.SetParent()
-                self.__key.remove(element)
+                self.__children.remove(element)
                 
                 self.__toRemoveFromView.append(str(element))
                 self.SetModified()
         else:
             print("Can't remove element to " + IDPTypeToStr(self.__type) + ", name is \"" + self.__name + "\"")
-            print("Key:")
-            print(str(self.__key))
+            print("children:")
+            print(str(self.__children))
+
+    def Call(self, value = None):
+        if self.__callback != None:
+            self.__callback(value)
 
 class IDisplay(ABC):
     def __init__(self) -> None:
         self.__slaveSettings = dict
-        self._PreLayout = PreLayoutElement(IDP_FRAME, "Main Frame")
+        self._Layout = LayoutElement(IDP_COLUMN)
 
     def SetSlaveSettingsRef(self, slaveSettings:dict) -> None:
         self.__slaveSettings = slaveSettings
@@ -157,7 +187,7 @@ class IDisplay(ABC):
         pass
 
     @abstractmethod
-    def UpdateLayout(self, slaveSettings:dict) -> None:
+    def UpdateLayout(self) -> None:
         pass
 
     @abstractmethod
@@ -168,11 +198,11 @@ class IDisplay(ABC):
     def IsRunning(self) -> bool:
         pass
 
-    def AddPreLayout(self, element:PreLayoutElement) -> None:
-        self._PreLayout.AppendElement(element)
+    def AddLayout(self, element:LayoutElement) -> None:
+        self._Layout.AppendElement(element)
 
-    def RemovePreLayout(self, element:PreLayoutElement) -> None:
-        self._PreLayout.RemoveElement(element)
+    def RemoveLayout(self, element:LayoutElement) -> None:
+        self._Layout.RemoveElement(element)
 
-    def GetPrelayout(self) -> list:
-        return self._PreLayout
+    def GetLayout(self) -> list:
+        return self._Layout

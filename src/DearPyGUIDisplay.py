@@ -61,21 +61,21 @@ class DearPyGUIDisplay(IDisplay):
         self.UpdateLayout(None)
         dpg.render_dearpygui_frame()
 
-    def __UpdateChildLayout(self, parentElement:PreLayoutElement, columnTag = None) -> None:
+    def __UpdateChildLayout(self, parentElement:LayoutElement, columnTag = None) -> None:
         
         if isinstance(parentElement.GetKey(), list):
-            childElement:PreLayoutElement
+            childElement:LayoutElement
 
 <<<<<<< HEAD
             childIndex = 0
             for childElement in parentElement.GetKey():
 
                 if childElement.IsModified():
-                    self.__UpdatePrelayout(childElement, columnTag, childIndex)
+                    self.__UpdateLayout(childElement, columnTag, childIndex)
                 
                 childIndex += 1
 
-    def __UpdatePrelayout(self, element:PreLayoutElement, columnTag=None, childIndex=0):
+    def __UpdateLayout(self, element:LayoutElement, columnTag=None, childIndex=0):
 
         elementsToRemove = element.GetElementsToRemoveFromView()
         while elementsToRemove.__len__():
@@ -101,11 +101,11 @@ class DearPyGUIDisplay(IDisplay):
             type:int = element.GetType()
             name = element.GetName()
             
-            if isinstance(name, Pointer):
+            if isinstance(name, Mutable):
                 name = name.GetValue()
 
             key = element.GetKey()
-            ret:Pointer = element.GetRet()
+            ret:Mutable = element.GetRet()
 
             parentTag = parent=str(element.GetParent()) if element.GetParent() else columnTag
                 
@@ -199,8 +199,8 @@ class DearPyGUIDisplay(IDisplay):
                     
 
     def UpdateLayout(self, slaveSettings:dict) -> None:
-        if self._PreLayout.IsModified():
-            self.__UpdatePrelayout(self._PreLayout, self.__mainGroup)
+        if self._Layout.IsModified():
+            self.__UpdateLayout(self._Layout, self.__mainGroup)
 
         if slaveSettings:
             pass

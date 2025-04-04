@@ -6,14 +6,22 @@ from Display import *
 class Settingator:
     def __init__(self, ctr:ICTR, display:IDisplay) -> None:
         self.__communicator = ctr
-        self.__display = display
         self.__slaveSettings = dict()
         self.__slaves = dict()
-        self.__display.SetSlaveSettingsRef(self.__slaveSettings)
         self.__shouldUpdateDisplayLayout = False
         self.__shouldUpdateSetting = None
         self.__notifCallback = dict()
         self.__initCallback = dict()
+
+        # Display Stuff
+        self.__display = display
+        self.__display.SetSlaveSettingsRef(self.__slaveSettings)
+        self.__preLayout = LayoutElement(IDP_FRAME)
+        self.__slaveLayout = LayoutElement(IDP_FRAME)
+        self.__display.AddLayout(self.__preLayout)
+        self.__display.AddLayout(self.__slaveLayout)
+
+
         return
     
     def Update(self) -> None:
@@ -46,7 +54,7 @@ class Settingator:
         self.SendUpdateSetting(self.__display.Update())
         
         if self.__shouldUpdateDisplayLayout:
-            self.__display.UpdateLayout(self.__slaveSettings)
+            self.__display.UpdateLayout()
             self.__shouldUpdateDisplayLayout = False
 
         if self.__shouldUpdateSetting != None:
@@ -121,6 +129,38 @@ class Settingator:
 
         if not slaveID in self.__slaves:
             self.__slaves[slaveID] = Slave(self, slaveID, self.__slaveSettings[slaveID])
+
+            slaveLayout = LayoutElement(IDP_COLUMN, None, "Slave "+str(slaveID))
+
+            for settingRef in self.__slaveSettings[slaveID]:
+                setting:Setting = self.__slaveSettings[slaveID][settingRef]
+                settingType = setting.GetType()
+
+                if settingType == SettingType.SLIDER.value:
+                    slaveLayout.AppendElement(LayoutElement(IDP_SLIDER, setting.GetName()))
+                
+                elif settingType == SettingType.TRIGGER.value:
+                    slaveLayout.AppendElement(LayoutElement(IDP_BUTTON, setting.GetValue(), setting.GetName()))
+
+                elif settingType == SettingType.SWITCH.value or \
+                    settingType == SettingType.BOOL.value:
+                    slaveLayout.AppendElement(LayoutElement(IDP_CHECK, setting.GetValue(), setting.GetName(), callback=lambda value, setting=setting : self.SendUpdateSetting(setting, value)))
+
+                elif settingType == SettingType.FLOAT.value or\
+                    settingType == SettingType.UINT8.value or \
+                    settingType == SettingType.UINT16.value or \
+                    settingType == SettingType.UINT32.value or \
+                    settingType == SettingType.CUSTOM_FLOAT.value:
+                    slaveLayout.AppendElement(LayoutElement(IDP_TEXT, setting.GetName(), setting.GetName()))
+                    slaveLayout.AppendElement(LayoutElement(IDP_INPUT, setting.GetValue(), setting.GetName(), callback=lambda value, setting=setting : self.SendUpdateSetting(setting, value)))
+
+                else:
+                    slaveLayout.AppendElement(LayoutElement(IDP_TEXT, "Unhandled type : " + str(settingType)))
+                
+
+            self.__slaveLayout.AppendElement(slaveLayout)
+            self.__display.UpdateLayout()
+
         if slaveID in self.__initCallback:
             self.__initCallback[slaveID](self.__slaves[slaveID])
 
@@ -165,8 +205,11 @@ class Settingator:
 
         return msgIndex
 
-    def SendUpdateSetting(self, setting:Setting) -> None:
+    def SendUpdateSetting(self, setting:Setting, value = None) -> None:
         if setting != None:
+            if value != None:
+                setting.SetValue(value)
+
             type = MessageType.SETTING_UPDATE.value
             buffer = bytearray()
             buffer.append(MessageControlFrame.START.value)
@@ -253,7 +296,8 @@ class Settingator:
     def RemoveDirectSettingUpdateConfig(self, srcSlaveID:int, dstSlave:int, settingRef:int) -> None:
         self.RemoveDirectMessageConfig(srcSlaveID, dstSlave, settingRef, MessageType.ESP_NOW_REMOVE_DIRECT_SETTING_UPDATE_CONFIG.value)
 
-
+    def AddToPreLayout(self, layoutElement:LayoutElement) -> None:
+        self.__preLayout.AppendElement(layoutElement)
 
 class Slave:
     def __init__(self, str:Settingator, slaveID:int, settings:dict) -> None:
