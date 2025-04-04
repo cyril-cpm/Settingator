@@ -156,7 +156,7 @@ class Setting():
             self.__value = float(value)
 
         elif (IsBoolTypeValue(self.__type)):
-            if value == '':
+            if value == '' or value == '0':
                 value = False
             self.__value = bool(value)
             

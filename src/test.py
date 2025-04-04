@@ -79,7 +79,7 @@ class Player():
                                                         self.__goodElement,
                                                         self.__badElement
                                                     ])
-        STR.AddToPreLayout(self.__playerLayout)
+        STR.AddToLayout(self.__playerLayout)
                                                 
     def GetLayout(self) -> LayoutElement:
         return self.__playerLayout
@@ -192,7 +192,7 @@ class Player():
         return self.__badText
     
     def PrepareToDestroy(self) -> None:
-        self.__prelayout = None
+        self.__layout = None
         self.__nameElement = None
         self.__positionElement = None
         self.__frameElement = None
@@ -299,7 +299,7 @@ class Players(IRefreshable):
     def ResetPlayer(self) -> None:
         for player in self.__playerList:
             self.__playerList[player].Send("GREEN LOADING")
-            #display.RemoveLayout(self.__playerList[player].GetLayout())
+            display.RemoveLayout(self.__playerList[player].GetLayout())
             self.__playerList[player].PrepareToDestroy()
 
         self.__orderedPlayerList.clear()
@@ -1262,15 +1262,15 @@ if __name__ == "__main__":
     STR.SendBridgeInitRequest(1, b'Turret', TurretCallback)
     STR.SendBridgeInitRequest(2, b'Desk', DeskCallback, NUMBER_PLAYER)
 
-    ControlColumnPrelayout = PreLayoutElement(IDP_COLUMN)
-
-    ControlColumnPrelayout.AppendElement(InitPlayerButton)
     ControlColumnLayout = LayoutElement(IDP_COLUMN)
 
     ControlColumnLayout.AppendElement(InitPlayerButton)
-    ControlColumnPrelayout = PreLayoutElement(IDP_COLUMN)
+    ControlColumnLayout = LayoutElement(IDP_COLUMN)
 
-    ControlColumnPrelayout.AppendElement(InitPlayerButton)
+    ControlColumnLayout.AppendElement(InitPlayerButton)
+    ControlColumnLayout = LayoutElement(IDP_COLUMN)
+
+    ControlColumnLayout.AppendElement(InitPlayerButton)
     if TESTING:
         ControlColumnLayout.AppendElement(startGameAutoButton)
         ControlColumnLayout.AppendElement(startGameManualButton)
@@ -1301,7 +1301,7 @@ if __name__ == "__main__":
     if TESTING:
         ControlColumnLayout.AppendElement(LayoutElement(IDP_BUTTON, None, "Test BG", callback=lambda value : playerList.SetAllBGColor(RED_COLOR)))
 
-    STR.AddToPreLayout(ControlColumnLayout)
+    STR.AddToLayout(ControlColumnLayout)
     
     game = Game()
 
@@ -1322,7 +1322,7 @@ if __name__ == "__main__":
     STR.SendBridgeInitRequest(1, b'Turret', TurretCallback)
     STR.SendBridgeInitRequest(2, b'Desk', DeskCallback, NUMBER_PLAYER)
 
-    while display.isRunning():
+    while display.IsRunning():
         STR.Update()
         game.Update()
 

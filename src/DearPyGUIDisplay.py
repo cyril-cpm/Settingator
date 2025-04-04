@@ -152,10 +152,10 @@ class DearPyGUIDisplay(IDisplay):
 =======
 <<<<<<< HEAD
 =======
-    def __UpdateChildLayout(self, parentElement:PreLayoutElement, columnTag = None) -> None:
+    def __UpdateChildLayout(self, parentElement:LayoutElement, columnTag = None) -> None:
         
         if isinstance(parentElement.GetKey(), list):
-            childElement:PreLayoutElement
+            childElement:LayoutElement
 
             childIndex = 0
 >>>>>>> 075c465 (Start implementing DearPyGUI)
@@ -163,9 +163,9 @@ class DearPyGUIDisplay(IDisplay):
             for childElement in parentElement.GetKey():
 
                 if childElement.IsModified():
-                    self.__UpdatePrelayout(childElement, columnTag)
+                    self.__UpdateLayout(childElement, columnTag)
 
-    def __UpdatePrelayout(self, element:PreLayoutElement, columnTag=None):
+    def __UpdateLayout(self, element:LayoutElement, columnTag=None):
 
         for elementToRemove in element.GetElementsToRemoveFromView():
             print("item to delete")
@@ -183,9 +183,9 @@ class DearPyGUIDisplay(IDisplay):
             for childElement in parentElement.GetKey():
 
                 if childElement.IsModified():
-                    self.__UpdatePrelayout(childElement, columnTag)
+                    self.__UpdateLayout(childElement, columnTag)
 
-    def __UpdatePrelayout(self, element:PreLayoutElement, columnTag=None):
+    def __UpdateLayout(self, element:LayoutElement, columnTag=None):
 >>>>>>> 075c465 (Start implementing DearPyGUI)
         elementsToRemove = element.GetElementsToRemoveFromView()
         while elementsToRemove.__len__():
@@ -195,9 +195,9 @@ class DearPyGUIDisplay(IDisplay):
             for childElement in parentElement.GetKey():
 
                 if childElement.IsModified():
-                    self.__UpdatePrelayout(childElement, columnTag)
+                    self.__UpdateLayout(childElement, columnTag)
 
-    def __UpdatePrelayout(self, element:PreLayoutElement, columnTag=None):
+    def __UpdateLayout(self, element:LayoutElement, columnTag=None):
 
         if element.IsNew():
             element.SetNew(False)
@@ -399,8 +399,8 @@ class DearPyGUIDisplay(IDisplay):
 <<<<<<< HEAD
 =======
 =======
-        if self._PreLayout.IsModified():
-            self.__UpdatePrelayout(self._PreLayout, self.__mainWindow)
+        if self._Layout.IsModified():
+            self.__UpdateLayout(self._Layout, self.__mainWindow)
 >>>>>>> 8cbc806 (Start implementing DearPyGUI)
 
 >>>>>>> 075c465 (Start implementing DearPyGUI)

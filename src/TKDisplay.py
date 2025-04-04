@@ -100,7 +100,7 @@ class TKDisplay(IDisplay):
                 #    ret.SetValue(TKElement(newElement, IDP_INPUT))
 
             elif type == IDP_CHECK:
-                newElement = ttk.Checkbutton(parent, text=name, textvariable=elementVariable, command=lambda e=element : e.Call(elementVariable.get()))
+                newElement = ttk.Checkbutton(parent, text=name, variable=elementVariable, command=lambda e=element : e.Call(elementVariable.get()))
                 
                 #if element.GetValue() == True:
                 #    newElement.state(['selected'])

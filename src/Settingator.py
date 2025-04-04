@@ -16,9 +16,9 @@ class Settingator:
         # Display Stuff
         self.__display = display
         self.__display.SetSlaveSettingsRef(self.__slaveSettings)
-        self.__preLayout = LayoutElement(IDP_FRAME)
+        self.__layout = LayoutElement(IDP_FRAME)
         self.__slaveLayout = LayoutElement(IDP_FRAME)
-        self.__display.AddLayout(self.__preLayout)
+        self.__display.AddLayout(self.__layout)
         self.__display.AddLayout(self.__slaveLayout)
 
 
@@ -296,8 +296,8 @@ class Settingator:
     def RemoveDirectSettingUpdateConfig(self, srcSlaveID:int, dstSlave:int, settingRef:int) -> None:
         self.RemoveDirectMessageConfig(srcSlaveID, dstSlave, settingRef, MessageType.ESP_NOW_REMOVE_DIRECT_SETTING_UPDATE_CONFIG.value)
 
-    def AddToPreLayout(self, layoutElement:LayoutElement) -> None:
-        self.__preLayout.AppendElement(layoutElement)
+    def AddToLayout(self, layoutElement:LayoutElement) -> None:
+        self.__layout.AppendElement(layoutElement)
 
 class Slave:
     def __init__(self, str:Settingator, slaveID:int, settings:dict) -> None:
