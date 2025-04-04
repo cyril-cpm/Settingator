@@ -69,19 +69,22 @@ def GetNumericalValueFromBuffer(value:bytearray) -> tuple:
     return (retValue, valueLen)
 
 def GetFloatValueFromBuffer(value:bytearray) -> tuple:
-    return(Mutable(struct.unpack('<f', value)[0]), value.__len__())
+    return struct.unpack('<f', value)[0], value.__len__()
 
 def GetBoolValueFromBuffer(value:bytearray) -> tuple:
-    return (Mutable(struct.unpack('<B', value)[0]), value.__len__())
+    return struct.unpack('<B', value)[0], value.__len__()
 
 def GetUInt8ValueFromBuffer(value:bytearray) -> tuple:
-    return (Mutable(struct.unpack('<B', value)[0]), value.__len__())
+    return struct.unpack('<B', value)[0], value.__len__()
 
 def GetUInt16ValueFromBuffer(value:bytearray) -> tuple:
-    return (Mutable(struct.unpack('<H', value)[0]), value.__len__())
+    return struct.unpack('<H', value)[0], value.__len__()
 
 def GetUInt32ValueFromBuffer(value:bytearray) -> tuple:
-    return(Mutable(struct.unpack('<I', value)[0]), value.__len__())
+    return struct.unpack('<I', value)[0], value.__len__()
+
+def GetNumeriacalValueFromBuffer(value:bytearray, type:SettingType):
+    return struct.unpack(PACK_TAB[type], value)[0], value.__len__()
 
 def GetStringValueFromBuffer(value:bytearray) -> tuple:
     string = str()
@@ -99,19 +102,11 @@ class Setting():
         self.__name = name
         self.__type = type
         self.__slaveID = slaveID
-        self.__value = None#:Mutable
+        self.__value = None
         self.__valueLen:int
 
-        if (IsFloatTypeValue(type)):
-            self.__value, self.__valueLen = GetFloatValueFromBuffer(value)
-        elif (IsUInt8TypeValue(type)):
-            self.__value, self.__valueLen = GetUInt32ValueFromBuffer(value)
-        elif (IsUInt16TypeValue(type)):
-            self.__value, self.__valueLen = GetUInt32ValueFromBuffer(value)
-        elif (IsUInt32TypeValue(type)):
-            self.__value, self.__valueLen = GetUInt32ValueFromBuffer(value)
-        elif (IsBoolTypeValue(type)):
-            self.__value, self.__valueLen = GetBoolValueFromBuffer(value)
+        if (IsNumericalTypeValue(type)):
+            self.__value, self.__valueLen = GetNumeriacalValueFromBuffer(value, type)
         else:
             self.__value, self.__valueLen = GetStringValueFromBuffer(value)
 
@@ -156,7 +151,7 @@ class Setting():
             self.__value = float(value)
 
         elif (IsBoolTypeValue(self.__type)):
-            if value == '':
+            if value == '' or value == '0':
                 value = False
             self.__value = bool(value)
             

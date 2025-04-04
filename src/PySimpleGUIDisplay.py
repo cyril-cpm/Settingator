@@ -36,12 +36,6 @@ class PySimpleGUIDisplay(IDisplay):
         for element in elementList:
             type:int = element.GetType()
             name = element.GetName()
-            
-            if isinstance(name, Mutable):
-                name = name.GetValue()
-
-            key = element.GetKey()
-            ret:Mutable = element.GetRet()
 
             newElement:sg.Element
 

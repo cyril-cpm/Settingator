@@ -80,32 +80,20 @@ class DearPyGUIDisplay(IDisplay):
 
             type:int = element.GetType()
             name = element.GetName()
-            
-            if isinstance(name, Mutable):
-                name = name.GetValue()
-
-            key = element.GetKey()
-            ret:Mutable = element.GetRet()
 
             parentTag = parent=str(element.GetParent()) if element.GetParent() else columnTag
                 
             if type == IDP_BUTTON:
                 dpg.add_button(label=name, tag=str(element), parent=columnTag, callback=key)
                 
-                if ret:
-                    ret.SetValue(DPGElement(str(element), IDP_BUTTON))
 
             elif type == IDP_TEXT:
                 dpg.add_text(default_value=name, tag=str(element), parent=columnTag)
                 
-                if ret:
-                    ret.SetValue(DPGElement(str(element), IDP_TEXT))
 
             elif type == IDP_INPUT:
                 dpg.add_input_text(default_value=name, tag=str(element), parent=columnTag, width=200)
 
-                if ret:
-                    ret.SetValue(DPGElement(str(element), IDP_INPUT))
 
             elif type == IDP_COLUMN:
                 dpg.add_group(tag=str(element)+"columnBody", parent=columnTag, label=name, horizontal=False)

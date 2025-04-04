@@ -64,9 +64,6 @@ class TKDisplay(IDisplay):
 
             type:int = element.GetType()
             name = element.GetName()
-            
-            if isinstance(name, Mutable):
-                name = name.GetValue()
                 
             row = 1
             column = 1
@@ -75,7 +72,7 @@ class TKDisplay(IDisplay):
 
             styleName = str(element)
 
-            elementVariable = StringVar(master=self.__root, value=element.GetValue())
+            elementVariable = Variable(master=self.__root, value=element.GetValue())
 
             if element.GetParent():
                 if element.GetParent().GetType() == IDP_FRAME:
@@ -100,7 +97,7 @@ class TKDisplay(IDisplay):
                 #    ret.SetValue(TKElement(newElement, IDP_INPUT))
 
             elif type == IDP_CHECK:
-                newElement = ttk.Checkbutton(parent, text=name, textvariable=elementVariable, command=lambda e=element : e.Call(elementVariable.get()))
+                newElement = ttk.Checkbutton(parent, text=name, variable=elementVariable, command=lambda e=element : e.Call(elementVariable.get()))
                 
                 #if element.GetValue() == True:
                 #    newElement.state(['selected'])
