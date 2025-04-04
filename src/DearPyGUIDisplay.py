@@ -229,14 +229,10 @@ class DearPyGUIDisplay(IDisplay):
                 dpg.add_button(label=name, tag=str(element), parent=columnTag, callback=key)
 <<<<<<< HEAD
                 
-                if ret:
-                    ret.SetValue(DPGElement(str(element), IDP_BUTTON))
 
             elif type == IDP_TEXT:
                 dpg.add_text(default_value=name, tag=str(element), parent=columnTag)
                 
-                if ret:
-                    ret.SetValue(DPGElement(str(element), IDP_TEXT))
 =======
 
             elif type == IDP_TEXT:
