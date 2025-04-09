@@ -2,11 +2,12 @@ from Display import *
 from Setting import *
 from tkinter import *
 from tkinter import ttk
+import queue
 
 dict_var = {}
 
 class TKElement(IElement):
-    def __init__(self, element, type, variable:Variable, style = None, styleName = "", index = 0):
+    def __init__(self, display, element, type, variable:Variable, style = None, styleName = "", index = 0):
         IElement.__init__(self)
         self.__type = type
         self.__index = index
@@ -14,26 +15,34 @@ class TKElement(IElement):
         self.__styleName:str = styleName
         self.__element = element
         self.__variable:Variable = variable
+        self.__display:TKDisplay = display
         print(f"TKElement créé avec variable: {self.__variable.get()}")
 
     def SetBGColor(self, color):
         if self.__style and self.__styleName != "":
+            self.__display.PutUpdateBGColor(self, color)
+
+    def UpdateBGColor(self, color):
             self.__style.configure(self.__styleName, background=color)
 
     def UpdateValue(self, value):
-        self.__variable.set(value)
+        self.__display.PutUpdateValue(self, value)
 
     def GetValue(self):
         return self.__variable.get()
     
     def GetElement(self):
         return self.__element
+    
+    def GetVariable(self) -> Variable:
+        return self.__variable
 
 class TKDisplay(IDisplay):
     def __init__(self) -> None:
         IDisplay.__init__(self)
 
         self.__root = Tk()
+        self.__root.update()
 
         #self.__root.tk.call('source', 'Forest-ttk-theme-master/forest-dark.tcl')
 
@@ -48,9 +57,36 @@ class TKDisplay(IDisplay):
         #self.__root.columnconfigure(0, weight=1)
         #self.__root.rowconfigure(0, weight=1)
 
+        self.__updateValuesQueue = queue.Queue()
+        self.__updateBGColorQueue = queue.Queue()
+
     def Update(self) -> Setting:
         self.UpdateLayout()
+        self.UpdateValues()
+        self.UpdateBGColors()
         self.__root.update()
+
+    def PutUpdateBGColor(self, element:TKElement, color):
+        self.__updateBGColorQueue.put((element, color))
+
+    def PutUpdateValue(self, element:TKElement, value):
+        self.__updateValuesQueue.put((element, value))
+
+    def UpdateValues(self) -> None:
+        while True:
+            try:
+                element, value = self.__updateValuesQueue.get_nowait()
+                element.GetVariable().set(value)
+            except queue.Empty:
+                break
+
+    def UpdateBGColors(self):
+        while True:
+            try:
+                element, color = self.__updateBGColorQueue.get_nowait()
+                element.UpdateBGColor(color)
+            except queue.Empty:
+                break
 
     def __UpdateLayout(self, element:LayoutElement, parent, childIndex=0):
 
@@ -130,7 +166,7 @@ class TKDisplay(IDisplay):
                     newElement = ttk.Labelframe(parent, text=name, style=styleName)
  
             newElement.grid(column=column, row=row, sticky=(N, W, E), padx=5, pady=5)
-            element.SetIElement(TKElement(newElement, type, elementVariable, self.__style, styleName))
+            element.SetIElement(TKElement(self, newElement, type, elementVariable, self.__style, styleName))
             dict_var[element] = elementVariable
             self.__UpdateChildLayout(element, newElement)
 
