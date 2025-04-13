@@ -2,6 +2,8 @@ from Setting import *
 from Communicator import ICTR
 from Message import *
 from Display import *
+import queue
+import threading
 
 class Settingator:
     def __init__(self, ctr:ICTR, display:IDisplay) -> None:
@@ -21,9 +23,13 @@ class Settingator:
         self.__display.AddLayout(self.__layout)
         self.__display.AddLayout(self.__slaveLayout)
 
+        self.__functionQueue = queue.Queue()
 
         return
     
+    def PutFunctionToQueue(self, f, args):
+        self.__functionQueue.put((f, args))
+
     def Update(self) -> None:
 
         if self.__communicator.Available():
@@ -51,8 +57,15 @@ class Settingator:
 
             self.__communicator.Flush()
 
-        self.SendUpdateSetting(self.__display.Update())
+        self.__display.Update()
         
+        while True:
+            try:
+                f, args = self.__functionQueue.get_nowait()
+                f(*args)
+            except queue.Empty:
+                break
+
         if self.__shouldUpdateDisplayLayout:
             self.__display.UpdateLayout()
             self.__shouldUpdateDisplayLayout = False
@@ -86,7 +99,10 @@ class Settingator:
         bridgeInitRequest = Message(buffer)
         self.__communicator.Write(bridgeInitRequest)
 
-    def SendInitRequest(self, slaveID:int) -> None:
+    def SendInitRequest(self, slaveID:int, callbackFunction = None) -> None:
+        if callbackFunction != None:
+            self.__initCallback[slaveID] = callbackFunction
+
         type = MessageType.INIT_REQUEST.value
         buffer = bytearray()
         buffer.append(MessageControlFrame.START.value)
@@ -136,15 +152,19 @@ class Settingator:
                 setting:Setting = self.__slaveSettings[slaveID][settingRef]
                 settingType = setting.GetType()
 
+                layoutElement:LayoutElement
                 if settingType == SettingType.SLIDER.value:
-                    slaveLayout.AppendElement(LayoutElement(IDP_SLIDER, setting.GetName()))
+                    layoutElement = LayoutElement(IDP_SLIDER, setting.GetName())
+                    slaveLayout.AppendElement(layoutElement)
                 
                 elif settingType == SettingType.TRIGGER.value:
-                    slaveLayout.AppendElement(LayoutElement(IDP_BUTTON, setting.GetValue(), setting.GetName()))
+                    layoutElement = LayoutElement(IDP_BUTTON, setting.GetValue(), setting.GetName())
+                    slaveLayout.AppendElement(layoutElement)
 
                 elif settingType == SettingType.SWITCH.value or \
                     settingType == SettingType.BOOL.value:
-                    slaveLayout.AppendElement(LayoutElement(IDP_CHECK, setting.GetValue(), setting.GetName(), callback=lambda value, setting=setting : self.SendUpdateSetting(setting, value)))
+                    layoutElement = LayoutElement(IDP_CHECK, setting.GetValue(), setting.GetName(), callback=lambda value, setting=setting : self.SendUpdateSetting(setting, value))
+                    slaveLayout.AppendElement(layoutElement)
 
                 elif settingType == SettingType.FLOAT.value or\
                     settingType == SettingType.UINT8.value or \
@@ -152,10 +172,15 @@ class Settingator:
                     settingType == SettingType.UINT32.value or \
                     settingType == SettingType.CUSTOM_FLOAT.value:
                     slaveLayout.AppendElement(LayoutElement(IDP_TEXT, setting.GetName(), setting.GetName()))
-                    slaveLayout.AppendElement(LayoutElement(IDP_INPUT, setting.GetValue(), setting.GetName(), callback=lambda value, setting=setting : self.SendUpdateSetting(setting, value)))
+
+                    layoutElement = LayoutElement(IDP_INPUT, setting.GetValue(), setting.GetName(), callback=lambda value, setting=setting : self.SendUpdateSetting(setting, value))
+                    slaveLayout.AppendElement(layoutElement)
 
                 else:
-                    slaveLayout.AppendElement(LayoutElement(IDP_TEXT, "Unhandled type : " + str(settingType)))
+                    layoutElement = LayoutElement(IDP_TEXT, "Unhandled type : " + str(settingType))
+                    slaveLayout.AppendElement(layoutElement)
+
+                setting.SetLayoutElement(layoutElement)
                 
 
             self.__slaveLayout.AppendElement(slaveLayout)
@@ -206,6 +231,10 @@ class Settingator:
         return msgIndex
 
     def SendUpdateSetting(self, setting:Setting, value = None) -> None:
+        if threading.current_thread().name != "MainThread":
+            self.PutFunctionToQueue(self.SendUpdateSetting, (setting, value))
+            return
+        
         if setting != None:
             if value != None:
                 setting.SetValue(value)
@@ -299,26 +328,26 @@ class Settingator:
     def AddToLayout(self, layoutElement:LayoutElement) -> None:
         self.__layout.AppendElement(layoutElement)
 
+    def RemoveFromLayout(self, layoutElement:LayoutElement) -> None:
+        self.__layout.RemoveElement(layoutElement)
+
 class Slave:
     def __init__(self, str:Settingator, slaveID:int, settings:dict) -> None:
         self.__ID = slaveID
         self.__settings = settings
         self.__str = str
 
-    def GetSettingByRef(self, ref:int):
+    def GetSettingByRef(self, ref:int) -> Setting:
         return self.__settings[ref]
 
-    def GetSettingByName(self, settingName:str):
+    def GetSettingByName(self, settingName:str) -> Setting:
         for setting in self.__settings:
             if self.__settings[setting].GetName() == settingName:
                 return self.GetSettingByRef(setting)
+        return None
 
     def SendSettingUpdateByRef(self, ref:int, value = None):
-
-        if (value != None):
-            self.__settings[ref].SetValue(value)
-
-        self.__str.SendUpdateSetting(self.__settings[ref])
+        self.__str.SendUpdateSetting(self.__settings[ref], value)
 
     def SendSettingUpdateByName(self, settingName:str, value = None):
 

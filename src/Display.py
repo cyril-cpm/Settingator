@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Type
-from Setting import *
 from Utils import *
+import weakref
 
 #enum display
 IDP_NONE = 0x00
@@ -34,6 +34,9 @@ class IElement(ABC):
     def __init__(self):
         pass
 
+    def __del__(self):
+        pass
+
     @abstractmethod
     def SetBGColor(self, color):
         pass
@@ -50,32 +53,39 @@ class IElement(ABC):
     def GetElement(self):
         pass
 
+    @abstractmethod
+    def SetEnable(self, value:bool):
+        pass
+
+    @abstractmethod
+    def SetVisible(self, value):
+        pass
+
+
 class LayoutElement(ABC):
-    def __init__(self, type, value=None, name="", children=None, callback=None) -> None:
+    def __init__(self, type, value=None, name="", children:list=None, callback=None) -> None:
         self.__type = type
         self.__name = name
         self.__value = value
         self.__parent:LayoutElement = None
         self.__isModified = True
-        self.__toRemoveFromView = []
-        self.__toAddInView = []
         self.__isNew = True
         self.__callback = callback
 
         self.__iElement:IElement = None
 
-        self.__children = children
+        self.__children:list = children
 
         if isinstance(self.__children, list):
             for element in self.__children:
-                element.SetParentRecursively(self)
+                if element:
+                    element.SetParentRecursively(self)
 
         if (type == IDP_COLUMN or type == IDP_FRAME) and children == None:
             self.__children = []
 
     def __del__(self):
-        self.__children = None
-        print("delete")
+        pass
 
     def IsNew(self):
         return self.__isNew
@@ -117,24 +127,32 @@ class LayoutElement(ABC):
         self.__iElement = element
 
     def SetParent(self, parent = None) -> None:
-        self.__parent = parent
+        if parent == None:
+            self.__parent = None
+        else:
+            self.__parent = weakref.ref(parent)
 
     def SetParentRecursively(self, parent = None) -> None:
-        self.__parent = parent
+        if parent != None:
+            self.__parent = weakref.ref(parent)
+        else:
+            self.__parent = None
 
         if isinstance(self.__children, list):
             for element in self.__children:
                 element.SetParentRecursively(self)
     
     def GetParent(self):
+        if self.__parent:
+            return self.__parent()
         return self.__parent
     
     def SetModified(self, modified:bool = True):
         self.__isModified = modified
 
 
-        if modified and self.__parent:
-            self.__parent.SetModified()
+        if modified and self.__parent and self.__parent():
+            self.__parent().SetModified()
 
     def IsModified(self) -> bool:
         return self.__isModified
@@ -144,7 +162,7 @@ class LayoutElement(ABC):
             self.__children.append(element)
             element.SetParent(self)
 
-            self.__toAddInView.append(element)
+            #self.__toAddInView.append(element)
             self.SetModified()
             
         else:
@@ -159,7 +177,7 @@ class LayoutElement(ABC):
                 element.SetParent()
                 self.__children.remove(element)
                 
-                self.__toRemoveFromView.append(str(element))
+                #self.__toRemoveFromView.append(str(element))
                 self.SetModified()
         else:
             print("Can't remove element to " + IDPTypeToStr(self.__type) + ", name is \"" + self.__name + "\"")
@@ -169,6 +187,16 @@ class LayoutElement(ABC):
     def Call(self, value = None):
         if self.__callback != None:
             self.__callback(value)
+
+    def SetEnable(self, value):
+        self.__iElement.SetEnable(value)
+
+        if isinstance(self.__children, list):
+            for children in self.__children:
+                children.SetEnable(value)
+
+    def SetVisible(self, value):
+        self.__iElement.SetVisible(value)
 
 class IDisplay(ABC):
     def __init__(self) -> None:
@@ -182,15 +210,11 @@ class IDisplay(ABC):
         return self.__slaveSettings
 
     @abstractmethod
-    def Update(self) -> Setting:
+    def Update(self) -> None:
         pass
 
     @abstractmethod
     def UpdateLayout(self) -> None:
-        pass
-
-    @abstractmethod
-    def UpdateSetting(self,setting:Setting) -> None:
         pass
 
     @abstractmethod

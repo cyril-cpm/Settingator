@@ -3,6 +3,9 @@ from Setting import *
 from tkinter import *
 from tkinter import ttk
 import queue
+from weakref import WeakMethod
+import sys
+import gc
 
 dict_var = {}
 
@@ -13,10 +16,13 @@ class TKElement(IElement):
         self.__index = index
         self.__style:ttk.Style = style
         self.__styleName:str = styleName
-        self.__element = element
+        self.__element:ttk.Widget = element
         self.__variable:Variable = variable
         self.__display:TKDisplay = display
         print(f"TKElement créé avec variable: {self.__variable.get()}")
+
+    def __del__(self):
+        self.__element.destroy()
 
     def SetBGColor(self, color):
         if self.__style and self.__styleName != "":
@@ -36,6 +42,29 @@ class TKElement(IElement):
     
     def GetVariable(self) -> Variable:
         return self.__variable
+    
+    def SetEnable(self, value):
+        if (value == '' or value == '0'):
+            value = False
+        else:
+            value = True
+
+        if value:
+            self.__display.PutFunction(self.__element.state, (['!disabled'],))
+        else:
+            self.__display.PutFunction(self.__element.state, (['disabled'],))
+
+    def SetVisible(self, value):
+        if (value == '' or value == '0'):
+            value = False
+        else:
+            value = True
+
+        if value:
+            self.__display.PutFunction(self.__element.grid, ())
+        else:
+            self.__display.PutFunction(self.__element.grid_remove,())
+
 
 class TKDisplay(IDisplay):
     def __init__(self) -> None:
@@ -60,10 +89,13 @@ class TKDisplay(IDisplay):
         self.__updateValuesQueue = queue.Queue()
         self.__updateBGColorQueue = queue.Queue()
 
-    def Update(self) -> Setting:
+        self.__functionQueue = queue.Queue()
+
+    def Update(self) -> None:
         self.UpdateLayout()
         self.UpdateValues()
         self.UpdateBGColors()
+        self.ExecuteFunctionQueue()
         self.__root.update()
 
     def PutUpdateBGColor(self, element:TKElement, color):
@@ -71,6 +103,18 @@ class TKDisplay(IDisplay):
 
     def PutUpdateValue(self, element:TKElement, value):
         self.__updateValuesQueue.put((element, value))
+
+    def PutFunction(self, function:callable, args:tuple) -> None:
+        self.__functionQueue.put((function, args))
+
+    def ExecuteFunctionQueue(self) -> None:
+        while True:
+            try:
+                f, args = self.__functionQueue.get_nowait()
+                f(*args)
+
+            except queue.Empty:
+                break
 
     def UpdateValues(self) -> None:
         while True:
@@ -100,9 +144,6 @@ class TKDisplay(IDisplay):
 
             type:int = element.GetType()
             name = element.GetName()
-            
-            if isinstance(name, Mutable):
-                name = name.GetValue()
                 
             row = 1
             column = 1
@@ -120,31 +161,21 @@ class TKDisplay(IDisplay):
                 elif element.GetParent().GetType() == IDP_COLUMN:
                     row = childIndex + 1
 
+            weakMethod = WeakMethod(element.Call)
+
             if type == IDP_BUTTON:
-                newElement = ttk.Button(parent, text=name, command=lambda e=element : e.Call(None))
+                newElement = ttk.Button(parent, text=name, command=lambda w=weakMethod: w() and w()(None))
 
             elif type == IDP_TEXT:
                 newElement = ttk.Label(parent, textvariable=elementVariable)
                 
             elif type == IDP_INPUT:
-                newElement = ttk.Entry(parent, textvariable=elementVariable)
-                newElement.bind("<Return>", lambda event, e=element : e.Call(elementVariable.get()))
+                newElement = ttk.Entry(parent)#, textvariable=elementVariable)
+                #newElement.bind("<Return>", lambda event, w=weakMethod: w() and w()(elementVariable.get()))
                 
-                #print("Valeur par défaut:", inputVar.get())
-
-                #if ret:
-                #    ret.SetValue(TKElement(newElement, IDP_INPUT))
-
             elif type == IDP_CHECK:
-                newElement = ttk.Checkbutton(parent, text=name, variable=elementVariable, command=lambda e=element : e.Call(elementVariable.get()))
-                
-                #if element.GetValue() == True:
-                #    newElement.state(['selected'])
-                #else:
-                #    newElement.state(['!selected'])
-
-    
-
+                newElement = ttk.Checkbutton(parent, text=name, variable=elementVariable, command=lambda w=weakMethod: w() and w()(elementVariable.get()))
+                 
             elif type == IDP_COLUMN:
                 
                 if name == "":
@@ -167,10 +198,9 @@ class TKDisplay(IDisplay):
  
             newElement.grid(column=column, row=row, sticky=(N, W, E), padx=5, pady=5)
             element.SetIElement(TKElement(self, newElement, type, elementVariable, self.__style, styleName))
-            dict_var[element] = elementVariable
             self.__UpdateChildLayout(element, newElement)
 
-        else:
+        elif (element and element.GetIElement()):
             self.__UpdateChildLayout(element, element.GetIElement().GetElement())
 
 
@@ -185,7 +215,7 @@ class TKDisplay(IDisplay):
             childIndex = 0
             for childElement in parentElement.GetChildren():
 
-                if childElement.IsModified():
+                if childElement and childElement.IsModified():
                     self.__UpdateLayout(childElement, parent, childIndex)
                 
                 childIndex += 1
@@ -194,8 +224,6 @@ class TKDisplay(IDisplay):
         if self._Layout.IsModified():
             self.__UpdateLayout(self._Layout, self.__mainFrame)
 
-    def UpdateSetting(self, setting:Setting) -> None:
-        pass
 
     def IsRunning(self) -> bool:
         return True

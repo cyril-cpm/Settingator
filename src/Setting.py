@@ -3,6 +3,7 @@ from typing import Type
 from enum import Enum
 import struct
 from Utils import *
+from Display import *
 
 class SettingType(Enum):
     SLIDER = 0x01
@@ -24,6 +25,7 @@ PACK_TAB = {
     SettingType.BOOL.value : '<B',
     SettingType.UINT16.value : '<H',
     SettingType.UINT32.value : '<I',
+    SettingType.FLOAT.value : '<f',
     SettingType.FLOAT.value : '<f'
 }
 
@@ -69,19 +71,19 @@ def GetNumericalValueFromBuffer(value:bytearray) -> tuple:
     return (retValue, valueLen)
 
 def GetFloatValueFromBuffer(value:bytearray) -> tuple:
-    return(Mutable(struct.unpack('<f', value)[0]), value.__len__())
+    return(struct.unpack('<f', value)[0]), value.__len__()
 
 def GetBoolValueFromBuffer(value:bytearray) -> tuple:
-    return (Mutable(struct.unpack('<B', value)[0]), value.__len__())
+    return (struct.unpack('<B', value)[0]), value.__len__()
 
 def GetUInt8ValueFromBuffer(value:bytearray) -> tuple:
-    return (Mutable(struct.unpack('<B', value)[0]), value.__len__())
+    return (struct.unpack('<B', value)[0]), value.__len__()
 
 def GetUInt16ValueFromBuffer(value:bytearray) -> tuple:
-    return (Mutable(struct.unpack('<H', value)[0]), value.__len__())
+    return (struct.unpack('<H', value)[0]), value.__len__()
 
 def GetUInt32ValueFromBuffer(value:bytearray) -> tuple:
-    return(Mutable(struct.unpack('<I', value)[0]), value.__len__())
+    return(struct.unpack('<I', value)[0]), value.__len__()
 
 def GetStringValueFromBuffer(value:bytearray) -> tuple:
     string = str()
@@ -99,7 +101,8 @@ class Setting():
         self.__name = name
         self.__type = type
         self.__slaveID = slaveID
-        self.__value = None#:Mutable
+        self.__layoutElement:LayoutElement = None
+        self.__value = None
         self.__valueLen:int
 
         if (IsFloatTypeValue(type)):
@@ -159,6 +162,9 @@ class Setting():
             if value == '' or value == '0':
                 value = False
             self.__value = bool(value)
+
+        if (self.__layoutElement.GetIElement().GetValue() != str(self.__value)):
+            self.__layoutElement.GetIElement().UpdateValue(self.__value)
             
 
     def SetBinaryValue(self, value:bytearray):
@@ -175,4 +181,7 @@ class Setting():
 
         for i in range(0, value.__len__()):
             buffer.append(value[i])
+
+    def SetLayoutElement(self, layoutElement:LayoutElement) -> None:
+        self.__layoutElement = layoutElement
 
