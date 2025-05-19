@@ -170,8 +170,8 @@ class TKDisplay(IDisplay):
                 newElement = ttk.Label(parent, textvariable=elementVariable)
                 
             elif type == IDP_INPUT:
-                newElement = ttk.Entry(parent)#, textvariable=elementVariable)
-                #newElement.bind("<Return>", lambda event, w=weakMethod: w() and w()(elementVariable.get()))
+                newElement = ttk.Entry(parent, textvariable=elementVariable)
+                newElement.bind("<Return>", lambda event, w=weakMethod: w() and w()(elementVariable.get()))
                 
             elif type == IDP_CHECK:
                 newElement = ttk.Checkbutton(parent, text=name, variable=elementVariable, command=lambda w=weakMethod: w() and w()(elementVariable.get()))

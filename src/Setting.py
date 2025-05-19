@@ -26,7 +26,7 @@ PACK_TAB = {
     SettingType.UINT16.value : '<H',
     SettingType.UINT32.value : '<I',
     SettingType.FLOAT.value : '<f',
-    SettingType.FLOAT.value : '<f'
+    SettingType.CUSTOM_FLOAT.value : '<f'
 }
 
 def IsNumericalTypeValue(settingType:int) -> bool:
@@ -34,7 +34,8 @@ def IsNumericalTypeValue(settingType:int) -> bool:
         (settingType == SettingType.UINT16.value) or \
         (settingType == SettingType.UINT32.value) or \
         (settingType == SettingType.FLOAT.value) or \
-        (settingType == SettingType.BOOL.value)
+        (settingType == SettingType.BOOL.value) or \
+        (settingType == SettingType.CUSTOM_FLOAT.value)
 
 def IsIntegerTypeValue(settingType:int) -> bool:
     return (settingType == SettingType.UINT8.value) or \
