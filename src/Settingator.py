@@ -13,7 +13,7 @@ class Settingator:
         self.__shouldUpdateDisplayLayout = False
         self.__shouldUpdateSetting = None
         self.__notifCallback = dict()
-        self.__initCallback = dict()
+        self.__initCallback:callable = None
 
         # Display Stuff
         self.__display = display
@@ -76,12 +76,9 @@ class Settingator:
 
         return
     
-    def SendBridgeInitRequest(self, slaveID:int, slaveName:bytearray, callbackFunction = None, expectedSlaveNumber:int = 1) -> None:
+    def SendBridgeInitRequest(self, slaveID:int, slaveName:bytearray, callbackFunction:callable = None, expectedSlaveNumber:int = 1) -> None:
         
-        if callbackFunction != None:
-            while expectedSlaveNumber != 0: 
-                self.__initCallback[slaveID + expectedSlaveNumber - 1] = callbackFunction
-                expectedSlaveNumber -= 1
+        self.__initCallback = callbackFunction
         
         type = MessageType.ESP_NOW_INIT_WITH_SSID.value
         buffer = bytearray()
@@ -99,9 +96,8 @@ class Settingator:
         bridgeInitRequest = Message(buffer)
         self.__communicator.Write(bridgeInitRequest)
 
-    def SendInitRequest(self, slaveID:int, callbackFunction = None) -> None:
-        if callbackFunction != None:
-            self.__initCallback[slaveID] = callbackFunction
+    def SendInitRequest(self, slaveID:int, callbackFunction:callable = None) -> None:
+        self.__initCallback = callbackFunction
 
         type = MessageType.INIT_REQUEST.value
         buffer = bytearray()
@@ -115,6 +111,38 @@ class Settingator:
 
         initRequest = Message(buffer)
         self.__communicator.Write(initRequest)
+
+    def BridgeStartInitBroadcasted(self, callbackFunction:callable = None) -> None:
+
+        self.__initCallback = callbackFunction
+
+        type = MessageType.ESP_NOW_START_INIT_BROADCASTED_SLAVE.value
+        buffer = bytearray()
+        buffer.append(MessageControlFrame.START.value)
+        buffer.append(0x00)
+        buffer.append(0x06)
+        buffer.append(0x00)
+        buffer.append(type)
+        buffer.append(MessageControlFrame.END.value)
+
+        message = Message(buffer)
+        self.__communicator.Write(message)
+
+    def BridgeStopInitBroadcasted(self) -> None:
+
+        self.__initCallback = None
+
+        type = MessageType.ESP_NOW_STOP_INIT_BROADCASTED_SLAVE.value
+        buffer = bytearray()
+        buffer.append(MessageControlFrame.START.value)
+        buffer.append(0x00)
+        buffer.append(0x06)
+        buffer.append(0x00)
+        buffer.append(type)
+        buffer.append(MessageControlFrame.END.value)
+
+        message = Message(buffer)
+        self.__communicator.Write(message)
 
     def __ParseSettingInit(self, buffer:bytearray) -> bool:
         isValid = True
@@ -186,8 +214,8 @@ class Settingator:
             self.__slaveLayout.AppendElement(slaveLayout)
             self.__display.UpdateLayout()
 
-        if slaveID in self.__initCallback:
-            self.__initCallback[slaveID](self.__slaves[slaveID])
+        if self.__initCallback != None:
+            self.__initCallback(self.__slaves[slaveID])
 
         return isValid
 
