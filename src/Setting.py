@@ -109,9 +109,9 @@ class Setting():
         if (IsFloatTypeValue(type)):
             self.__value, self.__valueLen = GetFloatValueFromBuffer(value)
         elif (IsUInt8TypeValue(type)):
-            self.__value, self.__valueLen = GetUInt32ValueFromBuffer(value)
+            self.__value, self.__valueLen = GetUInt8ValueFromBuffer(value)
         elif (IsUInt16TypeValue(type)):
-            self.__value, self.__valueLen = GetUInt32ValueFromBuffer(value)
+            self.__value, self.__valueLen = GetUInt16ValueFromBuffer(value)
         elif (IsUInt32TypeValue(type)):
             self.__value, self.__valueLen = GetUInt32ValueFromBuffer(value)
         elif (IsBoolTypeValue(type)):

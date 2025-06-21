@@ -186,7 +186,7 @@ class Settingator:
                     slaveLayout.AppendElement(layoutElement)
                 
                 elif settingType == SettingType.TRIGGER.value:
-                    layoutElement = LayoutElement(IDP_BUTTON, setting.GetValue(), setting.GetName())
+                    layoutElement = LayoutElement(IDP_BUTTON, setting.GetValue(), setting.GetName(), callback=lambda value, setting=setting : self.SendUpdateSetting(setting, value))
                     slaveLayout.AppendElement(layoutElement)
 
                 elif settingType == SettingType.SWITCH.value or \
