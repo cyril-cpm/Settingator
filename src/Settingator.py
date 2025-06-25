@@ -26,6 +26,8 @@ class Settingator:
         self.__functionQueue = queue.Queue()
 
         return
+    def GetSlave(self, slaveID:int):
+        return self.__slaves[slaveID]
     
     def PutFunctionToQueue(self, f, args):
         self.__functionQueue.put((f, args))
