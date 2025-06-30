@@ -386,6 +386,11 @@ class Slave:
                 self.SendSettingUpdateByRef(self.__settings[setting].GetRef(), value)
                 break
 
+    def SendSettingUpdatesByName(self, settings:dict) -> None:
+
+        for settingName in settings:
+            self.SendSettingUpdateByName(settingName, settings[settingName])
+
     def ConfigDiretNotif(self, target, notifByte:int):
         self.__str.ConfigDirectNotf(self.__ID, target.GetID(), notifByte)
 
