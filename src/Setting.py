@@ -164,7 +164,9 @@ class Setting():
                 value = False
             self.__value = bool(value)
 
-        if (self.__layoutElement.GetIElement().GetValue() != str(self.__value)):
+        if (self.__layoutElement and
+            self.__layoutElement.GetIElement() and
+            self.__layoutElement.GetIElement().GetValue() != str(self.__value)):
             self.__layoutElement.GetIElement().UpdateValue(self.__value)
             
 

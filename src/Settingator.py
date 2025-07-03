@@ -14,6 +14,7 @@ class Settingator:
         self.__shouldUpdateSetting = None
         self.__notifCallback = dict()
         self.__initCallback:callable = None
+        self.__slaveIDCount:int = 1
 
         # Display Stuff
         self.__display = display
@@ -26,9 +27,13 @@ class Settingator:
         self.__functionQueue = queue.Queue()
 
         return
+    
     def GetSlave(self, slaveID:int):
         return self.__slaves[slaveID]
     
+    def GetSlaves(self):
+        return self.__slaves
+
     def PutFunctionToQueue(self, f, args):
         self.__functionQueue.put((f, args))
 
@@ -56,6 +61,9 @@ class Settingator:
                 if notifByte in self.__notifCallback:
                     self.__notifCallback[notifByte](slaveID)
 
+            elif msg.GetType() == MessageType.SLAVE_ID_REQUEST.value:
+                self.SendInitRequest()
+                print("Slave request recved")
 
             self.__communicator.Flush()
 
@@ -78,7 +86,7 @@ class Settingator:
 
         return
     
-    def SendBridgeInitRequest(self, slaveID:int, slaveName:bytearray, callbackFunction:callable = None, expectedSlaveNumber:int = 1) -> None:
+    def SendBridgeInitRequest(self, slaveID:int, slaveName:bytearray, callbackFunction:callable = None, expectedSlaveNumber:int = 1) -> None: #deprecated
         
         self.__initCallback = callbackFunction
         
@@ -98,7 +106,7 @@ class Settingator:
         bridgeInitRequest = Message(buffer)
         self.__communicator.Write(bridgeInitRequest)
 
-    def SendInitRequest(self, slaveID:int, callbackFunction:callable = None) -> None:
+    def SendInitRequest(self, callbackFunction:callable = None, slaveID = 0) -> None:
         self.__initCallback = callbackFunction
 
         type = MessageType.INIT_REQUEST.value
@@ -106,7 +114,13 @@ class Settingator:
         buffer.append(MessageControlFrame.START.value)
         buffer.append(0x00)
         buffer.append(0x07)
-        buffer.append(slaveID)
+
+        if slaveID == 0:
+            buffer.append(self.__slaveIDCount)
+            self.__slaveIDCount += 1
+        else:
+            buffer.append(slaveID)
+
         buffer.append(MessageType.INIT_REQUEST.value)
         buffer.append(0x00)
         buffer.append(MessageControlFrame.END.value)
@@ -135,6 +149,22 @@ class Settingator:
         self.__initCallback = None
 
         type = MessageType.ESP_NOW_STOP_INIT_BROADCASTED_SLAVE.value
+        buffer = bytearray()
+        buffer.append(MessageControlFrame.START.value)
+        buffer.append(0x00)
+        buffer.append(0x06)
+        buffer.append(0x00)
+        buffer.append(type)
+        buffer.append(MessageControlFrame.END.value)
+
+        message = Message(buffer)
+        self.__communicator.Write(message)
+
+    def BridgeReInitSlaves(self) -> None:
+
+        self.__initCallback = None
+
+        type = MessageType.BRIDGE_REINIT_SLAVES.value
         buffer = bytearray()
         buffer.append(MessageControlFrame.START.value)
         buffer.append(0x00)

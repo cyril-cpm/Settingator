@@ -39,6 +39,8 @@ class MessageType(Enum):
     ESP_NOW_REMOVE_DIRECT_SETTING_UPDATE_CONFIG:int = 0x58
     ESP_NOW_START_INIT_BROADCASTED_SLAVE:int = 0x59
     ESP_NOW_STOP_INIT_BROADCASTED_SLAVE:int = 0x5A
+    BRIDGE_REINIT_SLAVES:int = 0x5B
+    SLAVE_ID_REQUEST:int = 0x5C
 
 class MessageControlFrame(Enum):
     START:int = 0xFF
