@@ -43,6 +43,9 @@ REMOVE_DIRECT_SETTING_UPDATE_CONFIG 0x18: ->
 BROADCASTED_PING 0x19: <->
 | StartMsgByte | MsgSize | MsgSize | 0 | BROADCASTED_PING | EndMsgByte |
 
+COMMAND 0x1A: <->
+| StartMsgByte | MsgSize | MsgSize | SlaveID | COMMAND | COMMAND ... | EndMsgByte |
+
 Un Slider BG
 
 BRIDGE

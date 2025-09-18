@@ -31,6 +31,7 @@ class MessageType(Enum):
     NOTIF:int = 0x14
     CONFIG_ESP_NOW_DIRECT_NOTIF:int = 0x15
     CONFIG_ESP_NOW_DIRECT_SETTING_UPDATE:int = 0x16
+    COMMAND:int = 0x1A
 
     ESP_NOW_INIT_WITH_SSID:int = 0x54
     ESP_NOW_CONFIG_DIRECT_NOTF:int = 0x55

@@ -230,6 +230,9 @@ class Settingator:
                     settingType == SettingType.UINT8.value or \
                     settingType == SettingType.UINT16.value or \
                     settingType == SettingType.UINT32.value or \
+                    settingType == SettingType.INT8.value or \
+                    settingType == SettingType.INT16.value or \
+                    settingType == SettingType.INT32.value or \
                     settingType == SettingType.CUSTOM_FLOAT.value:
                     slaveLayout.AppendElement(LayoutElement(IDP_TEXT, setting.GetName(), setting.GetName()))
 

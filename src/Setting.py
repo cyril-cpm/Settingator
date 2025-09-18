@@ -16,17 +16,23 @@ class SettingType(Enum):
     UINT16 = 0x22
     FLOAT = 0x23
     BOOL = 0x24
+    INT32 = 0x25
+    INT8 = 0x26
+    INT16 = 0x27
 
     #TESTING 
     CUSTOM_FLOAT = 254
 
 PACK_TAB = {
     SettingType.UINT8.value : '<B',
-    SettingType.BOOL.value : '<B',
+    SettingType.BOOL.value : '<?',
     SettingType.UINT16.value : '<H',
     SettingType.UINT32.value : '<I',
     SettingType.FLOAT.value : '<f',
-    SettingType.CUSTOM_FLOAT.value : '<f'
+    SettingType.CUSTOM_FLOAT.value : '<f',
+    SettingType.INT8.value : '<b',
+    SettingType.INT16.value : '<h',
+    SettingType.INT32.value : '<i',
 }
 
 def IsNumericalTypeValue(settingType:int) -> bool:
@@ -35,12 +41,18 @@ def IsNumericalTypeValue(settingType:int) -> bool:
         (settingType == SettingType.UINT32.value) or \
         (settingType == SettingType.FLOAT.value) or \
         (settingType == SettingType.BOOL.value) or \
-        (settingType == SettingType.CUSTOM_FLOAT.value)
+        (settingType == SettingType.CUSTOM_FLOAT.value) or \
+        (settingType == SettingType.INT8.value) or \
+        (settingType == SettingType.INT16.value) or \
+        (settingType == SettingType.INT32.value)
 
 def IsIntegerTypeValue(settingType:int) -> bool:
     return (settingType == SettingType.UINT8.value) or \
         (settingType == SettingType.UINT16.value) or \
-        (settingType == SettingType.UINT32.value)
+        (settingType == SettingType.UINT32.value) or \
+        (settingType == SettingType.INT8.value) or \
+        (settingType == SettingType.INT16.value) or \
+        (settingType == SettingType.INT32.value)
 
 def IsFloatTypeValue(settingType:int) -> bool:
     return (settingType == SettingType.CUSTOM_FLOAT.value) or \
@@ -58,6 +70,15 @@ def IsUInt16TypeValue(settingType:int) -> bool:
 
 def IsUInt32TypeValue(settingType:int) -> bool:
     return (settingType == SettingType.UINT32.value)
+
+def IsInt8TypeValue(settingType:int) -> bool:
+    return (settingType == SettingType.INT8.value)
+
+def IsInt16TypeValue(settingType:int) -> bool:
+    return (settingType == SettingType.INT16.value)
+
+def IsInt32TypeValue(settingType:int) -> bool:
+    return (settingType == SettingType.INT32.value)
 
 def GetNumericalValueFromBuffer(value:bytearray) -> tuple:
     valueLen = value.__len__()
@@ -85,6 +106,15 @@ def GetUInt16ValueFromBuffer(value:bytearray) -> tuple:
 
 def GetUInt32ValueFromBuffer(value:bytearray) -> tuple:
     return(struct.unpack('<I', value)[0]), value.__len__()
+
+def GetInt8ValueFromBuffer(value:bytearray) -> tuple:
+    return (struct.unpack('<b', value)[0]), value.__len__()
+
+def GetInt16ValueFromBuffer(value:bytearray) -> tuple:
+    return (struct.unpack('<h', value)[0]), value.__len__()
+
+def GetInt32ValueFromBuffer(value:bytearray) -> tuple:
+    return(struct.unpack('<i', value)[0]), value.__len__()
 
 def GetStringValueFromBuffer(value:bytearray) -> tuple:
     string = str()
@@ -114,6 +144,12 @@ class Setting():
             self.__value, self.__valueLen = GetUInt16ValueFromBuffer(value)
         elif (IsUInt32TypeValue(type)):
             self.__value, self.__valueLen = GetUInt32ValueFromBuffer(value)
+        elif (IsInt8TypeValue(type)):
+            self.__value, self.__valueLen = GetInt8ValueFromBuffer(value)
+        elif (IsInt16TypeValue(type)):
+            self.__value, self.__valueLen = GetInt16ValueFromBuffer(value)
+        elif (IsInt32TypeValue(type)):
+            self.__value, self.__valueLen = GetInt32ValueFromBuffer(value)
         elif (IsBoolTypeValue(type)):
             self.__value, self.__valueLen = GetBoolValueFromBuffer(value)
         else:
