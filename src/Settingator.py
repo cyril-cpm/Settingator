@@ -29,10 +29,24 @@ class Settingator:
         return
     
     def GetSlave(self, slaveID:int):
-        return self.__slaves[slaveID]
+        if slaveID in self.__slaves:
+            return self.__slaves[slaveID]
+        return None
+    
+    def RemoveSlaveLayout(self) -> None:
+        self.__slaveLayout.SetVisible(False)
+
+    def DisplaySlaveLayout(self) -> None:
+       self.__slaveLayout.SetVisible(True)
     
     def GetSlaves(self):
         return self.__slaves
+    
+    def GetSlaveWithSetting(self, settingName):
+        for i in self.__slaves:
+            slave:Slave = self.__slaves[i]
+            if slave.GetSettingByName(settingName) != None:
+                return slave
 
     def PutFunctionToQueue(self, f, args):
         self.__functionQueue.put((f, args))
@@ -62,7 +76,7 @@ class Settingator:
                     self.__notifCallback[notifByte](slaveID)
 
             elif msg.GetType() == MessageType.SLAVE_ID_REQUEST.value:
-                self.SendInitRequest()
+                self.SendInitRequest(self.__initCallback)
                 print("Slave request recved")
 
             self.__communicator.Flush()

@@ -55,7 +55,7 @@ class TKElement(IElement):
             self.__display.PutFunction(self.__element.state, (['disabled'],))
 
     def SetVisible(self, value):
-        if (value == '' or value == '0'):
+        if (value == '' or value == '0' or value == False):
             value = False
         else:
             value = True

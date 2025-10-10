@@ -174,11 +174,11 @@ class LayoutElement(ABC):
         if isinstance(self.__children, list):
 
             if element in self.__children:
+                self.SetModified()
                 element.SetParent()
                 self.__children.remove(element)
                 
                 #self.__toRemoveFromView.append(str(element))
-                self.SetModified()
         else:
             print("Can't remove element to " + IDPTypeToStr(self.__type) + ", name is \"" + self.__name + "\"")
             print("children:")
