@@ -334,6 +334,40 @@ class Settingator:
 
             self.__communicator.Write(Message(buffer))
 
+    def SendMultiUpdateSetting(self, settingValue:list) -> None:
+        if threading.current_thread().name != "MainThread":
+            self.PutFunctionToQueue(self.SendUpdateSetting, (settingValue))
+            return
+        
+        if settingValue != None:
+
+            type = MessageType.SETTING_UPDATE.value
+            buffer = bytearray()
+            buffer.append(MessageControlFrame.START.value)
+            buffer.append(0x00)
+            buffer.append(0x00)
+            buffer.append(0x00)
+            buffer.append(type)
+
+            for setting, value in settingValue:
+
+                if setting != None:
+                    if value != None:
+                        setting.SetValue(value)
+
+                    buffer[3] = setting.GetSlaveID()
+
+                    buffer.append(setting.GetRef())
+
+                    setting.AppendValueToBuffer(buffer)
+
+            buffer.append(MessageControlFrame.END.value)
+            size = buffer.__len__()
+            buffer[1] = size >> 8
+            buffer[2] = size
+
+            self.__communicator.Write(Message(buffer))
+
     def GetSlaveSettings(self) -> dict:
         return self.__slaveSettings
     
@@ -433,10 +467,16 @@ class Slave:
                 self.SendSettingUpdateByRef(self.__settings[setting].GetRef(), value)
                 break
 
-    def SendSettingUpdatesByName(self, settings:dict) -> None:
+    def SendSettingUpdatesByName(self, settings:list) -> None:
+        setValue = []
 
-        for settingName in settings:
-            self.SendSettingUpdateByName(settingName, settings[settingName])
+        for name, value in settings:
+            setting = self.GetSettingByName(name)
+
+            if setting:
+                setValue.append((setting, value))
+
+        self.__str.SendMultiUpdateSetting(setValue)
 
     def ConfigDiretNotif(self, target, notifByte:int):
         self.__str.ConfigDirectNotf(self.__ID, target.GetID(), notifByte)
