@@ -3,7 +3,11 @@ from Communicator import ICTR
 from Message import *
 from Display import *
 import queue
+import time
 import threading
+
+def mac_to_str(mac: bytearray | bytes) -> str:
+    return ':'.join(f'{b:02X}' for b in mac)
 
 class Settingator:
     def __init__(self, ctr:ICTR, display:IDisplay) -> None:
@@ -19,9 +23,12 @@ class Settingator:
         # Display Stuff
         self.__display = display
         self.__display.SetSlaveSettingsRef(self.__slaveSettings)
+        self.__espNowLinkInfo = None
+        self.__espNowLinkInfoLayout = LayoutElement(IDP_COLUMN)
         self.__layout = LayoutElement(IDP_FRAME)
         self.__slaveLayout = LayoutElement(IDP_FRAME)
         self.__display.AddLayout(self.__layout)
+        self.__display.AddLayout(self.__espNowLinkInfoLayout)
         self.__display.AddLayout(self.__slaveLayout)
 
         self.__functionQueue = queue.Queue()
@@ -79,7 +86,14 @@ class Settingator:
                 self.SendInitRequest(self.__initCallback)
                 print("Slave request recved")
 
+            elif msg.GetType() == MessageType.ESP_NOW_LINK_INFO.value:
+                print("Link Info received")             
+                self.__treatEspNowLinkInfoMsg(msg.GetByteArray())
+
+
             self.__communicator.Flush()
+
+        self.__updateEspNowLinkInf()
 
         self.__display.Update()
         
@@ -307,6 +321,113 @@ class Settingator:
 
         return msgIndex
 
+    def __updateEspNowLinkInf(self):
+        if not self.__espNowLinkInfo:
+            return
+        
+        currentTimeStamp = int(time.time() * 1000)
+
+        if not "last_updated" in self.__espNowLinkInfo:
+            self.__espNowLinkInfo["last_updated"] = currentTimeStamp
+
+        diffTimeStamp = currentTimeStamp - self.__espNowLinkInfo["last_updated"]
+        if diffTimeStamp > 500:
+            self.__espNowLinkInfo["last_updated"] = currentTimeStamp
+
+            for bridgeMac in self.__espNowLinkInfo:
+
+                if bridgeMac != "last_updated":
+                    for peerMac in self.__espNowLinkInfo[bridgeMac]:
+
+                        if peerMac != "nbPeer":
+                            peerDict = self.__espNowLinkInfo[bridgeMac][peerMac]
+
+                            peerDict["bridgeDeltaMs"] = peerDict["bridgeDeltaMs"] + diffTimeStamp
+                            peerDict["peerDeltaMs"] = peerDict["peerDeltaMs"] + diffTimeStamp
+
+                            peerDict["layout"].UpdateValue(bridgeMac + "    <->    " + peerMac + "\n" +
+                                               str(peerDict["bridgeRssi"]) + "\t" +
+                                               str(peerDict["bridgeNoiseFloor"]) + "\t" +
+                                               str(peerDict["bridgeDeltaMs"]) + "\t" +
+                                               str(peerDict["peerRssi"]) + "\t" +
+                                               str(peerDict["peerNoiseFloor"]) + "\t" +
+                                               str(peerDict["peerDeltaMs"]))
+
+
+                            bridgeSNR = peerDict["bridgeRssi"] - peerDict["bridgeNoiseFloor"]
+                            peerSNR = peerDict["peerRssi"] - peerDict["peerNoiseFloor"]
+
+                            if  (peerDict["bridgeDeltaMs"] > 12500 or peerDict["peerDeltaMs"] > 12500):
+                                if peerDict["color"] != "grey":
+                                    peerDict["layout"].GetIElement().SetBGColor("#B9B9B9")
+                                    peerDict["color"] = "greu"
+
+                            elif (bridgeSNR <= 10 or peerSNR <= 10) :
+                                if peerDict["color"] != "red":
+                                    peerDict["layout"].GetIElement().SetBGColor("#FF5050")
+                                    peerDict["color"] = "red"
+
+                            elif (bridgeSNR <= 15 or peerSNR <= 15):
+                                if peerDict["color"] != "orange":
+                                    peerDict["layout"].GetIElement().SetBGColor("#FFD476")
+                                    peerDict["color"] = "orange"
+
+                            elif (bridgeSNR <= 25 or peerSNR <= 25):
+                                if peerDict["color"] != "green":
+                                    peerDict["layout"].GetIElement().SetBGColor("#00FF00")
+                                    peerDict["color"] = "green"
+
+                            elif (bridgeSNR > 25 or peerSNR > 25):
+                                if peerDict["color"] != "blue":
+                                    peerDict["layout"].GetIElement().SetBGColor("#00FFFF")
+                                    peerDict["color"] = "blue"
+
+
+
+
+
+    def __treatEspNowLinkInfoMsg(self, buffer:bytearray):
+        nbPeer = buffer[5]
+        bridgeMac:str = mac_to_str(buffer[6:12])
+
+        if not self.__espNowLinkInfo:
+            self.__espNowLinkInfo = dict()
+
+        if not bridgeMac in self.__espNowLinkInfo:
+            self.__espNowLinkInfo[bridgeMac] = dict()
+
+        self.__espNowLinkInfo[bridgeMac]["nbPeer"] = nbPeer
+
+        #self.__espNowLinkInfo[bridgeMac]["timestamp"] = int(time.time() * 1000)
+
+        index = 12
+        peerInfoSize = 18
+        for i in range(0, nbPeer):
+            peerMac = mac_to_str(buffer[index + i * 18: index + i * peerInfoSize + 6])
+
+            if not peerMac in self.__espNowLinkInfo[bridgeMac]:
+                self.__espNowLinkInfo[bridgeMac][peerMac] = dict(layout=LayoutElement(IDP_TEXT, "no_data"), color=None)
+                self.__espNowLinkInfoLayout.AppendElement(self.__espNowLinkInfo[bridgeMac][peerMac]["layout"])
+
+            peerDict = self.__espNowLinkInfo[bridgeMac][peerMac]
+
+            peerDict["bridgeRssi"], len = GetInt8ValueFromBuffer(buffer[index + i * peerInfoSize + 6:])
+            peerDict["bridgeNoiseFloor"], len = GetInt8ValueFromBuffer(buffer[index + i * peerInfoSize + 7:])
+            peerDict["bridgeDeltaMs"], len = GetUInt32ValueFromBuffer(buffer[index + i * peerInfoSize + 8:])
+
+            peerDict["peerRssi"], len = GetInt8ValueFromBuffer(buffer[index + i * peerInfoSize + 12:])
+            peerDict["peerNoiseFloor"], len = GetInt8ValueFromBuffer(buffer[index + i * peerInfoSize + 13:])
+            peerDict["peerDeltaMs"], len = GetUInt32ValueFromBuffer(buffer[index + i * peerInfoSize + 14:])
+
+            peerDict["layout"].UpdateValue(bridgeMac + "    <->    " + peerMac + "\n" +
+                                               str(peerDict["bridgeRssi"]) + "\t" +
+                                               str(peerDict["bridgeNoiseFloor"]) + "\t" +
+                                               str(peerDict["bridgeDeltaMs"]) + "\t" +
+                                               str(peerDict["peerRssi"]) + "\t" +
+                                               str(peerDict["peerNoiseFloor"]) + "\t" +
+                                               str(peerDict["peerDeltaMs"]))
+
+
     def SendUpdateSetting(self, setting:Setting, value = None) -> None:
         if threading.current_thread().name != "MainThread":
             self.PutFunctionToQueue(self.SendUpdateSetting, (setting, value))
@@ -470,7 +591,8 @@ class Slave:
     def SendSettingUpdatesByName(self, settings:list) -> None:
         setValue = []
 
-        for name, value in settings:
+        for nameValue in settings:
+            name, value = nameValue
             setting = self.GetSettingByName(name)
 
             if setting:

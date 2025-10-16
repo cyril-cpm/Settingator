@@ -93,28 +93,28 @@ def GetNumericalValueFromBuffer(value:bytearray) -> tuple:
     return (retValue, valueLen)
 
 def GetFloatValueFromBuffer(value:bytearray) -> tuple:
-    return(struct.unpack('<f', value)[0]), value.__len__()
+    return(struct.unpack('<f', value[0:4])[0]), value.__len__()
 
 def GetBoolValueFromBuffer(value:bytearray) -> tuple:
-    return (struct.unpack('<B', value)[0]), value.__len__()
+    return (struct.unpack('<B', value[0:1])[0]), value.__len__()
 
 def GetUInt8ValueFromBuffer(value:bytearray) -> tuple:
-    return (struct.unpack('<B', value)[0]), value.__len__()
+    return (struct.unpack('<B', value[0:1])[0]), value.__len__()
 
 def GetUInt16ValueFromBuffer(value:bytearray) -> tuple:
-    return (struct.unpack('<H', value)[0]), value.__len__()
+    return (struct.unpack('<H', value[0:2])[0]), value.__len__()
 
 def GetUInt32ValueFromBuffer(value:bytearray) -> tuple:
-    return(struct.unpack('<I', value)[0]), value.__len__()
+    return(struct.unpack('<I', value[0:4])[0]), value.__len__()
 
 def GetInt8ValueFromBuffer(value:bytearray) -> tuple:
-    return (struct.unpack('<b', value)[0]), value.__len__()
+    return (struct.unpack('<b', value[0:1])[0]), value.__len__()
 
 def GetInt16ValueFromBuffer(value:bytearray) -> tuple:
-    return (struct.unpack('<h', value)[0]), value.__len__()
+    return (struct.unpack('<h', value[0:2])[0]), value.__len__()
 
 def GetInt32ValueFromBuffer(value:bytearray) -> tuple:
-    return(struct.unpack('<i', value)[0]), value.__len__()
+    return(struct.unpack('<i', value[0:4])[0]), value.__len__()
 
 def GetStringValueFromBuffer(value:bytearray) -> tuple:
     string = str()

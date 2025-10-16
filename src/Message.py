@@ -42,6 +42,7 @@ class MessageType(Enum):
     ESP_NOW_STOP_INIT_BROADCASTED_SLAVE:int = 0x5A
     BRIDGE_REINIT_SLAVES:int = 0x5B
     SLAVE_ID_REQUEST:int = 0x5C
+    ESP_NOW_LINK_INFO:int = 0x5F
 
 class MessageControlFrame(Enum):
     START:int = 0xFF

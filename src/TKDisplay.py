@@ -167,7 +167,9 @@ class TKDisplay(IDisplay):
                 newElement = ttk.Button(parent, text=name, command=lambda w=weakMethod: w() and w()(None))
 
             elif type == IDP_TEXT:
-                newElement = ttk.Label(parent, textvariable=elementVariable)
+                styleName += ".TLabel"
+                self.__style.configure(styleName)
+                newElement = ttk.Label(parent, textvariable=elementVariable, style=styleName)
                 
             elif type == IDP_INPUT:
                 newElement = ttk.Entry(parent, textvariable=elementVariable)
