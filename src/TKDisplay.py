@@ -21,8 +21,8 @@ class TKElement(IElement):
         self.__display:TKDisplay = display
         print(f"TKElement créé avec variable: {self.__variable.get()}")
 
-    def __del__(self):
-        self.__element.destroy()
+ #   def __del__(self):
+ #       self.__element.destroy()
 
     def SetBGColor(self, color):
         if self.__style and self.__styleName != "":
@@ -90,6 +90,13 @@ class TKDisplay(IDisplay):
         self.__updateBGColorQueue = queue.Queue()
 
         self.__functionQueue = queue.Queue()
+
+        def on_close():
+            print("La fenêtre a été fermée")
+            self.__root.destroy()
+            self._isRunning = False
+
+        self.__root.protocol("WM_DELETE_WINDOW", on_close)
 
     def Update(self) -> None:
         self.UpdateLayout()
@@ -228,4 +235,4 @@ class TKDisplay(IDisplay):
 
 
     def IsRunning(self) -> bool:
-        return True
+        return self._isRunning

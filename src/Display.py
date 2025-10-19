@@ -202,6 +202,7 @@ class IDisplay(ABC):
     def __init__(self) -> None:
         self.__slaveSettings = dict
         self._Layout = LayoutElement(IDP_COLUMN)
+        self._isRunning = True
 
     def SetSlaveSettingsRef(self, slaveSettings:dict) -> None:
         self.__slaveSettings = slaveSettings
