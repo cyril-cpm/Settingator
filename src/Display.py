@@ -12,221 +12,245 @@ IDP_FRAME = 0x04
 IDP_COLUMN = 0x05
 IDP_CHECK = 0x06
 IDP_SLIDER = 0x07
+IDP_WRAPPER = 0x08
 
 def IDPTypeToStr(IDPType:int = IDP_NONE):
-    if IDPType == IDP_NONE:
-        return "IDP_NONE"
-    elif IDPType == IDP_BUTTON:
-        return "IDP_BUTTON"
-    elif IDPType == IDP_INPUT:
-        return "IDP_INPUT"
-    elif IDPType == IDP_TEXT:
-        return "IDP_TEXT"
-    elif IDPType == IDP_FRAME:
-        return "IDP_FRAME"
-    elif IDPType == IDP_COLUMN:
-        return "IDP_COLUMN"
-    else:
-        return "IDP_UNKNOWN"
-        
+	if IDPType == IDP_NONE:
+		return "IDP_NONE"
+	elif IDPType == IDP_BUTTON:
+		return "IDP_BUTTON"
+	elif IDPType == IDP_INPUT:
+		return "IDP_INPUT"
+	elif IDPType == IDP_TEXT:
+		return "IDP_TEXT"
+	elif IDPType == IDP_FRAME:
+		return "IDP_FRAME"
+	elif IDPType == IDP_COLUMN:
+		return "IDP_COLUMN"
+	elif IDPType == IDP_WRAPPER:
+		return "IDP_WRAPPER"
+	else:
+		return "IDP_UNKNOWN"
+		
 
 class IElement(ABC):
-    def __init__(self):
-        pass
+	def __init__(self):
+		pass
 
-    def __del__(self):
-        pass
+	def __del__(self):
+		pass
 
-    @abstractmethod
-    def SetBGColor(self, color):
-        pass
+	@abstractmethod
+	def SetBGColor(self, color):
+		pass
 
-    @abstractmethod
-    def UpdateValue(self, value):
-        pass
+	@abstractmethod
+	def UpdateValue(self, value):
+		pass
 
-    @abstractmethod
-    def GetValue(self):
-        pass
+	@abstractmethod
+	def GetValue(self):
+		pass
 
-    @abstractmethod
-    def GetElement(self):
-        pass
+	@abstractmethod
+	def GetElement(self):
+		pass
 
-    @abstractmethod
-    def SetEnable(self, value:bool):
-        pass
+	@abstractmethod
+	def SetEnable(self, value:bool):
+		pass
 
-    @abstractmethod
-    def SetVisible(self, value):
-        pass
+	@abstractmethod
+	def SetVisible(self, value):
+		pass
 
 
 class LayoutElement(ABC):
-    def __init__(self, type, value=None, name="", children:list=None, callback=None) -> None:
-        self.__type = type
-        self.__name = name
-        self.__value = value
-        self.__parent:LayoutElement = None
-        self.__isModified = True
-        self.__isNew = True
-        self.__callback = callback
+	def __init__(self, type, value=None, name="", children:list|None=None, callback=None, stick="nsew") -> None:
+		self._type = type
+		self._name = name
+		self.__value = value
+		self._parent:LayoutElement|None = None
+		self._isModified:bool = True
+		self._isNew:bool = True
+		self.__callback = callback
+		self.__stick = stick
 
-        self.__iElement:IElement = None
+		self.__iElement:IElement|None = None
 
-        self.__children:list = children
+		self._children:list|None = children
 
-        if isinstance(self.__children, list):
-            for element in self.__children:
-                if element:
-                    element.SetParentRecursively(self)
+		if isinstance(self._children, list):
+			for element in self._children:
+				if element:
+					element.SetParentRecursively(self)
 
-        if (type == IDP_COLUMN or type == IDP_FRAME) and children == None:
-            self.__children = []
+		if (type == IDP_COLUMN or type == IDP_FRAME) and children == None:
+			self._children = []
 
-    def __del__(self):
-        pass
+	def __del__(self):
+		pass
 
-    def IsNew(self):
-        return self.__isNew
-    
-    def SetNew(self, value:bool):
-        self.__isNew = value
+	def GetStick(self) -> str:
+		return self.__stick
 
-    def GetElementsToRemoveFromView(self):
-        return self.__toRemoveFromView
-    
-    def GetElementsToAddInView(self):
-        return self.__toAddInView
+	def IsNew(self):
+		return self._isNew
+	
+	def SetNew(self, value:bool):
+		self._isNew = value
 
-    def GetType(self):
-        return self.__type
-    
-    def GetName(self):
-        return self.__name
-    
-    def GetValue(self):
-        return self.__value
-    
-    def SetValue(self, value):
-        self.__value = value
+	def GetElementsToRemoveFromView(self):
+		return self.__toRemoveFromView
+	
+	def GetElementsToAddInView(self):
+		return self.__toAddInView
 
-    def UpdateValue(self, value):
-        self.SetValue(value)
-        
-        if not self.IsNew():
-            self.__iElement.UpdateValue(value)
-    
-    def GetChildren(self):
-        return self.__children
-    
-    def GetIElement(self) -> IElement:
-        return self.__iElement
-    
-    def SetIElement(self, element:IElement) -> None:
-        self.__iElement = element
+	def GetType(self):
+		return self._type
+	
+	def GetName(self):
+		return self._name
+	
+	def GetValue(self):
+		return self.__value
+	
+	def SetValue(self, value):
+		self.__value = value
 
-    def SetParent(self, parent = None) -> None:
-        if parent == None:
-            self.__parent = None
-        else:
-            self.__parent = weakref.ref(parent)
+	def UpdateValue(self, value):
+		self.SetValue(value)
+		
+		if not self.IsNew():
+			if self.__iElement != None:
+				self.__iElement.UpdateValue(value)
+	
+	def GetChildren(self):
+		return self._children
+	
+	def GetIElement(self) -> IElement|None:
+		return self.__iElement
+	
+	def SetIElement(self, element:IElement) -> None:
+		self.__iElement = element
 
-    def SetParentRecursively(self, parent = None) -> None:
-        if parent != None:
-            self.__parent = weakref.ref(parent)
-        else:
-            self.__parent = None
+	def SetParent(self, parent = None) -> None:
+		if parent == None:
+			self._parent = None
+		else:
+			self._parent = weakref.ref(parent)
 
-        if isinstance(self.__children, list):
-            for element in self.__children:
-                element.SetParentRecursively(self)
-    
-    def GetParent(self):
-        if self.__parent:
-            return self.__parent()
-        return self.__parent
-    
-    def SetModified(self, modified:bool = True):
-        self.__isModified = modified
+	def SetParentRecursively(self, parent = None) -> None:
+		if parent != None:
+			self._parent = weakref.ref(parent)
+		else:
+			self._parent = None
 
+		if isinstance(self._children, list):
+			for element in self._children:
+				element.SetParentRecursively(self)
+	
+	def GetParent(self, n = 1):
+		if n > 1:
+			return self.GetParent(n-1)
 
-        if modified and self.__parent and self.__parent():
-            self.__parent().SetModified()
+		if self._parent:
+			return self._parent()
+		return self._parent
+	
+	def SetModified(self, modified:bool = True):
+		self._isModified = modified
 
-    def IsModified(self) -> bool:
-        return self.__isModified
-    
-    def AppendElement(self, element) -> None:
-        if isinstance(self.__children, list):
-            self.__children.append(element)
-            element.SetParent(self)
+		if modified and self._parent and self._parent():
+			self._parent().SetModified()
 
-            #self.__toAddInView.append(element)
-            self.SetModified()
-            
-        else:
-            print("Can't append element to " + IDPTypeToStr(self.__type) + ", name is \"" + self.__name + "\"")
-            print("children:")
-            print(str(self.__children))
+	def IsModified(self) -> bool:
+		return self._isModified
+	
+	def AppendElements(self, elements:list) -> None:
+		if isinstance(self._children, list):
+			for element in elements:
+				self._children.append(element)
+				element.SetParent(self)
 
-    def RemoveElement(self, element) -> None:
-        if isinstance(self.__children, list):
+			#self.__toAddInView.append(element)
+			self.SetModified()
+			
+		else:
+			print("Can't append element to " + IDPTypeToStr(self._type) + ", name is \"" + self._name + "\"")
+			print("children:")
+			print(str(self._children))
 
-            if element in self.__children:
-                self.SetModified()
-                element.SetParent()
-                self.__children.remove(element)
-                
-                #self.__toRemoveFromView.append(str(element))
-        else:
-            print("Can't remove element to " + IDPTypeToStr(self.__type) + ", name is \"" + self.__name + "\"")
-            print("children:")
-            print(str(self.__children))
+	def AppendElement(self, element) -> None:
+		if isinstance(self._children, list):
+			self._children.append(element)
+			element.SetParent(self)
 
-    def Call(self, value = None):
-        if self.__callback != None:
-            self.__callback(value)
+			#self.__toAddInView.append(element)
+			self.SetModified()
+			
+		else:
+			print("Can't append element to " + IDPTypeToStr(self._type) + ", name is \"" + self._name + "\"")
+			print("children:")
+			print(str(self._children))
 
-    def SetEnable(self, value):
-        self.__iElement.SetEnable(value)
+	def RemoveElement(self, element) -> None:
+		if isinstance(self._children, list):
 
-        if isinstance(self.__children, list):
-            for children in self.__children:
-                children.SetEnable(value)
+			if element in self._children:
+				self.SetModified()
+				element.SetParent()
+				self._children.remove(element)
+				
+				#self.__toRemoveFromView.append(str(element))
+		else:
+			print("Can't remove element to " + IDPTypeToStr(self._type) + ", name is \"" + self._name + "\"")
+			print("children:")
+			print(str(self._children))
 
-    def SetVisible(self, value):
-        self.__iElement.SetVisible(value)
+	def Call(self, value = None):
+		if self.__callback != None:
+			self.__callback(value)
+
+	def SetEnable(self, value):
+		self.__iElement.SetEnable(value)
+
+		if isinstance(self._children, list):
+			for children in self._children:
+				children.SetEnable(value)
+
+	def SetVisible(self, value):
+		self.__iElement.SetVisible(value)
 
 class IDisplay(ABC):
-    def __init__(self) -> None:
-        self.__slaveSettings = dict
-        self._Layout = LayoutElement(IDP_COLUMN)
-        self._isRunning = True
+	def __init__(self) -> None:
+		self.__slaveSettings = dict
+		self._Layout = LayoutElement(IDP_COLUMN)
+		self._isRunning = True
 
-    def SetSlaveSettingsRef(self, slaveSettings:dict) -> None:
-        self.__slaveSettings = slaveSettings
+	def SetSlaveSettingsRef(self, slaveSettings:dict) -> None:
+		self.__slaveSettings = slaveSettings
 
-    def GetSlaveSettings(self) -> dict:
-        return self.__slaveSettings
+	def GetSlaveSettings(self) -> dict:
+		return self.__slaveSettings
 
-    @abstractmethod
-    def Update(self) -> None:
-        pass
+	@abstractmethod
+	def Update(self) -> None:
+		pass
 
-    @abstractmethod
-    def UpdateLayout(self) -> None:
-        pass
+	@abstractmethod
+	def UpdateLayout(self) -> None:
+		pass
 
-    @abstractmethod
-    def IsRunning(self) -> bool:
-        pass
+	@abstractmethod
+	def IsRunning(self) -> bool:
+		pass
 
-    def AddLayout(self, element:LayoutElement) -> None:
-        self._Layout.AppendElement(element)
+	def AddLayout(self, element:LayoutElement) -> None:
+		self._Layout.AppendElement(element)
 
-    def RemoveLayout(self, element:LayoutElement) -> None:
-        self._Layout.RemoveElement(element)
+	def RemoveLayout(self, element:LayoutElement) -> None:
+		self._Layout.RemoveElement(element)
 
-    def GetLayout(self) -> list:
-        return self._Layout
+	def GetLayout(self) -> list:
+		return self._Layout

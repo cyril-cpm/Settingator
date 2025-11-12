@@ -24,12 +24,19 @@ class Settingator:
         self.__display = display
         self.__display.SetSlaveSettingsRef(self.__slaveSettings)
         self.__espNowLinkInfo = None
-        self.__espNowLinkInfoLayout = LayoutElement(IDP_COLUMN)
+        self.__espNowLinkInfoLayout = LayoutElement(IDP_COLUMN, stick="e")
         self.__layout = LayoutElement(IDP_FRAME)
         self.__slaveLayout = LayoutElement(IDP_FRAME)
-        self.__display.AddLayout(self.__layout)
-        self.__display.AddLayout(self.__espNowLinkInfoLayout)
-        self.__display.AddLayout(self.__slaveLayout)
+
+        leftLayout = LayoutElement(IDP_COLUMN)
+        mainLayout = LayoutElement(IDP_FRAME)
+
+        self.__display.AddLayout(mainLayout)
+
+        mainLayout.AppendElement(leftLayout)
+        mainLayout.AppendElement(self.__espNowLinkInfoLayout)
+        leftLayout.AppendElement(self.__layout)
+        leftLayout.AppendElement(self.__slaveLayout)
 
         self.__functionQueue = queue.Queue()
 
