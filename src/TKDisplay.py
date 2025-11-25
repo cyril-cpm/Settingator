@@ -171,11 +171,11 @@ class TKDisplay(IDisplay):
 						row = childIndex + 1
 					
 					elif element.GetParent().GetType() == IDP_WRAPPER:
-						if element.GetParent(2):
-							if element.GetParent(2).GetType() == IDP_FRAME:
+						if element.GetParent().GetParent():
+							if element.GetParent().GetParent().GetType() == IDP_FRAME:
 								column = childIndex + 1
 
-							elif element.GetParent(2).GetType() == IDP_COLUMN:
+							elif element.GetParent().GetParent().GetType() == IDP_COLUMN:
 								row = childIndex + 1
 
 				weakMethod = WeakMethod(element.Call)

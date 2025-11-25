@@ -85,5 +85,8 @@ ESP_NOW_PING 0x5D: ->
 ESP_NOW_PONG 0x5E: <-
 | StartMsgByte | MsgSize | MsgSize | SlaveID | ESP_NOW_PONG | RSSI | NOISE | DELTA_MS ... | MsgEndByte |
 
-ESP_NOW_LINK_INFO 0x5F: <-
+LINK_INFO 0x5F: <-
 | StartMsgBute | MsgSize | MsgSize | SlaveID | ESP_NOW_LINK_INFO | NbPeer | BRIDGE_MAC ... | PEER1_Mac ... | RSSI | NOISE | DELTA_MS ... | PeerRSSI | PeerNOISE | PeerDELTA_MMS ... | (Slave) | ... | EndMsgByte |
+|
+|				ESP_NOW:	0x00
+|				UART:		0x01

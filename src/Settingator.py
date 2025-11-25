@@ -23,8 +23,8 @@ class Settingator:
         # Display Stuff
         self.__display = display
         self.__display.SetSlaveSettingsRef(self.__slaveSettings)
-        self.__espNowLinkInfo = None
-        self.__espNowLinkInfoLayout = LayoutElement(IDP_COLUMN, stick="e")
+        self.__linkInfo = None
+        self.__linkInfoLayout = LayoutElement(IDP_COLUMN, stick="e")
         self.__layout = LayoutElement(IDP_FRAME)
         self.__slaveLayout = LayoutElement(IDP_FRAME)
 
@@ -34,7 +34,7 @@ class Settingator:
         self.__display.AddLayout(mainLayout)
 
         mainLayout.AppendElement(leftLayout)
-        mainLayout.AppendElement(self.__espNowLinkInfoLayout)
+        mainLayout.AppendElement(self.__linkInfoLayout)
         leftLayout.AppendElement(self.__layout)
         leftLayout.AppendElement(self.__slaveLayout)
 
@@ -93,9 +93,9 @@ class Settingator:
                 self.SendInitRequest(self.__initCallback)
                 print("Slave request recved")
 
-            elif msg.GetType() == MessageType.ESP_NOW_LINK_INFO.value:
+            elif msg.GetType() == MessageType.LINK_INFO.value:
                 print("Link Info received")             
-                self.__treatEspNowLinkInfoMsg(msg.GetByteArray())
+                self.__treatLinkInfoMsg(msg.GetByteArray())
 
 
             self.__communicator.Flush()
@@ -329,25 +329,25 @@ class Settingator:
         return msgIndex
 
     def __updateEspNowLinkInf(self):
-        if not self.__espNowLinkInfo:
+        if not self.__linkInfo:
             return
         
         currentTimeStamp = int(time.time() * 1000)
 
-        if not "last_updated" in self.__espNowLinkInfo:
-            self.__espNowLinkInfo["last_updated"] = currentTimeStamp
+        if not "last_updated" in self.__linkInfo:
+            self.__linkInfo["last_updated"] = currentTimeStamp
 
-        diffTimeStamp = currentTimeStamp - self.__espNowLinkInfo["last_updated"]
+        diffTimeStamp = currentTimeStamp - self.__linkInfo["last_updated"]
         if diffTimeStamp > 500:
-            self.__espNowLinkInfo["last_updated"] = currentTimeStamp
+            self.__linkInfo["last_updated"] = currentTimeStamp
 
-            for bridgeMac in self.__espNowLinkInfo:
+            for bridgeMac in self.__linkInfo:
 
                 if bridgeMac != "last_updated":
-                    for peerMac in self.__espNowLinkInfo[bridgeMac]:
+                    for peerMac in self.__linkInfo[bridgeMac]:
 
                         if peerMac != "nbPeer":
-                            peerDict = self.__espNowLinkInfo[bridgeMac][peerMac]
+                            peerDict = self.__linkInfo[bridgeMac][peerMac]
 
                             peerDict["bridgeDeltaMs"] = peerDict["bridgeDeltaMs"] + diffTimeStamp
                             peerDict["peerDeltaMs"] = peerDict["peerDeltaMs"] + diffTimeStamp
@@ -379,7 +379,7 @@ class Settingator:
                                     peerDict["layout"].GetIElement().SetBGColor("#FFD476")
                                     peerDict["color"] = "orange"
 
-                            elif (bridgeSNR <= 25 or peerSNR <= 25):
+                            elif (bridgeSNR <= 25 or peesrSNR <= 25):
                                 if peerDict["color"] != "green":
                                     peerDict["layout"].GetIElement().SetBGColor("#00FF00")
                                     peerDict["color"] = "green"
@@ -393,30 +393,28 @@ class Settingator:
 
 
 
-    def __treatEspNowLinkInfoMsg(self, buffer:bytearray):
+    def __treatLinkInfoMsg(self, buffer:bytearray):
         nbPeer = buffer[5]
         bridgeMac:str = mac_to_str(buffer[6:12])
 
-        if not self.__espNowLinkInfo:
-            self.__espNowLinkInfo = dict()
+        if not self.__linkInfo:
+            self.__linkInfo = dict()
 
-        if not bridgeMac in self.__espNowLinkInfo:
-            self.__espNowLinkInfo[bridgeMac] = dict()
+        if not bridgeMac in self.__linkInfo:
+            self.__linkInfo[bridgeMac] = dict()
 
-        self.__espNowLinkInfo[bridgeMac]["nbPeer"] = nbPeer
-
-        #self.__espNowLinkInfo[bridgeMac]["timestamp"] = int(time.time() * 1000)
+        self.__linkInfo[bridgeMac]["nbPeer"] = nbPeer
 
         index = 12
         peerInfoSize = 18
         for i in range(0, nbPeer):
             peerMac = mac_to_str(buffer[index + i * 18: index + i * peerInfoSize + 6])
 
-            if not peerMac in self.__espNowLinkInfo[bridgeMac]:
-                self.__espNowLinkInfo[bridgeMac][peerMac] = dict(layout=LayoutElement(IDP_TEXT, "no_data"), color=None)
-                self.__espNowLinkInfoLayout.AppendElement(self.__espNowLinkInfo[bridgeMac][peerMac]["layout"])
+            if not peerMac in self.__linkInfo[bridgeMac]:
+                self.__linkInfo[bridgeMac][peerMac] = dict(layout=LayoutElement(IDP_TEXT, "no_data"), color=None)
+                self.__linkInfoLayout.AppendElement(self.__linkInfo[bridgeMac][peerMac]["layout"])
 
-            peerDict = self.__espNowLinkInfo[bridgeMac][peerMac]
+            peerDict = self.__linkInfo[bridgeMac][peerMac]
 
             peerDict["bridgeRssi"], len = GetInt8ValueFromBuffer(buffer[index + i * peerInfoSize + 6:])
             peerDict["bridgeNoiseFloor"], len = GetInt8ValueFromBuffer(buffer[index + i * peerInfoSize + 7:])

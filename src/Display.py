@@ -85,7 +85,7 @@ class LayoutElement(ABC):
 				if element:
 					element.SetParentRecursively(self)
 
-		if (type == IDP_COLUMN or type == IDP_FRAME) and children == None:
+		if (type == IDP_COLUMN or type == IDP_FRAME or type == IDP_WRAPPER) and children == None:
 			self._children = []
 
 	def __del__(self):
