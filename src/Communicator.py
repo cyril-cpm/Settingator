@@ -18,7 +18,7 @@ class ICTR(ABC):
     def __init__(self) -> None:
         self.__receivedMessage = deque()
 
-    def Available(self) -> bool:
+    def Available(self) -> int:
         self.Update()
         return self.__receivedMessage.__len__()
     
