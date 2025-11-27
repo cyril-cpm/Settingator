@@ -383,7 +383,7 @@ class Settingator:
 									peerDict["layout"].GetIElement().SetBGColor("#FFD476")
 									peerDict["color"] = "orange"
 
-							elif (bridgeSNR <= 25 or peesrSNR <= 25):
+							elif (bridgeSNR <= 25 or peerSNR <= 25):
 								if peerDict["color"] != "green":
 									peerDict["layout"].GetIElement().SetBGColor("#00FF00")
 									peerDict["color"] = "green"
@@ -428,12 +428,12 @@ class Settingator:
 
 						peerDict = self.__linkInfo[bridgeMac][peerMac]
 
-						peerDict["bridgeRssi"], len = GetInt8ValueFromBuffer(buffer[index + 10:])
-						peerDict["bridgeNoiseFloor"], len = GetInt8ValueFromBuffer(buffer[index + 11:])
-						peerDict["bridgeDeltaMs"], len = GetUInt32ValueFromBuffer(buffer[index + 12:])
+						peerDict["bridgeRssi"], len = GetInt8ValueFromBuffer(buffer[index + 9:])
+						peerDict["bridgeNoiseFloor"], len = GetInt8ValueFromBuffer(buffer[index + 10:])
+						peerDict["bridgeDeltaMs"], len = GetUInt32ValueFromBuffer(buffer[index + 11:])
 
-						peerDict["peerRssi"], len = GetInt8ValueFromBuffer(buffer[index + 16:])
-						peerDict["peerNoiseFloor"], len = GetInt8ValueFromBuffer(buffer[index + 17:])
+						peerDict["peerRssi"], len = GetInt8ValueFromBuffer(buffer[index + 15:])
+						peerDict["peerNoiseFloor"], len = GetInt8ValueFromBuffer(buffer[index + 16:])
 						peerDict["peerDeltaMs"], len = GetUInt32ValueFromBuffer(buffer[index + 18:])
 
 						peerDict["layout"].UpdateValue(bridgeMac + "	<->    " + peerMac + "\n" +
