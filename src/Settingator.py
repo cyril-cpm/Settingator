@@ -46,7 +46,7 @@ class Settingator:
 
 		return
 	
-	def GetSlave(self, slaveID:int):
+	def GetSlave(self, slaveID:int) -> Slave | None:
 		if slaveID in self.__slaves:
 			return self.__slaves[slaveID]
 		return None
@@ -55,7 +55,7 @@ class Settingator:
 		self.__slaveLayout.SetVisible(False)
 
 	def DisplaySlaveLayout(self) -> None:
-	   self.__slaveLayout.SetVisible(True)
+		self.__slaveLayout.SetVisible(True)
 	
 	def GetSlaves(self):
 		return self.__slaves

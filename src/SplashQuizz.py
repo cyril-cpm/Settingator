@@ -3,104 +3,162 @@ from PySerialCommunicator import *
 from TKDisplay import *
 import time
 import random
+from pygame import mixer as mx
+
 
 
 BUZZ_BUTTON = 5
 
 buzzed = True
-buzzedTeam = 0
 buzzedSlave = None
 
-def delay():
-    time.sleep(0.05)
-
 def ReInit(value):
-    STR.BridgeReInitSlaves()
+	STR.BridgeReInitSlaves()
 
 btReInit = LayoutElement(IDP_BUTTON, None, "reinitSlave", callback=ReInit)
 
 def reloadAll(value):
-    slaves = STR.GetSlaves()
+	slaves = STR.GetSlaves()
 
-    for id in slaves:
-        STR.SendInitRequest(None, id)
+	for id in slaves:
+		STR.SendInitRequest(None, id)
 
 reloadButton = LayoutElement(IDP_BUTTON, None, "reload", callback=reloadAll)
 
 def sendInitRequestFunc(value):
-    STR.SendInitRequest()
+	STR.SendInitRequest()
 
 sendInitRequestButton = LayoutElement(IDP_BUTTON, None, "SendInitRequest", callback=sendInitRequestFunc)
 
 def startBridgeInitFunc(value):
-    STR.BridgeStartInitBroadcasted(initModule)
+	STR.BridgeStartInitBroadcasted(initModule)
 
 def stopBridgeInitFunc(value):
-    STR.BridgeStopInitBroadcasted()
+	STR.BridgeStopInitBroadcasted()
 
 
 startBridgeInitButton = LayoutElement(IDP_BUTTON, None, "StartBridgeInit", callback=startBridgeInitFunc)
 stopBridgeInitButton = LayoutElement(IDP_BUTTON, None, "StopBridgeInit", callback=stopBridgeInitFunc)
 
 def displayLayout(value):
-    if int(value):
-        STR.DisplaySlaveLayout()
-    else:
-        STR.RemoveSlaveLayout()
+	if int(value):
+		STR.DisplaySlaveLayout()
+	else:
+		STR.RemoveSlaveLayout()
 
 layoutDisplayCheck = LayoutElement(IDP_CHECK, None, "DisplayLayout", callback=displayLayout)
 
 
-def initModule(slave):
-    if slave.GetSettingByName("TEAM") != None:
-
-        slave.SendSettingUpdateByName("RED", 0)
-        delay()
-        slave.SendSettingUpdateByName("GREEN", 0)
-        delay()
-        slave.SendSettingUpdateByName("BLUE", 0)
-        delay()
-        slave.SendSettingUpdateByName("UPDATE_LED")
-        delay()
+def initModule(slave:Slave):
+	if slave.GetSettingByName("TEAM") != None:
+		slave.SendSettingUpdatesByName([("RED", 0),
+										("GREEN", 0),
+										("BLUE", 255),
+										("UPDATE_LED", None)])
 
 def buzzButton(slaveID:int):
-    buzzSlave = STR.GetSlave(slaveID)
-    
-def introAButtonCB(value):
-    module = STR.GetSlaveWithSetting("LEDMODULE")
+	global buzzed
+	if not buzzed:
+		global buzzedSlave
+		buzzed = True
+		buzzedSlave = STR.GetSlave(slaveID)
+		if buzzedSlave:
+			buzzedSlave.SendSettingUpdatesByName([("RED", 255),
+												("GREEN", 255),
+												("BLUE", 255),
+												("UPDATE_LED", None)])
+			global buzzSound
+			global chan
+			chan.play(buzzSound)
 
-    if module:
-        module.SendSettingUpdatesByName([("INTRO_STACK", None),
-                                         ("8INTRO_FORWARD_TRANSI_RATE_TRANSITION", None),
-                                         ("9INTRO_BACKWARD_TRANSI_RATE_TRANSITION", None)])
+def resetBuzzerFunc(value):
+	global buzzedSlave
+	if buzzedSlave:
+			buzzedSlave.SendSettingUpdatesByName([("RED", 0),
+												("GREEN", 0),
+												("BLUE", 255),
+												("UPDATE_LED", None)])
 
-introAButton = LayoutElement(IDP_BUTTON, None, "IntroA", callback=introAButtonCB)
+def activateBuzzerFunc(value):
+	global buzzed
+	buzzed = False
+
+	global chan
+	global activateSound
+	chan.play(activateSound)
+
+def validateQuestionFunc(value):
+	global buzzedSlave
+	if buzzedSlave:
+		buzzedSlave.SendSettingUpdatesByName([("RED", 0),
+											("GREEN", 255),
+											("BLUE", 0),
+											("UPDATE_LED", None)])
+		global chan
+		global validateSound
+		chan.play(validateSound)
+
+def invalidateQuestionFunc(value):
+	global buzzedSlave
+	if buzzedSlave:
+		buzzedSlave.SendSettingUpdatesByName([("RED", 255),
+											("GREEN", 0),
+											("BLUE", 0),
+											("UPDATE_LED", None)])
+		global chan
+		global invalidateSound
+		chan.play(invalidateSound)
+
+resetBuzzer = LayoutElement(IDP_BUTTON, None, "Reset Buzzer", callback=resetBuzzerFunc)
+activateBuzzer = LayoutElement(IDP_BUTTON, None, "Activate Buzzer", callback=activateBuzzerFunc)
+validateQuestion = LayoutElement(IDP_BUTTON, None, "Validate", callback=validateQuestionFunc)
+invalidateQuestion = LayoutElement(IDP_BUTTON, None, "Invalidate", callback=invalidateQuestionFunc)
+
 
 if __name__ == "__main__":
 
-    com = SerialCTR("/dev/ttyUSB0")
+	com = SerialCTR("/dev/ttyUSB0")
 
-    display = TKDisplay()
+	mx.init(channels=1)
+	global chan
+	chan = mx.Channel(0)
 
-    STR = Settingator(com, display)
+	global validateSound
+	validateSound = mx.Sound("../good.wav")
+
+	global invalidateSound
+	invalidateSound = mx.Sound("../bad.wav")
+
+	global activateSound
+	activateSound = mx.Sound("../endWait.wav")
+
+	global buzzSound
+	buzzSound = mx.Sound("../stw.wav")
+
+	display = TKDisplay()
+
+	STR = Settingator(com, display)
 
 
-    STR.AddNotifCallback(BUZZ_BUTTON, buzzButton)
+	STR.AddNotifCallback(BUZZ_BUTTON, buzzButton)
 
-    STR.AddToLayout(introAButton)
+	STR.AddToLayout(LayoutElement(IDP_COLUMN, None, "Control", children=[
+		resetBuzzer,
+		activateBuzzer,
+		validateQuestion,
+		invalidateQuestion
+		]))
 
-    STR.AddToLayout(reloadButton)
+	STR.AddToLayout(reloadButton)
 
-    STR.AddToLayout(startBridgeInitButton)
-    STR.AddToLayout(stopBridgeInitButton)
+	STR.AddToLayout(startBridgeInitButton)
+	STR.AddToLayout(stopBridgeInitButton)
 
-    STR.AddToLayout(sendInitRequestButton)
+	STR.AddToLayout(sendInitRequestButton)
 
-    STR.AddToLayout(btReInit)
+	STR.AddToLayout(btReInit)
 
-    STR.AddToLayout(layoutDisplayCheck)
+	STR.AddToLayout(layoutDisplayCheck)
 
-    STR.BridgeStartInitBroadcasted(initModule)
-
-    while display.IsRunning():
-        STR.Update()
+	while display.IsRunning():
+		STR.Update()
