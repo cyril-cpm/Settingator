@@ -39,8 +39,20 @@ class Settingator:
 
 		mainLayout.AppendElement(leftLayout)
 		mainLayout.AppendElement(self.__linkInfoLayout)
+
 		leftLayout.AppendElement(self.__layout)
 		leftLayout.AppendElement(self.__slaveLayout)
+
+		#LOG LAYOUT STUFF
+
+		logLayout = LayoutElement(IDP_FRAME)
+		leftLayout.AppendElement(logLayout)
+
+		self.__generalLog = LogElement()
+		logLayout.AppendElement(self.__generalLog)
+
+
+		#################
 
 		self.__functionQueue = queue.Queue()
 
@@ -72,6 +84,10 @@ class Settingator:
 	def Update(self) -> None:
 
 		if self.__communicator.Available():
+			rawText = self.__communicator.GetRawText()
+
+			if rawText:
+				self.Log(rawText, "CTR_RAW_TEXT", "CTR")
 
 			msg:Message = self.__communicator.Read()
 
@@ -582,6 +598,10 @@ class Settingator:
 	def RemoveFromLayout(self, layoutElement:LayoutElement) -> None:
 		self.__layout.RemoveElement(layoutElement)
 
+	def Log(self, text:str, typeLog:str, tag:str):
+		if self.__generalLog:
+			self.__generalLog.Log(text, typeLog, tag)
+
 class Slave:
 	def __init__(self, str:Settingator, slaveID:int, settings:dict) -> None:
 		self.__ID = slaveID
@@ -630,3 +650,4 @@ class Slave:
 
 	def GetID(self):
 		return self.__ID
+

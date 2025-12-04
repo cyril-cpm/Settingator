@@ -16,7 +16,7 @@ class TKElement(IElement):
 		self.__index = index
 		self.__style:ttk.Style = style
 		self.__styleName:str = styleName
-		self.__element:ttk.Widget = element
+		self.__element:Widget|Text = element
 		self.__variable:Variable = variable
 		self.__display:TKDisplay = display
 		print(f"TKElement créé avec variable: {self.__variable.get()}")
@@ -64,6 +64,10 @@ class TKElement(IElement):
 			self.__display.PutFunction(self.__element.grid, ())
 		else:
 			self.__display.PutFunction(self.__element.grid_remove,())
+			
+	def Insert(self, tag:tuple|None, text:str):
+		self.__element.insert('end', text, tag)
+		self.__element.yview(END)
 
 
 class TKDisplay(IDisplay):
@@ -157,7 +161,7 @@ class TKDisplay(IDisplay):
 				row = 1
 				column = 1
 
-				newElement:ttk.Widget
+				newElement:Widget
 
 				styleName = str(element)
 
@@ -214,6 +218,9 @@ class TKDisplay(IDisplay):
 						styleName += ".TLabelframe"
 						self.__style.configure(styleName)
 						newElement = ttk.Labelframe(parent, text=name, style=styleName)
+
+				elif type == IDP_MULTILINE:
+					newElement = Text(parent)
  
 				newElement.grid(column=column, row=row, sticky=element.GetStick(), padx=5, pady=5)
 				element.SetIElement(TKElement(self, newElement, type, elementVariable, self.__style, styleName))

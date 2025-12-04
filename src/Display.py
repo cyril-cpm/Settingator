@@ -13,6 +13,7 @@ IDP_COLUMN = 0x05
 IDP_CHECK = 0x06
 IDP_SLIDER = 0x07
 IDP_WRAPPER = 0x08
+IDP_MULTILINE = 0x09
 
 def IDPTypeToStr(IDPType:int = IDP_NONE):
 	if IDPType == IDP_NONE:
@@ -29,6 +30,8 @@ def IDPTypeToStr(IDPType:int = IDP_NONE):
 		return "IDP_COLUMN"
 	elif IDPType == IDP_WRAPPER:
 		return "IDP_WRAPPER"
+	elif IDPType == IDP_MULTILINE:
+		return "IDP_MULTILINE"
 	else:
 		return "IDP_UNKNOWN"
 		
@@ -64,6 +67,9 @@ class IElement(ABC):
 	def SetVisible(self, value):
 		pass
 
+	@abstractmethod
+	def Insert(self, truc:str, text:str) -> None:
+		pass
 
 class LayoutElement(ABC):
 	def __init__(self, type, value=None, name="", children:list|None=None, callback=None, stick="nsew") -> None:
@@ -221,6 +227,17 @@ class LayoutElement(ABC):
 
 	def SetVisible(self, value):
 		self.__iElement.SetVisible(value)
+
+class LogElement(LayoutElement):
+	def __init__(self, value=None, name="", callback=None, stick="nsew") -> None:
+		super().__init__(IDP_MULTILINE, value, name, None, callback, stick)
+
+	def Log(self, text:str, type:str, tag:str):
+		if tag:
+			text = "[" + tag + "] - " + text
+
+		if self.GetIElement():
+			self.GetIElement().Insert(None, "\n" + text)
 
 class IDisplay(ABC):
 	def __init__(self) -> None:

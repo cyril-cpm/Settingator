@@ -11,6 +11,7 @@ BUZZ_BUTTON = 5
 
 buzzed = True
 buzzedSlave = None
+resetted = False
 
 def ReInit(value):
 	STR.BridgeReInitSlaves()
@@ -58,8 +59,21 @@ def initModule(slave:Slave):
 
 def buzzButton(slaveID:int):
 	global buzzed
-	if not buzzed:
+	global resetted
+	global buzzedSlave
+	global chan
+	if buzzed and resetted:
 		global buzzedSlave
+		buzzedSlave = STR.GetSlave(slaveID)
+		if buzzedSlave:
+			buzzedSlave.SendSettingUpdatesByName([("RED", 255),
+												("GREEN",0),
+												("BLUE", 0),
+												("UPDATE_LED", None)])
+			global invalidateSound
+			chan.play(invalidateSound)
+		
+	if not buzzed:
 		buzzed = True
 		buzzedSlave = STR.GetSlave(slaveID)
 		if buzzedSlave:
@@ -68,20 +82,30 @@ def buzzButton(slaveID:int):
 												("BLUE", 255),
 												("UPDATE_LED", None)])
 			global buzzSound
-			global chan
 			chan.play(buzzSound)
 
 def resetBuzzerFunc(value):
-	global buzzedSlave
-	if buzzedSlave:
-			buzzedSlave.SendSettingUpdatesByName([("RED", 0),
+	global resetted
+	resetted = True
+
+	slaves = STR.GetSlaves()
+
+	if slaves:
+		for slaveID in slaves:
+			slave = STR.GetSlave(slaveID)
+
+			if slave:
+				slave.SendSettingUpdatesByName([("RED", 0),
 												("GREEN", 0),
 												("BLUE", 255),
 												("UPDATE_LED", None)])
+				time.sleep(0.1)
 
 def activateBuzzerFunc(value):
 	global buzzed
 	buzzed = False
+	global resetted
+	resetted = False
 
 	global chan
 	global activateSound
@@ -114,6 +138,10 @@ activateBuzzer = LayoutElement(IDP_BUTTON, None, "Activate Buzzer", callback=act
 validateQuestion = LayoutElement(IDP_BUTTON, None, "Validate", callback=validateQuestionFunc)
 invalidateQuestion = LayoutElement(IDP_BUTTON, None, "Invalidate", callback=invalidateQuestionFunc)
 
+def logTestFunc(value):
+	STR.Log(value, "ERROR", "BUZZER")
+
+testLogButton = LayoutElement(IDP_INPUT, None, "log", callback=logTestFunc)
 
 if __name__ == "__main__":
 
@@ -159,6 +187,8 @@ if __name__ == "__main__":
 	STR.AddToLayout(btReInit)
 
 	STR.AddToLayout(layoutDisplayCheck)
+
+	STR.AddToLayout(testLogButton)
 
 	while display.IsRunning():
 		STR.Update()

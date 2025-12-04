@@ -62,8 +62,11 @@ class SerialCTR(ICTR):
 		n = self.__serial.available()
 
 		if n:
-			self.__serialBuffer.extend(self.__serial.read())
+			readData = self.__serial.read()
+			self.__serialBuffer.extend(readData)
 			self.__serialBufferSize = self.__serialBuffer.__len__()
+			
+			self._rawText += bytes(readData).decode("ascii", errors="replace")
 		
 		startFrameIndex = self.__serialBuffer.find(MessageControlFrame.START.value)
 		
