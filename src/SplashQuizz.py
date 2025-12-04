@@ -143,9 +143,21 @@ def logTestFunc(value):
 
 testLogButton = LayoutElement(IDP_INPUT, None, "log", callback=logTestFunc)
 
+testListBox = ListBoxElement("listbox", columns=['A', 'B', 'Q'])
+
+def addColumunFunc(value):
+	testListBox.AddColumns(['G', 'A', 'T'])
+
+addColButton = LayoutElement(IDP_BUTTON, None, "TestAddCol", callback=addColumunFunc)
+
+def addEntryFunc(value):
+	testListBox.AddEntry({"coucou":"coucouc"})
+
+testListBoxButon = LayoutElement(IDP_BUTTON, None, "AddEntry", callback=addEntryFunc)
+
 if __name__ == "__main__":
 
-	com = SerialCTR("/dev/ttyUSB0")
+	com = ICTR() #SerialCTR("/dev/ttyUSB0")
 
 	mx.init(channels=1)
 	global chan
@@ -189,6 +201,9 @@ if __name__ == "__main__":
 	STR.AddToLayout(layoutDisplayCheck)
 
 	STR.AddToLayout(testLogButton)
+	STR.AddToLayout(testListBox)
+	STR.AddToLayout(testListBoxButon)
+	STR.AddToLayout(addColButton)
 
 	while display.IsRunning():
 		STR.Update()

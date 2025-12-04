@@ -14,6 +14,7 @@ IDP_CHECK = 0x06
 IDP_SLIDER = 0x07
 IDP_WRAPPER = 0x08
 IDP_MULTILINE = 0x09
+IDP_LISTBOX = 0xA
 
 def IDPTypeToStr(IDPType:int = IDP_NONE):
 	if IDPType == IDP_NONE:
@@ -32,6 +33,8 @@ def IDPTypeToStr(IDPType:int = IDP_NONE):
 		return "IDP_WRAPPER"
 	elif IDPType == IDP_MULTILINE:
 		return "IDP_MULTILINE"
+	elif IDPType == IDP_LISTBOX:
+		return "IDP_LISTBOX"
 	else:
 		return "IDP_UNKNOWN"
 		
@@ -238,6 +241,38 @@ class LogElement(LayoutElement):
 
 		if self.GetIElement():
 			self.GetIElement().Insert(None, "\n" + text)
+
+class ListBoxElement(LayoutElement):
+	def __init__(self, name="", callback="None", stick="nsew", columns:list = []) -> None:
+		super().__init__(IDP_LISTBOX, None, name, None, callback, stick)
+
+		self._columns:list = columns
+		self._displaycolumns:list = columns.copy()
+
+	def AddEntry(self, entry:dict) -> None:
+		if self.GetIElement():
+			self.GetIElement().AddEntry(entry)
+
+	def AddEntries(self, entries:list) -> None:
+		if self.GetIElement():
+			self.GetIElement().AddEntries(entries)
+
+	def AddColumn(self, column:str) -> None:
+		if isinstance(column, str):
+			if self.GetIElement():
+				self.GetIElement().AddColumn(column)
+
+	def AddColumns(self, columns:list) -> None:
+		if self.GetIElement():
+			self.GetIElement().AddColumns(columns)
+		# else:
+			# STR.Log("IElement not initialized in ListBoxElement to AddColumns", "WARNING", "ListBox")
+
+	def GetColumns(self) -> list:
+		return self._columns
+
+	def GetDisplayColumns(self) -> list:
+		return self._displaycolumns
 
 class IDisplay(ABC):
 	def __init__(self) -> None:

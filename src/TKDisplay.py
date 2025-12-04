@@ -14,15 +14,15 @@ class TKElement(IElement):
 		IElement.__init__(self)
 		self.__type = type
 		self.__index = index
-		self.__style:ttk.Style = style
+		self.__style:ttk.Style|None = style
 		self.__styleName:str = styleName
-		self.__element:Widget|Text = element
+		self._element:Widget|Text|ttk.Treeview = element
 		self.__variable:Variable = variable
 		self.__display:TKDisplay = display
 		print(f"TKElement créé avec variable: {self.__variable.get()}")
 
  #	 def __del__(self):
- #		 self.__element.destroy()
+ #		 self._element.destroy()
 
 	def SetBGColor(self, color):
 		if self.__style and self.__styleName != "":
@@ -38,7 +38,7 @@ class TKElement(IElement):
 		return self.__variable.get()
 	
 	def GetElement(self):
-		return self.__element
+		return self._element
 	
 	def GetVariable(self) -> Variable:
 		return self.__variable
@@ -50,9 +50,9 @@ class TKElement(IElement):
 			value = True
 
 		if value:
-			self.__display.PutFunction(self.__element.state, (['!disabled'],))
+			self.__display.PutFunction(self._element.state, (['!disabled'],))
 		else:
-			self.__display.PutFunction(self.__element.state, (['disabled'],))
+			self.__display.PutFunction(self._element.state, (['disabled'],))
 
 	def SetVisible(self, value):
 		if (value == '' or value == '0' or value == False):
@@ -61,13 +61,44 @@ class TKElement(IElement):
 			value = True
 
 		if value:
-			self.__display.PutFunction(self.__element.grid, ())
+			self.__display.PutFunction(self._element.grid, ())
 		else:
-			self.__display.PutFunction(self.__element.grid_remove,())
+			self.__display.PutFunction(self._element.grid_remove,())
 			
 	def Insert(self, tag:tuple|None, text:str):
-		self.__element.insert('end', text, tag)
-		self.__element.yview(END)
+		self._element.insert('end', text, tag)
+		self._element.yview(END)
+
+class ListBoxTKElement(TKElement):
+	def __init__(self, display, element, type, variable:Variable, style = None, styleName = "", index = 0, columns:list=[], displaycolumns:list=[]):
+		super().__init__(display, element, type, variable, style, styleName, index)
+		self.__index = 0
+		self._element['columns'] = columns
+		self._element['displaycolumns'] = displaycolumns
+
+		for col in columns:
+			self._element.heading(col, text=col)
+
+		self._element.column("#0", width=0)
+		self._element.column("#0", stretch=NO)
+	
+	def AddColumn(self, column:str) -> None:
+		if not column in self._element["column"]:
+			self._element["columns"] = self._element["columns"].__add__((column,))
+			self._element.heading(column, text=column)
+			self._element["displaycolumns"] = self._element["displaycolumns"].__add__((column,))
+
+	def AddColumns(self, columns:list) -> None:
+		for column in columns:
+			self.AddColumn(column)
+		
+
+	def AddEntry(self, entry:dict):
+		if self._element:
+			self._element.insert('', 'end', str(self.__index), text='test entry', values=('1', '2', '3'))
+			self.__index += 1
+
+
 
 
 class TKDisplay(IDisplay):
@@ -184,20 +215,26 @@ class TKDisplay(IDisplay):
 
 				weakMethod = WeakMethod(element.Call)
 
+				tkElement:TKElement
+
 				if type == IDP_BUTTON:
 					newElement = ttk.Button(parent, text=name, command=lambda w=weakMethod: w() and w()(None))
+					tkElement = TKElement(self, newElement, type, elementVariable, self.__style, styleName)
 
 				elif type == IDP_TEXT:
 					styleName += ".TLabel"
 					self.__style.configure(styleName)
 					newElement = ttk.Label(parent, textvariable=elementVariable, style=styleName)
+					tkElement = TKElement(self, newElement, type, elementVariable, self.__style, styleName)
 				
 				elif type == IDP_INPUT:
 					newElement = ttk.Entry(parent, textvariable=elementVariable)
 					newElement.bind("<Return>", lambda event, w=weakMethod: w() and w()(elementVariable.get()))
+					tkElement = TKElement(self, newElement, type, elementVariable, self.__style, styleName)
 				
 				elif type == IDP_CHECK:
 					newElement = ttk.Checkbutton(parent, text=name, variable=elementVariable, command=lambda w=weakMethod: w() and w()(elementVariable.get()))
+					tkElement = TKElement(self, newElement, type, elementVariable, self.__style, styleName)
 				 
 				elif type == IDP_COLUMN:
 				
@@ -209,6 +246,8 @@ class TKDisplay(IDisplay):
 						styleName += ".TLabelframe"
 						self.__style.configure(styleName)
 						newElement = ttk.Labelframe(parent, text=name, style=styleName)
+					
+					tkElement = TKElement(self, newElement, type, elementVariable, self.__style, styleName)
 
 				elif type == IDP_FRAME:
 
@@ -218,12 +257,19 @@ class TKDisplay(IDisplay):
 						styleName += ".TLabelframe"
 						self.__style.configure(styleName)
 						newElement = ttk.Labelframe(parent, text=name, style=styleName)
+					
+					tkElement = TKElement(self, newElement, type, elementVariable, self.__style, styleName)
 
 				elif type == IDP_MULTILINE:
 					newElement = Text(parent)
+					tkElement = TKElement(self, newElement, type, elementVariable, self.__style, styleName)
+
+				elif type == IDP_LISTBOX:
+					newElement = ttk.Treeview(parent)
+					tkElement = ListBoxTKElement(self, newElement, type, elementVariable, self.__style, styleName, columns=element.GetColumns(), displaycolumns=element.GetDisplayColumns())
  
 				newElement.grid(column=column, row=row, sticky=element.GetStick(), padx=5, pady=5)
-				element.SetIElement(TKElement(self, newElement, type, elementVariable, self.__style, styleName))
+				element.SetIElement(tkElement)
 				self.__UpdateChildLayout(element, newElement)
 
 			else:
