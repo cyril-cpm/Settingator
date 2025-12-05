@@ -143,15 +143,15 @@ def logTestFunc(value):
 
 testLogButton = LayoutElement(IDP_INPUT, None, "log", callback=logTestFunc)
 
-testListBox = ListBoxElement("listbox", columns=['A', 'B', 'Q'])
+testListBox = ListBoxElement("listbox", columns=('A', 'B', 'Q'))
 
 def addColumunFunc(value):
-	testListBox.AddColumns(['G', 'A', 'T'])
+	testListBox.SetDisplayColumns(('A',))
 
 addColButton = LayoutElement(IDP_BUTTON, None, "TestAddCol", callback=addColumunFunc)
 
 def addEntryFunc(value):
-	testListBox.AddEntry({"coucou":"coucouc"})
+	testListBox.AddEntry({"B":"coucouc", "A":"uooo", "T":"pppp"})
 
 testListBoxButon = LayoutElement(IDP_BUTTON, None, "AddEntry", callback=addEntryFunc)
 

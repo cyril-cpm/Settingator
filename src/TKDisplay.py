@@ -73,29 +73,30 @@ class ListBoxTKElement(TKElement):
 	def __init__(self, display, element, type, variable:Variable, style = None, styleName = "", index = 0, columns:list=[], displaycolumns:list=[]):
 		super().__init__(display, element, type, variable, style, styleName, index)
 		self.__index = 0
+
 		self._element['columns'] = columns
-		self._element['displaycolumns'] = displaycolumns
 
 		for col in columns:
 			self._element.heading(col, text=col)
 
+		self._element['displaycolumns'] = displaycolumns
+
+
 		self._element.column("#0", width=0)
 		self._element.column("#0", stretch=NO)
-	
-	def AddColumn(self, column:str) -> None:
-		if not column in self._element["column"]:
-			self._element["columns"] = self._element["columns"].__add__((column,))
-			self._element.heading(column, text=column)
-			self._element["displaycolumns"] = self._element["displaycolumns"].__add__((column,))
 
-	def AddColumns(self, columns:list) -> None:
-		for column in columns:
-			self.AddColumn(column)
-		
+	def SetDisplayColumns(self, displaycolumns) -> None:
+		self._element.config(displaycolumns=displaycolumns)
 
 	def AddEntry(self, entry:dict):
 		if self._element:
-			self._element.insert('', 'end', str(self.__index), text='test entry', values=('1', '2', '3'))
+			values:list = []
+
+			for col in self._element['columns']:
+				if col in entry:
+					values.append(entry[col])
+
+			self._element.insert('', 'end', str(self.__index), text='test entry', values=values)
 			self.__index += 1
 
 

@@ -243,11 +243,11 @@ class LogElement(LayoutElement):
 			self.GetIElement().Insert(None, "\n" + text)
 
 class ListBoxElement(LayoutElement):
-	def __init__(self, name="", callback="None", stick="nsew", columns:list = []) -> None:
+	def __init__(self, name="", callback="None", stick="nsew", columns=None) -> None:
 		super().__init__(IDP_LISTBOX, None, name, None, callback, stick)
 
-		self._columns:list = columns
-		self._displaycolumns:list = columns.copy()
+		self._columns = columns
+		self._displaycolumns:list = columns
 
 	def AddEntry(self, entry:dict) -> None:
 		if self.GetIElement():
@@ -257,17 +257,10 @@ class ListBoxElement(LayoutElement):
 		if self.GetIElement():
 			self.GetIElement().AddEntries(entries)
 
-	def AddColumn(self, column:str) -> None:
-		if isinstance(column, str):
-			if self.GetIElement():
-				self.GetIElement().AddColumn(column)
-
-	def AddColumns(self, columns:list) -> None:
+	def SetDisplayColumns(self, displayColumns) -> None:
 		if self.GetIElement():
-			self.GetIElement().AddColumns(columns)
-		# else:
-			# STR.Log("IElement not initialized in ListBoxElement to AddColumns", "WARNING", "ListBox")
-
+			self.GetIElement().SetDisplayColumns(displayColumns)
+	
 	def GetColumns(self) -> list:
 		return self._columns
 
