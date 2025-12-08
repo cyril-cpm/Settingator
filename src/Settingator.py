@@ -1,3 +1,4 @@
+from STRLog import STRMessgeLog
 from Setting import *
 from Communicator import ICTR
 from Message import *
@@ -38,7 +39,7 @@ class Settingator:
 		self.__display.AddLayout(mainLayout)
 
 		mainLayout.AppendElement(leftLayout)
-		mainLayout.AppendElement(self.__linkInfoLayout)
+		self.__slaveLayout.AppendElement(self.__linkInfoLayout)
 
 		leftLayout.AppendElement(self.__layout)
 		leftLayout.AppendElement(self.__slaveLayout)
@@ -51,6 +52,9 @@ class Settingator:
 		self.__generalLog = LogElement()
 		logLayout.AppendElement(self.__generalLog)
 
+		self.__msgLogger:STRMessgeLog = STRMessgeLog()
+
+		logLayout.AppendElement(self.__msgLogger)
 
 		#################
 
@@ -89,12 +93,12 @@ class Settingator:
 			if rawText:
 				self.Log(rawText, "CTR_RAW_TEXT", "CTR")
 
-			msg:Message = self.__communicator.Read()
+			msg:Message = self.Read()
 
-			if msg.GetType() == MessageType.SETTING_INIT.value:
+			if msg.GetType() == MessageType.SETTING_INIT:
 				self.__ParseSettingInit(msg.GetByteArray())
 
-			elif msg.GetType() == MessageType.SETTING_UPDATE.value:
+			elif msg.GetType() == MessageType.SETTING_UPDATE:
 				ref, value, slaveID = msg.ExtractSettingUpdate()
 
 				if slaveID in self.__slaveSettings:
@@ -103,17 +107,17 @@ class Settingator:
 						setting.SetBinaryValue(value)
 						self.__shouldUpdateSetting = setting
 
-			elif msg.GetType() == MessageType.NOTIF.value:
+			elif msg.GetType() == MessageType.NOTIF:
 				notifByte, slaveID = msg.ExtractNotif()
 
 				if notifByte in self.__notifCallback:
 					self.__notifCallback[notifByte](slaveID)
 
-			elif msg.GetType() == MessageType.SLAVE_ID_REQUEST.value:
+			elif msg.GetType() == MessageType.SLAVE_ID_REQUEST:
 				self.SendInitRequest(self.__initCallback)
 				print("Slave request recved")
 
-			elif msg.GetType() == MessageType.LINK_INFO.value:
+			elif msg.GetType() == MessageType.LINK_INFO:
 				print("Link Info received")				
 				self.__treatLinkInfoMsg(msg.GetByteArray())
 
@@ -145,13 +149,13 @@ class Settingator:
 		
 		self.__initCallback = callbackFunction
 		
-		type = MessageType.ESP_NOW_INIT_WITH_SSID.value
+		type = MessageType.ESP_NOW_INIT_WITH_SSID
 		buffer = bytearray()
 		buffer.append(MessageControlFrame.START.value)
 		buffer.append(0x00)
 		buffer.append(0x00)
 		buffer.append(slaveID)
-		buffer.append(type)
+		buffer.append(type.value)
 		buffer += slaveName
 		buffer.append(MessageControlFrame.END.value)
 		size = buffer.__len__()
@@ -159,12 +163,12 @@ class Settingator:
 		buffer[2] = size
 
 		bridgeInitRequest = Message(buffer)
-		self.__communicator.Write(bridgeInitRequest)
+		self.Write(bridgeInitRequest)
 
 	def SendInitRequest(self, callbackFunction:callable = None, slaveID = 0) -> None:
 		self.__initCallback = callbackFunction
 
-		type = MessageType.INIT_REQUEST.value
+		type = MessageType.INIT_REQUEST
 		buffer = bytearray()
 		buffer.append(MessageControlFrame.START.value)
 		buffer.append(0x00)
@@ -176,60 +180,60 @@ class Settingator:
 		else:
 			buffer.append(slaveID)
 
-		buffer.append(MessageType.INIT_REQUEST.value)
+		buffer.append(type.value)
 		buffer.append(0x00)
 		buffer.append(MessageControlFrame.END.value)
 
 		initRequest = Message(buffer)
-		self.__communicator.Write(initRequest)
+		self.Write(initRequest)
 
 	def BridgeStartInitBroadcasted(self, callbackFunction:callable = None) -> None:
 
 		self.__initCallback = callbackFunction
 
-		type = MessageType.ESP_NOW_START_INIT_BROADCASTED_SLAVE.value
+		type = MessageType.ESP_NOW_START_INIT_BROADCASTED_SLAVE
 		buffer = bytearray()
 		buffer.append(MessageControlFrame.START.value)
 		buffer.append(0x00)
 		buffer.append(0x06)
 		buffer.append(0x00)
-		buffer.append(type)
+		buffer.append(type.value)
 		buffer.append(MessageControlFrame.END.value)
 
 		message = Message(buffer)
-		self.__communicator.Write(message)
+		self.Write(message)
 
 	def BridgeStopInitBroadcasted(self) -> None:
 
 		self.__initCallback = None
 
-		type = MessageType.ESP_NOW_STOP_INIT_BROADCASTED_SLAVE.value
+		type = MessageType.ESP_NOW_STOP_INIT_BROADCASTED_SLAVE
 		buffer = bytearray()
 		buffer.append(MessageControlFrame.START.value)
 		buffer.append(0x00)
 		buffer.append(0x06)
 		buffer.append(0x00)
-		buffer.append(type)
+		buffer.append(type.value)
 		buffer.append(MessageControlFrame.END.value)
 
 		message = Message(buffer)
-		self.__communicator.Write(message)
+		self.Write(message)
 
 	def BridgeReInitSlaves(self) -> None:
 
 		self.__initCallback = None
 
-		type = MessageType.BRIDGE_REINIT_SLAVES.value
+		type = MessageType.BRIDGE_REINIT_SLAVES
 		buffer = bytearray()
 		buffer.append(MessageControlFrame.START.value)
 		buffer.append(0x00)
 		buffer.append(0x06)
 		buffer.append(0x00)
-		buffer.append(type)
+		buffer.append(type.value)
 		buffer.append(MessageControlFrame.END.value)
 
 		message = Message(buffer)
-		self.__communicator.Write(message)
+		self.Write(message)
 
 	def __ParseSettingInit(self, buffer:bytearray) -> bool:
 		isValid = True
@@ -472,13 +476,13 @@ class Settingator:
 			if value != None:
 				setting.SetValue(value)
 
-			type = MessageType.SETTING_UPDATE.value
+			type = MessageType.SETTING_UPDATE
 			buffer = bytearray()
 			buffer.append(MessageControlFrame.START.value)
 			buffer.append(0x00)
 			buffer.append(0x00)
 			buffer.append(setting.GetSlaveID())
-			buffer.append(type)
+			buffer.append(type.value)
 			buffer.append(setting.GetRef())
 
 			setting.AppendValueToBuffer(buffer)
@@ -488,7 +492,7 @@ class Settingator:
 			buffer[1] = size >> 8
 			buffer[2] = size
 
-			self.__communicator.Write(Message(buffer))
+			self.Write(Message(buffer))
 
 	def SendMultiUpdateSetting(self, settingValue:list) -> None:
 		if threading.current_thread().name != "MainThread":
@@ -497,13 +501,13 @@ class Settingator:
 		
 		if settingValue != None:
 
-			type = MessageType.SETTING_UPDATE.value
+			type = MessageType.SETTING_UPDATE
 			buffer = bytearray()
 			buffer.append(MessageControlFrame.START.value)
 			buffer.append(0x00)
 			buffer.append(0x00)
 			buffer.append(0x00)
-			buffer.append(type)
+			buffer.append(type.value)
 
 			for setting, value in settingValue:
 
@@ -522,7 +526,7 @@ class Settingator:
 			buffer[1] = size >> 8
 			buffer[2] = size
 
-			self.__communicator.Write(Message(buffer))
+			self.Write(Message(buffer))
 
 	def GetSlaveSettings(self) -> dict:
 		return self.__slaveSettings
@@ -539,12 +543,12 @@ class Settingator:
 		buffer.append(0x00)
 		buffer.append(0x08)
 		buffer.append(srcSlaveID)
-		buffer.append(MessageType.ESP_NOW_CONFIG_DIRECT_NOTF.value)
+		buffer.append(MessageType.ESP_NOW_CONFIG_DIRECT_NOTF)
 		buffer.append(dstSlaveID)
 		buffer.append(notifByte)
 		buffer.append(MessageControlFrame.END.value)
 
-		self.__communicator.Write(Message(buffer))
+		self.Write(Message(buffer))
 
 	def ConfigDirectSettingUpdate(self, srcSlaveID:int, dstSlaveID:int, settingRef) -> None:
 		setting:Setting = None
@@ -565,13 +569,13 @@ class Settingator:
 			buffer.append(0x00)
 			buffer.append(0x08)
 			buffer.append(srcSlaveID)
-			buffer.append(MessageType.ESP_NOW_CONFIG_DIRECT_SETTING_UPDATE.value)
+			buffer.append(MessageType.ESP_NOW_CONFIG_DIRECT_SETTING_UPDATE)
 			buffer.append(dstSlaveID)
 			buffer.append(settingRef)
 			buffer.append(setting.GetValueLen())
 			buffer.append(MessageControlFrame.END.value)
 
-			self.__communicator.Write(Message(buffer))
+			self.Write(Message(buffer))
 
 	def RemoveDirectMessageConfig(self, srcSlaveID:int, dstSlaveID:int, configID:int, configType:int) -> None:
 		buffer = bytearray()
@@ -584,13 +588,13 @@ class Settingator:
 		buffer.append(configID)
 		buffer.append(MessageControlFrame.END.value)
 
-		self.__communicator.Write(Message(buffer))
+		self.Write(Message(buffer))
 
 	def RemoveDirectNotifConfig(self, srcSlaveID:int, dstSlaveID:int, notifByte:int) -> None:
-		self.RemoveDirectMessageConfig(srcSlaveID, dstSlaveID, notifByte, MessageType.ESP_NOW_REMOVE_DIRECT_NOTIF_CONFIG.value)
+		self.RemoveDirectMessageConfig(srcSlaveID, dstSlaveID, notifByte, MessageType.ESP_NOW_REMOVE_DIRECT_NOTIF_CONFIG)
 
 	def RemoveDirectSettingUpdateConfig(self, srcSlaveID:int, dstSlave:int, settingRef:int) -> None:
-		self.RemoveDirectMessageConfig(srcSlaveID, dstSlave, settingRef, MessageType.ESP_NOW_REMOVE_DIRECT_SETTING_UPDATE_CONFIG.value)
+		self.RemoveDirectMessageConfig(srcSlaveID, dstSlave, settingRef, MessageType.ESP_NOW_REMOVE_DIRECT_SETTING_UPDATE_CONFIG)
 
 	def AddToLayout(self, layoutElement:LayoutElement) -> None:
 		self.__layout.AppendElement(layoutElement)
@@ -601,6 +605,19 @@ class Settingator:
 	def Log(self, text:str, typeLog:str, tag:str):
 		if self.__generalLog:
 			self.__generalLog.Log(text, typeLog, tag)
+
+	def Write(self, message:Message):
+		if (self.__communicator):
+			self.__msgLogger.Log(message, "OUT")
+			self.__communicator.Write(message)
+	
+	def Read(self) -> Message:
+		if (self.__communicator):
+			message = self.__communicator.Read()
+			self.__msgLogger.Log(message, "IN")
+			return message
+		
+		return Message()
 
 class Slave:
 	def __init__(self, str:Settingator, slaveID:int, settings:dict) -> None:

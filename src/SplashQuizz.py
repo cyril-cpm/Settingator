@@ -1,3 +1,5 @@
+import STRLog
+from STRLog import STRMessgeLog
 from Settingator import *
 from PySerialCommunicator import *
 from TKDisplay import *
@@ -143,7 +145,7 @@ def logTestFunc(value):
 
 testLogButton = LayoutElement(IDP_INPUT, None, "log", callback=logTestFunc)
 
-testListBox = ListBoxElement("listbox", columns=('A', 'B', 'Q'))
+testListBox = STRMessgeLog()
 
 def addColumunFunc(value):
 	testListBox.SetDisplayColumns(('A',))
@@ -157,7 +159,8 @@ testListBoxButon = LayoutElement(IDP_BUTTON, None, "AddEntry", callback=addEntry
 
 if __name__ == "__main__":
 
-	com = ICTR() #SerialCTR("/dev/ttyUSB0")
+	# com = ICTR()
+	com = SerialCTR("/dev/ttyUSB1")
 
 	mx.init(channels=1)
 	global chan
@@ -200,10 +203,10 @@ if __name__ == "__main__":
 
 	STR.AddToLayout(layoutDisplayCheck)
 
-	STR.AddToLayout(testLogButton)
-	STR.AddToLayout(testListBox)
-	STR.AddToLayout(testListBoxButon)
-	STR.AddToLayout(addColButton)
+	# STR.AddToLayout(testLogButton)
+	# STR.AddToLayout(testListBox)
+	# STR.AddToLayout(testListBoxButon)
+	# STR.AddToLayout(addColButton)
 
 	while display.IsRunning():
 		STR.Update()

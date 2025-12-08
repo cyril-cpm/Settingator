@@ -40,7 +40,7 @@ class PySerial(ISerial):
 		
 		if (self.__readBuffer.__len__() > 0):
 			print("<-")
-			print(self.__readBuffer.hex())
+			print(self.__readBuffer)
 
 		return self.__readBuffer.__len__()
 

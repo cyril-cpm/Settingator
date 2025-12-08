@@ -96,8 +96,9 @@ class ListBoxTKElement(TKElement):
 				if col in entry:
 					values.append(entry[col])
 
-			self._element.insert('', 'end', str(self.__index), text='test entry', values=values)
+			id = self._element.insert('', 'end', str(self.__index), text='test entry', values=values)
 			self.__index += 1
+			self._element.see(id)
 
 
 
