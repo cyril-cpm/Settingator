@@ -6,6 +6,7 @@ from Display import *
 import queue
 import time
 import threading
+from Log import Logger
 
 def mac_to_str(mac: bytearray | bytes) -> str:
 	return ':'.join(f'{b:02X}' for b in mac)
@@ -22,7 +23,7 @@ class Settingator:
 		self.__shouldUpdateDisplayLayout = False
 		self.__shouldUpdateSetting = None
 		self.__notifCallback = dict()
-		self.__initCallback:callable = None
+		self.__initCallback:Callable = None
 		self.__slaveIDCount:int = 1
 
 		# Display Stuff
@@ -55,6 +56,8 @@ class Settingator:
 		self.__msgLogger:STRMessgeLog = STRMessgeLog()
 
 		logLayout.AppendElement(self.__msgLogger)
+
+		Logger.AddCallback(self.__generalLog.Log)
 
 		#################
 
@@ -91,7 +94,7 @@ class Settingator:
 			rawText = self.__communicator.GetRawText()
 
 			if rawText:
-				self.Log(rawText, "CTR_RAW_TEXT", "CTR")
+				Logger.Log(rawText, "CTR", "CTR_RAW_TEXT")
 
 			msg:Message = self.Read()
 
@@ -604,7 +607,7 @@ class Settingator:
 
 	def Log(self, text:str, typeLog:str, tag:str):
 		if self.__generalLog:
-			self.__generalLog.Log(text, typeLog, tag)
+			self.__generalLog.Log(text, typeLog)
 
 	def Write(self, message:Message):
 		if (self.__communicator):

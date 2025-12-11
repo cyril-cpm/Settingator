@@ -1,3 +1,4 @@
+from Log import Logger
 from abc import ABC, abstractmethod
 from typing import Type
 from Utils import *
@@ -186,9 +187,9 @@ class LayoutElement(ABC):
 			self.SetModified()
 			
 		else:
-			print("Can't append element to " + IDPTypeToStr(self._type) + ", name is \"" + self._name + "\"")
-			print("children:")
-			print(str(self._children))
+			Logger.Log("Can't append element to " + IDPTypeToStr(self._type) + ", name is \"" + self._name + "\"", "DISPLAY", "ERROR")
+			Logger.Log("children:", "DISPLAY", "ERROR")
+			Logger.Log(str(self._children), "DISPLAY", "ERROR")
 
 	def AppendElement(self, element) -> None:
 		if isinstance(self._children, list):
@@ -199,9 +200,9 @@ class LayoutElement(ABC):
 			self.SetModified()
 			
 		else:
-			print("Can't append element to " + IDPTypeToStr(self._type) + ", name is \"" + self._name + "\"")
-			print("children:")
-			print(str(self._children))
+			Logger.Log("Can't append element to " + IDPTypeToStr(self._type) + ", name is \"" + self._name + "\"", "DISPLAY", "ERROR")
+			Logger.Log("children:", "DISPLAY", "ERROR")
+			Logger.Log(str(self._children), "DISPLAY", "ERROR")
 
 	def RemoveElement(self, element) -> None:
 		if isinstance(self._children, list):
@@ -235,10 +236,7 @@ class LogElement(LayoutElement):
 	def __init__(self, value=None, name="", callback=None, stick="nsew") -> None:
 		super().__init__(IDP_MULTILINE, value, name, None, callback, stick)
 
-	def Log(self, text:str, type:str, tag:str):
-		if tag:
-			text = "[" + tag + "] - " + text
-
+	def Log(self, text:str, type:str):
 		if self.GetIElement():
 			self.GetIElement().Insert(None, "\n" + text)
 

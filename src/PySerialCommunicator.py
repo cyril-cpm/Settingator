@@ -1,3 +1,5 @@
+from numpy import byte
+from Log import Logger
 from Communicator import *
 from Setting import *
 import serial
@@ -32,15 +34,12 @@ class PySerial(ISerial):
 
 	def write(self, data: bytearray) -> None:
 		self.__serial.write(data)
-		print("->")
-		print(data)
 
 	def available(self) -> int:
-		self.__readBuffer = self.__serial.read_all()
+		self.__readBuffer:bytearray = self.__serial.read_all()
 		
 		if (self.__readBuffer.__len__() > 0):
-			print("<-")
-			print(self.__readBuffer)
+			Logger.Log(self.__readBuffer.decode("ascii", errors='ignore'), "SERIAL_CTR", "CTR_RAW_TEXT")
 
 		return self.__readBuffer.__len__()
 

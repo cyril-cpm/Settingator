@@ -6,6 +6,7 @@ from TKDisplay import *
 import time
 import random
 from pygame import mixer as mx
+from Log import Logger
 
 
 
@@ -141,7 +142,7 @@ validateQuestion = LayoutElement(IDP_BUTTON, None, "Validate", callback=validate
 invalidateQuestion = LayoutElement(IDP_BUTTON, None, "Invalidate", callback=invalidateQuestionFunc)
 
 def logTestFunc(value):
-	STR.Log(value, "ERROR", "BUZZER")
+	Logger.Log(value, "BUZZER", "ERROR")
 
 testLogButton = LayoutElement(IDP_INPUT, None, "log", callback=logTestFunc)
 
@@ -160,7 +161,7 @@ testListBoxButon = LayoutElement(IDP_BUTTON, None, "AddEntry", callback=addEntry
 if __name__ == "__main__":
 
 	# com = ICTR()
-	com = SerialCTR("/dev/ttyUSB1")
+	com = SerialCTR("/dev/ttyUSB0")
 
 	mx.init(channels=1)
 	global chan
@@ -207,6 +208,7 @@ if __name__ == "__main__":
 	# STR.AddToLayout(testListBox)
 	# STR.AddToLayout(testListBoxButon)
 	# STR.AddToLayout(addColButton)
+
 
 	while display.IsRunning():
 		STR.Update()

@@ -1,3 +1,4 @@
+from Log import Logger
 from Display import *
 from Setting import *
 from tkinter import *
@@ -19,7 +20,7 @@ class TKElement(IElement):
 		self._element:Widget|Text|ttk.Treeview = element
 		self.__variable:Variable = variable
 		self.__display:TKDisplay = display
-		print(f"TKElement créé avec variable: {self.__variable.get()}")
+		Logger.Log(f"TKElement créé avec variable: {self.__variable.get()}", "TK", "INFO")
 
  #	 def __del__(self):
  #		 self._element.destroy()
@@ -129,7 +130,7 @@ class TKDisplay(IDisplay):
 		self.__functionQueue = queue.Queue()
 
 		def on_close():
-			print("La fenêtre a été fermée")
+			Logger.Log("La fenêtre a été fermée", "TK", "INFO")
 			self.__root.destroy()
 			self._isRunning = False
 
