@@ -15,6 +15,7 @@ BUZZ_BUTTON = 5
 buzzed = True
 buzzedSlave = None
 resetted = False
+blockedSlave:dict = {}
 
 def ReInit(value):
 	STR.BridgeReInitSlaves()
@@ -55,6 +56,9 @@ layoutDisplayCheck = LayoutElement(IDP_CHECK, None, "DisplayLayout", callback=di
 
 def initModule(slave:Slave):
 	if slave.GetSettingByName("TEAM") != None:
+		if slave.GetID() not in blockedSlave:
+			blockedSlave[slave.GetID()] = 0.0
+
 		slave.SendSettingUpdatesByName([("RED", 0),
 										("GREEN", 0),
 										("BLUE", 255),
@@ -65,27 +69,34 @@ def buzzButton(slaveID:int):
 	global resetted
 	global buzzedSlave
 	global chan
-	if buzzed and resetted:
-		global buzzedSlave
-		buzzedSlave = STR.GetSlave(slaveID)
-		if buzzedSlave:
-			buzzedSlave.SendSettingUpdatesByName([("RED", 255),
-												("GREEN",0),
-												("BLUE", 0),
-												("UPDATE_LED", None)])
-			global invalidateSound
-			chan.play(invalidateSound)
-		
-	if not buzzed:
-		buzzed = True
-		buzzedSlave = STR.GetSlave(slaveID)
-		if buzzedSlave:
-			buzzedSlave.SendSettingUpdatesByName([("RED", 255),
-												("GREEN", 255),
-												("BLUE", 255),
-												("UPDATE_LED", None)])
-			global buzzSound
-			chan.play(buzzSound)
+
+	if slaveID not in blockedSlave:
+		blockedSlave[slaveID] = 0.0
+
+	if time.time() - blockedSlave[slaveID] > 2.5:
+
+		if buzzed and resetted:
+			global buzzedSlave
+			buzzedSlave = STR.GetSlave(slaveID)
+			if buzzedSlave:
+				blockedSlave[slaveID] = time.time()
+				buzzedSlave.SendSettingUpdatesByName([("RED", 255),
+													("GREEN",0),
+													("BLUE", 0),
+													("UPDATE_LED", None)])
+				global invalidateSound
+				chan.play(invalidateSound)
+			
+		if not buzzed:
+			buzzed = True
+			buzzedSlave = STR.GetSlave(slaveID)
+			if buzzedSlave:
+				buzzedSlave.SendSettingUpdatesByName([("RED", 255),
+													("GREEN", 255),
+													("BLUE", 255),
+													("UPDATE_LED", None)])
+				global buzzSound
+				chan.play(buzzSound)
 
 def resetBuzzerFunc(value):
 	global resetted
