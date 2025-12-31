@@ -89,6 +89,7 @@ def buzzButton(slaveID:int):
 			
 		if not buzzed:
 			buzzed = True
+			resetted = False
 			buzzedSlave = STR.GetSlave(slaveID)
 			if buzzedSlave:
 				buzzedSlave.SendSettingUpdatesByName([("RED", 255),
@@ -101,6 +102,8 @@ def buzzButton(slaveID:int):
 def resetBuzzerFunc(value):
 	global resetted
 	resetted = True
+	global buzzed
+	buzzed = False
 
 	slaves = STR.GetSlaves()
 
@@ -146,9 +149,15 @@ def invalidateQuestionFunc(value):
 		global chan
 		global invalidateSound
 		chan.play(invalidateSound)
+		global resetted
+		global buzzed
+		resetted = True
+		buzzed = False
+		global blockedSlave
+		blockedSlave[buzzedSlave.GetID()] = time.time()
 
 resetBuzzer = LayoutElement(IDP_BUTTON, None, "Reset Buzzer", callback=resetBuzzerFunc)
-activateBuzzer = LayoutElement(IDP_BUTTON, None, "Activate Buzzer", callback=activateBuzzerFunc)
+activateBuzzer = LayoutElement(IDP_BUTTON, None, "Activate Buzzer", callback=resetBuzzerFunc)
 validateQuestion = LayoutElement(IDP_BUTTON, None, "Validate", callback=validateQuestionFunc)
 invalidateQuestion = LayoutElement(IDP_BUTTON, None, "Invalidate", callback=invalidateQuestionFunc)
 
@@ -168,6 +177,19 @@ def addEntryFunc(value):
 	testListBox.AddEntry({"B":"coucouc", "A":"uooo", "T":"pppp"})
 
 testListBoxButon = LayoutElement(IDP_BUTTON, None, "AddEntry", callback=addEntryFunc)
+
+def checkBlockedSlave() -> None:
+	global blockedSlave
+
+	for slaveID in blockedSlave:
+		if blockedSlave[slaveID] != 0.0 and time.time() - blockedSlave[slaveID] > 2.5:
+			blockedSlave[slaveID] = 0.0
+			slave: Slave | None = STR.GetSlave(slaveID)
+			if slave:
+				slave.SendSettingUpdatesByName([("RED", 0),
+												("GREEN", 0),
+												("BLUE", 255),
+												("UPDATE_LED", None)])
 
 if __name__ == "__main__":
 
@@ -223,3 +245,4 @@ if __name__ == "__main__":
 
 	while display.IsRunning():
 		STR.Update()
+		checkBlockedSlave()
