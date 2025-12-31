@@ -8,7 +8,35 @@ import random
 from pygame import mixer as mx
 from Log import Logger
 
+from pathlib import Path
 
+def getFile(index, dossier_cible="."):
+    """
+    Recherche un fichier commençant par 'index ' dans le dossier spécifié.
+    """
+    # On crée un objet Path pour le dossier
+    chemin_dossier = Path(dossier_cible)
+    
+    # On itère sur tous les fichiers du dossier
+    for fichier in chemin_dossier.iterdir():
+        # On vérifie si c'est un fichier (pas un dossier)
+        if fichier.is_file():
+            # On sépare le nom pour vérifier le début
+            # Exemple: "1 fichier 1.txt" -> "1"
+            prefixe = fichier.name.split(' ')[0]
+            
+            if prefixe == str(index):
+                return fichier.name
+                
+    return None
+
+# Exemple d'utilisation :
+# nom = recuperer_nom_fichier(2)
+# print(nom) # Affiche "2 le second fichier.ext"
+
+songIndex = 1
+songName = "Non trouvée"
+playedSong = []
 
 BUZZ_BUTTON = 5
 
@@ -105,6 +133,14 @@ def resetBuzzerFunc(value):
 	global buzzed
 	buzzed = False
 
+	global playedSong
+
+	if not songIndex in playedSong:
+		playedSong.append(songIndex)
+
+		if songNameLabel.GetIElement():
+			songNameLabel.GetIElement().SetBGColor("lightgreen")
+
 	slaves = STR.GetSlaves()
 
 	if slaves:
@@ -191,6 +227,58 @@ def checkBlockedSlave() -> None:
 												("BLUE", 255),
 												("UPDATE_LED", None)])
 
+songColumn = LayoutElement(IDP_COLUMN, None, "Sélection de Chanson")
+
+def setSong(index):
+	global songIndex
+	global songName
+	global validateSound
+	global songNameLabel
+
+	if (index >= 0):
+		songIndex = index
+
+		name = getFile(songIndex, "../musik")
+
+		if name:
+			songName = name
+			songNameLabel.UpdateValue(songName)
+			validateSound = mx.Sound("../musik/" + songName)
+		else:
+			songName = str(songIndex) + " Non trouvée"
+			songNameLabel.UpdateValue(songName)
+			validateSound = mx.Sound("../good.wav")
+
+		if songNameLabel.GetIElement():
+			if songIndex in playedSong:
+				songNameLabel.GetIElement().SetBGColor("lightgreen")
+
+			else:
+				songNameLabel.GetIElement().SetBGColor("lightgrey")
+
+def prevSongFunc(value):
+	global songIndex
+
+	setSong(songIndex - 1)
+
+prevSongButton = LayoutElement(IDP_BUTTON, None, "précédent", callback=prevSongFunc)
+
+def nextSongFunc(value):
+	global songIndex
+
+	setSong(songIndex + 1)
+
+nextSongButton = LayoutElement(IDP_BUTTON, None, "suivant", callback=nextSongFunc)
+
+songNameLabel = LayoutElement(IDP_TEXT, songName, "fichier")
+
+def selectSongIndex(value):
+	setSong(int(value))
+
+selectSongInput = LayoutElement(IDP_INPUT, None, callback=selectSongIndex)
+
+songColumn.AppendElements([prevSongButton, selectSongInput, songNameLabel, nextSongButton])
+
 if __name__ == "__main__":
 
 	# com = ICTR()
@@ -221,19 +309,15 @@ if __name__ == "__main__":
 
 	STR.AddToLayout(LayoutElement(IDP_COLUMN, None, "Control", children=[
 		resetBuzzer,
-		activateBuzzer,
+		# activateBuzzer,
 		validateQuestion,
 		invalidateQuestion
 		]))
 
-	STR.AddToLayout(reloadButton)
+	STR.AddToLayout(songColumn)
 
 	STR.AddToLayout(startBridgeInitButton)
 	STR.AddToLayout(stopBridgeInitButton)
-
-	STR.AddToLayout(sendInitRequestButton)
-
-	STR.AddToLayout(btReInit)
 
 	STR.AddToLayout(layoutDisplayCheck)
 
@@ -242,6 +326,7 @@ if __name__ == "__main__":
 	# STR.AddToLayout(testListBoxButon)
 	# STR.AddToLayout(addColButton)
 
+	setSong(0)
 
 	while display.IsRunning():
 		STR.Update()
