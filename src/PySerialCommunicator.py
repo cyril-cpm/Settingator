@@ -26,6 +26,7 @@ class PySerial(ISerial):
 		self.__serial.open()
 		
 		self.__readBuffer = bytearray()
+		self.logString = ""
 
 	def read(self) -> bytearray:
 		ret = self.__readBuffer
@@ -39,7 +40,13 @@ class PySerial(ISerial):
 		self.__readBuffer:bytearray = self.__serial.read_all()
 		
 		if (self.__readBuffer.__len__() > 0):
-			Logger.Log(self.__readBuffer.decode("ascii", errors='ignore'), "SERIAL_CTR", "CTR_RAW_TEXT")
+			self.logString += self.__readBuffer.decode("ascii", errors="ignore")
+
+			returnPos = self.logString.find('\n')
+
+			if (returnPos > 0):
+				Logger.Log(self.logString[:returnPos], "SERIAL_CTR", "CTR_RAW_TEXT")
+				self.logString = self.logString[returnPos+1:]
 
 		return self.__readBuffer.__len__()
 

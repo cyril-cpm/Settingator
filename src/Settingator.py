@@ -93,8 +93,8 @@ class Settingator:
 		if self.__communicator.Available():
 			rawText = self.__communicator.GetRawText()
 
-			if rawText:
-				Logger.Log(rawText, "CTR", "CTR_RAW_TEXT")
+			# if rawText:
+			# 	Logger.Log(rawText, "CTR", "CTR_RAW_TEXT")
 
 			msg:Message = self.Read()
 

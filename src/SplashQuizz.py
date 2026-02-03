@@ -198,9 +198,9 @@ validateQuestion = LayoutElement(IDP_BUTTON, None, "Validate", callback=validate
 invalidateQuestion = LayoutElement(IDP_BUTTON, None, "Invalidate", callback=invalidateQuestionFunc)
 
 def logTestFunc(value):
-	Logger.Log(value, "BUZZER", "ERROR")
-
-testLogButton = LayoutElement(IDP_INPUT, None, "log", callback=logTestFunc)
+	STR.SendInitRequest(None, 1)
+	
+testLogButton = LayoutElement(IDP_BUTTON, None, "log", callback=logTestFunc)
 
 testListBox = STRMessgeLog()
 
@@ -321,12 +321,13 @@ if __name__ == "__main__":
 
 	STR.AddToLayout(layoutDisplayCheck)
 
-	# STR.AddToLayout(testLogButton)
+	STR.AddToLayout(testLogButton)
 	# STR.AddToLayout(testListBox)
 	# STR.AddToLayout(testListBoxButon)
 	# STR.AddToLayout(addColButton)
 
 	setSong(0)
+
 
 	while display.IsRunning():
 		STR.Update()
