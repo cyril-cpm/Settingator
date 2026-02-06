@@ -43,10 +43,11 @@ class PySerial(ISerial):
 			self.logString += self.__readBuffer.decode("ascii", errors="ignore")
 
 			returnPos = self.logString.find('\n')
-
-			if (returnPos > 0):
+			
+			while (returnPos > 0):
 				Logger.Log(self.logString[:returnPos], "SERIAL_CTR", "CTR_RAW_TEXT")
 				self.logString = self.logString[returnPos+1:]
+				returnPos = self.logString.find('\n')
 
 		return self.__readBuffer.__len__()
 
