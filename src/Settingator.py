@@ -175,13 +175,16 @@ class Settingator:
 		buffer = bytearray()
 		buffer.append(MessageControlFrame.START.value)
 		buffer.append(0x00)
-		buffer.append(0x07)
+		buffer.append(0x08)
+
+		buffer.append(0x00)
 
 		if slaveID == 0:
 			buffer.append(self.__slaveIDCount)
 			self.__slaveIDCount += 1
 		else:
 			buffer.append(slaveID)
+
 
 		buffer.append(type.value)
 		buffer.append(0x00)
@@ -198,7 +201,8 @@ class Settingator:
 		buffer = bytearray()
 		buffer.append(MessageControlFrame.START.value)
 		buffer.append(0x00)
-		buffer.append(0x06)
+		buffer.append(0x07)
+		buffer.append(0x00)
 		buffer.append(0x00)
 		buffer.append(type.value)
 		buffer.append(MessageControlFrame.END.value)
@@ -214,7 +218,8 @@ class Settingator:
 		buffer = bytearray()
 		buffer.append(MessageControlFrame.START.value)
 		buffer.append(0x00)
-		buffer.append(0x06)
+		buffer.append(0x07)
+		buffer.append(0x00)
 		buffer.append(0x00)
 		buffer.append(type.value)
 		buffer.append(MessageControlFrame.END.value)
@@ -245,9 +250,9 @@ class Settingator:
 		if not slaveID in self.__slaveSettings:
 			self.__slaveSettings[slaveID] = dict()
 		
-		nbSetting = buffer[5]
+		nbSetting = buffer[6]
 
-		msgIndex = 6
+		msgIndex = 7
 		loopIndex = 0
 
 		while((loopIndex < nbSetting) and isValid):
@@ -421,8 +426,8 @@ class Settingator:
 
 
 	def __treatLinkInfoMsg(self, buffer:bytearray):
-		nbPeer = buffer[5]
-		bridgeMac:str = mac_to_str(buffer[6:12])
+		nbPeer = buffer[6]
+		bridgeMac:str = mac_to_str(buffer[7:13])
 
 		if not self.__linkInfo:
 			self.__linkInfo = dict()
@@ -432,7 +437,7 @@ class Settingator:
 
 		self.__linkInfo[bridgeMac]["nbPeer"] = nbPeer
 
-		index = 12
+		index = 13
 		for i in range(0, nbPeer):
 			peerInfoSize = buffer[index]
 
@@ -484,7 +489,8 @@ class Settingator:
 			buffer.append(MessageControlFrame.START.value)
 			buffer.append(0x00)
 			buffer.append(0x00)
-			buffer.append(setting.GetSlaveID())
+			buffer.append(0x00) # src slave ID
+			buffer.append(setting.GetSlaveID()) # dst slave ID
 			buffer.append(type.value)
 			buffer.append(setting.GetRef())
 
@@ -510,6 +516,7 @@ class Settingator:
 			buffer.append(0x00)
 			buffer.append(0x00)
 			buffer.append(0x00)
+			buffer.append(0x00)
 			buffer.append(type.value)
 
 			for setting, value in settingValue:
@@ -518,7 +525,7 @@ class Settingator:
 					if value != None:
 						setting.SetValue(value)
 
-					buffer[3] = setting.GetSlaveID()
+					buffer[4] = setting.GetSlaveID()
 
 					buffer.append(setting.GetRef())
 

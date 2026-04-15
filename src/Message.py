@@ -70,15 +70,17 @@ class Message():
 		
 		if buffer == None:
 			self.__type = MessageType.UNINITIALISED
-			self.__slaveID = 0
+			self.__srcID = 0
+			self.__dstID = 0
 			self.__setting = None
 			self.__buffer = None
 		else:
 			try:
-				self.__type:MessageType = MessageType(buffer[4])
+				self.__type:MessageType = MessageType(buffer[5])
 			except ValueError:
 				self.__type:MessageType = MessageType.UNINITIALISED
-			self.__slaveID = buffer[3]
+			self.__srcID = buffer[3]
+			self.__dstID = buffer[4]
 			self.__len = buffer.__len__()
 			self.__buffer = buffer
 			self.__setting = None
@@ -89,17 +91,20 @@ class Message():
 	def GetType(self) -> MessageType:
 		return self.__type
 	
-	def GetSlaveID(self) -> int:
-		return self.__slaveID
+	def GetSrcID(self) -> int:
+		return self.__srcID
+
+	def GetDstID(self) -> int:
+		return self.__dstID
 	
 	def ExtractSettingUpdate(self) -> tuple:
 		ref = 0
 		newValue = bytearray()
 
 		if self.GetType() == MessageType.SETTING_UPDATE:
-			ref = self.__buffer[5]
-			newValueLen = self.__buffer[6]
-			newValue = self.__buffer[7:7+newValueLen]
+			ref = self.__buffer[6]
+			newValueLen = self.__buffer[7]
+			newValue = self.__buffer[8:8+newValueLen]
 
 		return (ref, newValue, self.GetSlaveID())
 
@@ -108,7 +113,7 @@ class Message():
 		slaveID = 0
 
 		if self.GetType() == MessageType.NOTIF:
-			notifByte = self.__buffer[5]
+			notifByte = self.__buffer[6]
 		
 		return (notifByte, self.GetSlaveID())
 

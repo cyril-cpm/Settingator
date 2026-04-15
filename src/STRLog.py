@@ -14,7 +14,8 @@ class STRMessgeLog(ListBoxElement):
 		columns = [
 				"Way",
 				"Size",
-				"SlaveID",
+				"SrcID",
+				"DstID",
 				"Type",
 				"TimeStamp"
 				]
@@ -40,7 +41,8 @@ class STRMessgeLog(ListBoxElement):
 			entry = {
 				"Way": way,
 				"Size": message.GetLength(),
-				"SlaveID": message.GetSlaveID(),
+				"SrcID": message.GetSrcID(),
+				"DstID": message.GetDstID(),
 				"Type": message.GetType().name,
 				"TimeStamp": currentTimeStr
 				}
