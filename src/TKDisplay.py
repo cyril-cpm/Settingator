@@ -97,10 +97,18 @@ class ListBoxTKElement(TKElement):
 				if col in entry:
 					values.append(entry[col])
 
-			id = self._element.insert('', 'end', str(self.__index), text='test entry', values=values)
+			id = self._element.insert('', 'end', str(self.__index), text='test entry', values=values, tags=('message',))
 			self.__index += 1
 			self._element.see(id)
 
+	def GetFocusedElement(self):
+		if self._element:
+			return self._element.focus()
+	
+	def GetItemValues(self, item) -> dict | None:
+		if self._element:
+			return self._element.item(item)
+		return None
 
 
 
@@ -270,6 +278,8 @@ class TKDisplay(IDisplay):
 				elif type == IDP_LISTBOX:
 					newElement = ttk.Treeview(parent)
 					tkElement = ListBoxTKElement(self, newElement, type, elementVariable, self.__style, styleName, columns=element.GetColumns(), displaycolumns=element.GetDisplayColumns())
+					newElement.tag_bind('message', '<Double-1>', lambda event, w=weakMethod: w() and w()(None))
+
  
 				newElement.grid(column=column, row=row, sticky=element.GetStick(), padx=5, pady=5)
 				element.SetIElement(tkElement)

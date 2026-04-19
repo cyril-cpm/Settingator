@@ -282,7 +282,7 @@ songColumn.AppendElements([prevSongButton, selectSongInput, songNameLabel, nextS
 if __name__ == "__main__":
 
 	# com = ICTR()
-	com = SerialCTR("/dev/ttyUSB0")
+	com = SerialCTR("/dev/ttyUSB1")
 
 	mx.init(channels=1)
 	global chan

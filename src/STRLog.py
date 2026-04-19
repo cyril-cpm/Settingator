@@ -1,3 +1,4 @@
+from gc import callbacks
 from Display import ListBoxElement
 from Message import MessageType, Message
 
@@ -22,10 +23,14 @@ class STRMessgeLog(ListBoxElement):
 
 		super().__init__(
 				name="Message Log",
-				callback="None",
+				callback=self.Details,
 				stick=stick,
-				columns=columns
+				columns=columns,
 				)
+
+	def Details(self, v) -> None:
+		print("Details")
+		print(self.GetIElement().GetItemValues(self.GetIElement().GetFocusedElement()))
 
 	def Log(self, message:Message | None = None,
 		 way:str|None = None) -> None:
