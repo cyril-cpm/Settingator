@@ -1,3 +1,4 @@
+import tkinter
 from Log import Logger
 from Display import *
 from Setting import *
@@ -109,6 +110,20 @@ class ListBoxTKElement(TKElement):
 		if self._element:
 			return self._element.item(item)
 		return None
+
+class PopupTKElement(TKElement):
+	def __init__(self, display, element, type, variable:Variable, style=None, styleName="", index=0):
+		super().__init__(display, element, type, variable, style, styleName, index) 
+
+	def SetVisible(self, value):
+		element = self.GetElement()
+		if value == True:
+			element.deiconify()
+			element.focus_force()
+			element.grab_set()
+		else:
+			element.withdraw()
+			element.grab_release()
 
 
 
@@ -280,8 +295,20 @@ class TKDisplay(IDisplay):
 					tkElement = ListBoxTKElement(self, newElement, type, elementVariable, self.__style, styleName, columns=element.GetColumns(), displaycolumns=element.GetDisplayColumns())
 					newElement.tag_bind('message', '<Double-1>', lambda event, w=weakMethod: w() and w()(None))
 
+				elif type == IDP_POPUP:
+					newElement:Toplevel = Toplevel(parent)
+					newElement.overrideredirect(True)
+					# newElement.geometry("+x+y")
+					newElement.transient(self.__root)
+					newElement.bind("<Escape>", lambda e: tkElement.SetVisible(False))
+					newElement.withdraw()
+
+					tkElement = PopupTKElement(self, newElement, type, elementVariable, self.__style, styleName)
+
  
-				newElement.grid(column=column, row=row, sticky=element.GetStick(), padx=5, pady=5)
+				if type != IDP_POPUP:
+					newElement.grid(column=column, row=row, sticky=element.GetStick(), padx=5, pady=5)
+
 				element.SetIElement(tkElement)
 				self.__UpdateChildLayout(element, newElement)
 

@@ -1,5 +1,5 @@
 from gc import callbacks
-from Display import ListBoxElement
+from Display import *
 from Message import MessageType, Message
 
 import datetime
@@ -28,9 +28,22 @@ class STRMessgeLog(ListBoxElement):
 				columns=columns,
 				)
 
+		self.__logs = []
+
+		self.__popupLayout = LayoutElement(IDP_FRAME, None, "MessageDetails", children=[
+			LayoutElement(IDP_BUTTON, None, "Bouton")
+			])
+
+		self.__popup = PopupElement("Details", [self.__popupLayout]) 
+		self.AppendElement(self.__popup)
+
 	def Details(self, v) -> None:
 		print("Details")
-		print(self.GetIElement().GetItemValues(self.GetIElement().GetFocusedElement()))
+		index = int(self.GetIElement().GetFocusedElement())
+
+		print(self.__logs[index][0].GetByteArray())
+
+		self.__popup.SetVisible(True)
 
 	def Log(self, message:Message | None = None,
 		 way:str|None = None) -> None:
@@ -53,4 +66,7 @@ class STRMessgeLog(ListBoxElement):
 				}
 
 			self.AddEntry(entry)
+
+			self.__logs.append((message, currentTime))
+			self.SetModified(True)
 

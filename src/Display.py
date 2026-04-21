@@ -1,6 +1,6 @@
 from Log import Logger
 from abc import ABC, abstractmethod
-from typing import Type
+from typing import Callable, Type
 from Utils import *
 import weakref
 
@@ -16,6 +16,7 @@ IDP_SLIDER = 0x07
 IDP_WRAPPER = 0x08
 IDP_MULTILINE = 0x09
 IDP_LISTBOX = 0xA
+IDP_POPUP = 0xB
 
 def IDPTypeToStr(IDPType:int = IDP_NONE):
 	if IDPType == IDP_NONE:
@@ -36,6 +37,8 @@ def IDPTypeToStr(IDPType:int = IDP_NONE):
 		return "IDP_MULTILINE"
 	elif IDPType == IDP_LISTBOX:
 		return "IDP_LISTBOX"
+	elif IDPType == IDP_POPUP:
+		return "IDP_POPUP"
 	else:
 		return "IDP_UNKNOWN"
 		
@@ -76,7 +79,7 @@ class IElement(ABC):
 		pass
 
 class LayoutElement(ABC):
-	def __init__(self, type, value=None, name="", children:list|None=None, callback=None, stick="nsew") -> None:
+	def __init__(self, type, value=None, name="", children:list|None=None, callback:Callable|None=None, stick="nsew") -> None:
 		self._type = type
 		self._name = name
 		self.__value = value
@@ -241,8 +244,8 @@ class LogElement(LayoutElement):
 			self.GetIElement().Insert(None, "\n" + text)
 
 class ListBoxElement(LayoutElement):
-	def __init__(self, name="", callback="None", stick="nsew", columns=None) -> None:
-		super().__init__(IDP_LISTBOX, None, name, None, callback, stick)
+	def __init__(self, name="", callback=None, stick="nsew", columns=None) -> None:
+		super().__init__(IDP_LISTBOX, None, name, [], callback, stick)
 
 		self._columns = columns
 		self._displaycolumns:list = columns
@@ -265,11 +268,19 @@ class ListBoxElement(LayoutElement):
 	def GetDisplayColumns(self) -> list:
 		return self._displaycolumns
 
+class PopupElement(LayoutElement):
+	def __init__(self, name:str = "", children:list|None = None):
+		super().__init__(IDP_POPUP, None, name, children)
+
+	def SetVisible(self, value):
+		self.GetIElement().SetVisible(value)
+
 class IDisplay(ABC):
 	def __init__(self) -> None:
 		self.__slaveSettings = dict
 		self._Layout = LayoutElement(IDP_COLUMN)
 		self._isRunning = True
+		self._popup:list = []
 
 	def SetSlaveSettingsRef(self, slaveSettings:dict) -> None:
 		self.__slaveSettings = slaveSettings
@@ -297,3 +308,7 @@ class IDisplay(ABC):
 
 	def GetLayout(self) -> list:
 		return self._Layout
+
+	def AddPopup(self, popup:IPopup):
+		self._popup.append(popup)
+

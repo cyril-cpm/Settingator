@@ -200,20 +200,6 @@ invalidateQuestion = LayoutElement(IDP_BUTTON, None, "Invalidate", callback=inva
 def logTestFunc(value):
 	STR.SendInitRequest(None, 1)
 	
-testLogButton = LayoutElement(IDP_BUTTON, None, "log", callback=logTestFunc)
-
-testListBox = STRMessgeLog()
-
-def addColumunFunc(value):
-	testListBox.SetDisplayColumns(('A',))
-
-addColButton = LayoutElement(IDP_BUTTON, None, "TestAddCol", callback=addColumunFunc)
-
-def addEntryFunc(value):
-	testListBox.AddEntry({"B":"coucouc", "A":"uooo", "T":"pppp"})
-
-testListBoxButon = LayoutElement(IDP_BUTTON, None, "AddEntry", callback=addEntryFunc)
-
 def checkBlockedSlave() -> None:
 	global blockedSlave
 
@@ -282,7 +268,7 @@ songColumn.AppendElements([prevSongButton, selectSongInput, songNameLabel, nextS
 if __name__ == "__main__":
 
 	# com = ICTR()
-	com = SerialCTR("/dev/ttyUSB1")
+	com = SerialCTR("/dev/ttyUSB0")
 
 	mx.init(channels=1)
 	global chan
@@ -320,11 +306,6 @@ if __name__ == "__main__":
 	STR.AddToLayout(stopBridgeInitButton)
 
 	STR.AddToLayout(layoutDisplayCheck)
-
-	STR.AddToLayout(testLogButton)
-	# STR.AddToLayout(testListBox)
-	# STR.AddToLayout(testListBoxButon)
-	# STR.AddToLayout(addColButton)
 
 	setSong(0)
 
