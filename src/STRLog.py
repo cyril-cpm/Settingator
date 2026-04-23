@@ -30,20 +30,53 @@ class STRMessgeLog(ListBoxElement):
 
 		self.__logs = []
 
+		self.__messageML = LayoutElement(IDP_MULTILINE, width=47)
+		self.__wayLabel = LayoutElement(IDP_TEXT)
+		self.__sizeLabel = LayoutElement(IDP_TEXT)
+		self.__srcLabel = LayoutElement(IDP_TEXT)
+		self.__dstLabel = LayoutElement(IDP_TEXT)
+		self.__typeLabel = LayoutElement(IDP_TEXT)
+		self.__timestampLabel = LayoutElement(IDP_TEXT)
+
 		self.__popupLayout = LayoutElement(IDP_FRAME, None, "MessageDetails", children=[
-			LayoutElement(IDP_BUTTON, None, "Bouton")
+				LayoutElement(IDP_COLUMN, None, children=[
+					self.__wayLabel,
+					self.__sizeLabel,
+					self.__srcLabel,
+					self.__dstLabel,
+					self.__typeLabel,
+					self.__timestampLabel
+				]),
+				self.__messageML
 			])
 
 		self.__popup = PopupElement("Details", [self.__popupLayout]) 
 		self.AppendElement(self.__popup)
 
-	def Details(self, v) -> None:
-		print("Details")
-		index = int(self.GetIElement().GetFocusedElement())
+	def Details(self, v=None, index=None) -> None:
+		iElement = self.GetIElement()
+		if not index:
+			focused = iElement.GetFocusedElement()
 
-		print(self.__logs[index][0].GetByteArray())
+			if focused != '':
+				index = int(focused)
 
-		self.__popup.SetVisible(True)
+		if index is not None:
+			timestamp = self.__logs[index][1]
+			message:Message = self.__logs[index][0]
+			way = self.__logs[index][2]
+
+			self.__messageML.GetIElement().Reset()
+			self.__messageML.GetIElement().Insert(None, message.GetByteArray().hex(' '))
+
+			self.__wayLabel.UpdateValue(way)
+			self.__sizeLabel.UpdateValue("LEN: " + str(message.GetLength()))
+			self.__srcLabel.UpdateValue("SRC: " + str(message.GetSrcID()))
+			self.__dstLabel.UpdateValue("DST: " + str(message.GetDstID()))
+			self.__typeLabel.UpdateValue(message.GetType().name)
+			self.__timestampLabel.UpdateValue(timestamp)
+
+			self.__popup.SetVisible(True)
 
 	def Log(self, message:Message | None = None,
 		 way:str|None = None) -> None:
@@ -67,6 +100,6 @@ class STRMessgeLog(ListBoxElement):
 
 			self.AddEntry(entry)
 
-			self.__logs.append((message, currentTime))
+			self.__logs.append((message, currentTimeStr, way))
 			self.SetModified(True)
 

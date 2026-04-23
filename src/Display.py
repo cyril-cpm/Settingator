@@ -79,7 +79,7 @@ class IElement(ABC):
 		pass
 
 class LayoutElement(ABC):
-	def __init__(self, type, value=None, name="", children:list|None=None, callback:Callable|None=None, stick="nsew") -> None:
+	def __init__(self, type, value=None, name="", children:list|None=None, callback:Callable|None=None, stick="nsew", width=None, font=None) -> None:
 		self._type = type
 		self._name = name
 		self.__value = value
@@ -88,6 +88,8 @@ class LayoutElement(ABC):
 		self._isNew:bool = True
 		self.__callback = callback
 		self.__stick = stick
+		self.__width = width
+		self.__font = font
 
 		self.__iElement:IElement|None = None
 
@@ -234,6 +236,12 @@ class LayoutElement(ABC):
 
 	def SetVisible(self, value):
 		self.__iElement.SetVisible(value)
+
+	def GetWidth(self) -> int|None:
+		return self.__width
+
+	def GetFont(self) -> str|None:
+		return self.__font
 
 class LogElement(LayoutElement):
 	def __init__(self, value=None, name="", callback=None, stick="nsew") -> None:

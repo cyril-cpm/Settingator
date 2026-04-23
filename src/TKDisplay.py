@@ -71,6 +71,9 @@ class TKElement(IElement):
 		self._element.insert('end', text, tag)
 		self._element.yview(END)
 
+	def Reset(self):
+		self._element.delete('1.0', END)
+
 class ListBoxTKElement(TKElement):
 	def __init__(self, display, element, type, variable:Variable, style = None, styleName = "", index = 0, columns:list=[], displaycolumns:list=[]):
 		super().__init__(display, element, type, variable, style, styleName, index)
@@ -287,7 +290,7 @@ class TKDisplay(IDisplay):
 					tkElement = TKElement(self, newElement, type, elementVariable, self.__style, styleName)
 
 				elif type == IDP_MULTILINE:
-					newElement = Text(parent)
+					newElement = Text(parent, width=element.GetWidth(), font=element.GetFont(), wrap='word')
 					tkElement = TKElement(self, newElement, type, elementVariable, self.__style, styleName)
 
 				elif type == IDP_LISTBOX:
@@ -297,8 +300,6 @@ class TKDisplay(IDisplay):
 
 				elif type == IDP_POPUP:
 					newElement:Toplevel = Toplevel(parent)
-					newElement.overrideredirect(True)
-					# newElement.geometry("+x+y")
 					newElement.transient(self.__root)
 					newElement.bind("<Escape>", lambda e: tkElement.SetVisible(False))
 					newElement.withdraw()

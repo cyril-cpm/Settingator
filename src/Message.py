@@ -106,7 +106,7 @@ class Message():
 			newValueLen = self.__buffer[7]
 			newValue = self.__buffer[8:8+newValueLen]
 
-		return (ref, newValue, self.GetSlaveID())
+		return (ref, newValue, self.GetSrcID())
 
 	def ExtractNotif(self) -> tuple:
 		notifByte = 0
@@ -115,7 +115,7 @@ class Message():
 		if self.GetType() == MessageType.NOTIF:
 			notifByte = self.__buffer[6]
 		
-		return (notifByte, self.GetSlaveID())
+		return (notifByte, self.GetSrcID())
 
 	def GetSetting(self) -> Setting:
 		return self.__setting
