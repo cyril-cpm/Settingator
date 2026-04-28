@@ -462,7 +462,7 @@ class Settingator:
 
 						peerDict["peerRssi"], len = GetInt8ValueFromBuffer(buffer[index + 15:])
 						peerDict["peerNoiseFloor"], len = GetInt8ValueFromBuffer(buffer[index + 16:])
-						peerDict["peerDeltaMs"], len = GetUInt32ValueFromBuffer(buffer[index + 18:])
+						peerDict["peerDeltaMs"], len = GetUInt32ValueFromBuffer(buffer[index + 17:])
 
 						peerDict["layout"].UpdateValue(bridgeMac + "	<->    " + peerMac + "\n" +
 											   str(peerDict["bridgeRssi"]) + "\t" +
