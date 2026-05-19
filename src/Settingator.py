@@ -23,7 +23,7 @@ class Settingator:
 		self.__shouldUpdateDisplayLayout = False
 		self.__shouldUpdateSetting = None
 		self.__notifCallback = dict()
-		self.__initCallback:Callable = None
+		self.__initCallback:Callable|None = None
 		self.__slaveIDCount:int = 1
 
 		# Display Stuff
@@ -473,6 +473,9 @@ class Settingator:
 											   str(peerDict["peerDeltaMs"]))
 					case _:
 						pass
+
+			index += peerInfoSize
+
 
 
 	def SendUpdateSetting(self, setting:Setting, value = None) -> None:
