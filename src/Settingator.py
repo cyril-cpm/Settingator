@@ -278,9 +278,20 @@ class Settingator:
 			for settingRef in self.__slaveSettings[slaveID]:
 				setting:Setting = self.__slaveSettings[slaveID][settingRef]
 				settingType = setting.GetType()
+				settingName = setting.GetName()
 
 				layoutElement:LayoutElement
-				if settingType == SettingType.SLIDER.value:
+				if settingName == "__RGB" and settingType == SettingType.UINT32.value:
+					layoutElement = LayoutElement(
+							IDP_INPUT,
+							hex(setting.GetValue()),
+							setting.GetName(),
+							callback = lambda value :
+								self.SendUpdateSetting(setting, int(value, 16))
+						)
+					slaveLayout.AppendElement(layoutElement)
+
+				elif settingType == SettingType.SLIDER.value:
 					layoutElement = LayoutElement(IDP_SLIDER, setting.GetName())
 					slaveLayout.AppendElement(layoutElement)
 				
@@ -354,7 +365,8 @@ class Settingator:
 
 		name = GetString(buffer, msgIndex)
 
-		self.__slaveSettings[slaveID][ref] = Setting(ref, slaveID, name, settingType, value)
+		if ref not in self.__slaveSettings[slaveID]:
+			self.__slaveSettings[slaveID][ref] = Setting(ref, slaveID, name, settingType, value)
 		
 		msgIndex += nameLen + 1
 

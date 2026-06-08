@@ -83,14 +83,13 @@ layoutDisplayCheck = LayoutElement(IDP_CHECK, None, "DisplayLayout", callback=di
 
 
 def initModule(slave:Slave):
-	if slave.GetSettingByName("TEAM") != None:
+	rgbSetting = slave.GetSettingByName("__RGB")
+
+	if rgbSetting != None:
 		if slave.GetID() not in blockedSlave:
 			blockedSlave[slave.GetID()] = 0.0
 
-		slave.SendSettingUpdatesByName([("RED", 0),
-										("GREEN", 0),
-										("BLUE", 255),
-										("UPDATE_LED", None)])
+		slave.SendSettingUpdateByName("__RGB", rgbSetting.GetValue())
 
 def buzzButton(slaveID:int):
 	global buzzed
@@ -108,10 +107,7 @@ def buzzButton(slaveID:int):
 			buzzedSlave = STR.GetSlave(slaveID)
 			if buzzedSlave:
 				blockedSlave[slaveID] = time.time()
-				buzzedSlave.SendSettingUpdatesByName([("RED", 255),
-													("GREEN",0),
-													("BLUE", 0),
-													("UPDATE_LED", None)])
+				buzzedSlave.SendSettingUpdateByName("__RGB", 0xFF0000)
 				global invalidateSound
 				chan.play(invalidateSound)
 			
@@ -120,10 +116,7 @@ def buzzButton(slaveID:int):
 			resetted = False
 			buzzedSlave = STR.GetSlave(slaveID)
 			if buzzedSlave:
-				buzzedSlave.SendSettingUpdatesByName([("RED", 255),
-													("GREEN", 255),
-													("BLUE", 255),
-													("UPDATE_LED", None)])
+				buzzedSlave.SendSettingUpdateByName("__RGB", 0XFFFFFF)
 				global buzzSound
 				chan.play(buzzSound)
 
@@ -148,10 +141,7 @@ def resetBuzzerFunc(value):
 			slave = STR.GetSlave(slaveID)
 
 			if slave:
-				slave.SendSettingUpdatesByName([("RED", 0),
-												("GREEN", 0),
-												("BLUE", 255),
-												("UPDATE_LED", None)])
+				slave.SendSettingUpdateByName("__RGB", 0x0000FF)
 				time.sleep(0.1)
 
 def activateBuzzerFunc(value):
@@ -167,10 +157,8 @@ def activateBuzzerFunc(value):
 def validateQuestionFunc(value):
 	global buzzedSlave
 	if buzzedSlave:
-		buzzedSlave.SendSettingUpdatesByName([("RED", 0),
-											("GREEN", 255),
-											("BLUE", 0),
-											("UPDATE_LED", None)])
+		buzzedSlave.SendSettingUpdateByName("__RGB", 0x00FF00)
+
 		global chan
 		global validateSound
 		chan.play(validateSound)
@@ -178,10 +166,7 @@ def validateQuestionFunc(value):
 def invalidateQuestionFunc(value):
 	global buzzedSlave
 	if buzzedSlave:
-		buzzedSlave.SendSettingUpdatesByName([("RED", 255),
-											("GREEN", 0),
-											("BLUE", 0),
-											("UPDATE_LED", None)])
+		buzzedSlave.SendSettingUpdateByName("__RGB", 0xFF0000)
 		global chan
 		global invalidateSound
 		chan.play(invalidateSound)
@@ -208,10 +193,7 @@ def checkBlockedSlave() -> None:
 			blockedSlave[slaveID] = 0.0
 			slave: Slave | None = STR.GetSlave(slaveID)
 			if slave:
-				slave.SendSettingUpdatesByName([("RED", 0),
-												("GREEN", 0),
-												("BLUE", 255),
-												("UPDATE_LED", None)])
+				slave.SendSettingUpdateByName("__RGB", 0x0000FF)
 
 songColumn = LayoutElement(IDP_COLUMN, None, "Sélection de Chanson")
 
