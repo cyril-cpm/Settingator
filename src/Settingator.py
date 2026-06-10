@@ -281,27 +281,29 @@ class Settingator:
 				settingName = setting.GetName()
 
 				layoutElement:LayoutElement
-				if settingName == "__RGB" and settingType == SettingType.UINT32.value:
-					layoutElement = LayoutElement(
-							IDP_INPUT,
-							hex(setting.GetValue()),
-							setting.GetName(),
-							callback = lambda value :
-								self.SendUpdateSetting(setting, int(value, 16))
-						)
-					slaveLayout.AppendElement(layoutElement)
-
-				elif settingType == SettingType.SLIDER.value:
+				if settingType == SettingType.SLIDER.value:
 					layoutElement = LayoutElement(IDP_SLIDER, setting.GetName())
 					slaveLayout.AppendElement(layoutElement)
 				
 				elif settingType == SettingType.TRIGGER.value:
-					layoutElement = LayoutElement(IDP_BUTTON, setting.GetValue(), setting.GetName(), callback=lambda value, setting=setting : self.SendUpdateSetting(setting, value))
+					layoutElement = LayoutElement(
+							IDP_BUTTON,
+							setting.GetValue(),
+							setting.GetName(),
+							callback=lambda value, setting=setting : 
+								self.SendUpdateSetting(setting, value)
+						)
 					slaveLayout.AppendElement(layoutElement)
 
 				elif settingType == SettingType.SWITCH.value or \
 					settingType == SettingType.BOOL.value:
-					layoutElement = LayoutElement(IDP_CHECK, setting.GetValue(), setting.GetName(), callback=lambda value, setting=setting : self.SendUpdateSetting(setting, value))
+					layoutElement = LayoutElement(
+							IDP_CHECK,
+							setting.GetValue(),
+							setting.GetName(),
+							callback=lambda value, setting=setting :
+								self.SendUpdateSetting(setting, value)
+						)
 					slaveLayout.AppendElement(layoutElement)
 
 				elif settingType == SettingType.FLOAT.value or\
@@ -312,9 +314,28 @@ class Settingator:
 					settingType == SettingType.INT16.value or \
 					settingType == SettingType.INT32.value or \
 					settingType == SettingType.CUSTOM_FLOAT.value:
-					slaveLayout.AppendElement(LayoutElement(IDP_TEXT, setting.GetName(), setting.GetName()))
+					slaveLayout.AppendElement(
+							LayoutElement(IDP_TEXT, setting.GetName(), setting.GetName())
+						)
 
-					layoutElement = LayoutElement(IDP_INPUT, setting.GetValue(), setting.GetName(), callback=lambda value, setting=setting : self.SendUpdateSetting(setting, value))
+					if settingName == "__RGB":
+						layoutElement = LayoutElement(
+								IDP_INPUT,
+								hex(setting.GetValue()),
+								setting.GetName(),
+								callback = lambda value :
+									self.SendUpdateSetting(setting, int(value, 16))
+							)
+
+					else:
+						layoutElement = LayoutElement(
+								IDP_INPUT,
+								setting.GetValue(),
+								setting.GetName(),
+								callback=lambda value, setting=setting :
+									self.SendUpdateSetting(setting, value)
+							)
+
 					slaveLayout.AppendElement(layoutElement)
 
 				else:

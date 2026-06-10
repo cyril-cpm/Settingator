@@ -40,35 +40,92 @@ playedSong = []
 
 BUZZ_BUTTON = 5
 
-buzzed = True
-buzzedSlave = None
+buzzed = False
 resetted = False
+buzzerActivated = False
+
+buzzedSlave = None
 blockedSlave:dict = {}
 
-def ReInit(value):
-	STR.BridgeReInitSlaves()
+gunForInvalidation = False
+gunForTooEarlyBuzz = False
+gunForValidation = False
+songQuizz = False
 
-btReInit = LayoutElement(IDP_BUTTON, None, "reinitSlave", callback=ReInit)
+separateResetAndActivate = True
+punishBuzzBeforeDing = False
 
-def reloadAll(value):
-	slaves = STR.GetSlaves()
+def punishBuzzBeforeDingFunc(value):
+	global punishBuzzBeforeDing
+	punishBuzzBeforeDing = bool(int(value))
 
-	for id in slaves:
-		STR.SendInitRequest(None, id)
+punishBuzzBeforeDingCheck = LayoutElement(
+		IDP_CHECK,
+		None,
+		"Punish Buzzer for too early buzz",
+		callback=punishBuzzBeforeDingFunc
+	)
 
-reloadButton = LayoutElement(IDP_BUTTON, None, "reload", callback=reloadAll)
+def separateResetAndActivateFunc(value):
+	global separateResetAndActivate
+	separateResetAndActivate = bool(int(value))
 
-def sendInitRequestFunc(value):
-	STR.SendInitRequest()
+separateResetAndActivateCheck = LayoutElement(
+		IDP_CHECK,
+		separateResetAndActivate,
+		"Separate reset and activate",
+		callback=separateResetAndActivateFunc
+	)
 
-sendInitRequestButton = LayoutElement(IDP_BUTTON, None, "SendInitRequest", callback=sendInitRequestFunc)
+def songQuizzFunc(value):
+	global songQuizz
+	songQuizz = bool(int(value))
+
+songQuizzCheck = LayoutElement(
+		IDP_CHECK,
+		None,
+		"Song Quizz",
+		callback=songQuizzFunc
+	)
+
+def gunForValidationFunc(value):
+	global gunForValidation
+	gunForValidation = bool(int(value))
+
+gunForValidationCheck = LayoutElement(
+		IDP_CHECK,
+		None,
+		"Gun when good",
+		callback=gunForValidationFunc
+		)
+
+def gunForTooEarlyBuzzFunc(value):
+	global gunForTooEarlyBuzz
+	gunForTooEarlyBuzz = bool(int(value))
+
+gunForTooEarlyBuzzCheck = LayoutElement(
+		IDP_CHECK,
+		None,
+		"Gun when too early buzz",
+		callback=gunForTooEarlyBuzzFunc
+	)
+
+def gunForInvalidationFunc(value):
+	global gunForInvalidation
+	gunForInvalidation = bool(int(value))
+
+gunForInvalidationCheck = LayoutElement(
+		IDP_CHECK,
+		None,
+		"Gun when false",
+		callback = gunForInvalidationFunc
+	)
 
 def startBridgeInitFunc(value):
 	STR.BridgeStartInitBroadcasted(initModule)
 
 def stopBridgeInitFunc(value):
 	STR.BridgeStopInitBroadcasted()
-
 
 startBridgeInitButton = LayoutElement(IDP_BUTTON, None, "StartBridgeInit", callback=startBridgeInitFunc)
 stopBridgeInitButton = LayoutElement(IDP_BUTTON, None, "StopBridgeInit", callback=stopBridgeInitFunc)
@@ -79,8 +136,7 @@ def displayLayout(value):
 	else:
 		STR.RemoveSlaveLayout()
 
-layoutDisplayCheck = LayoutElement(IDP_CHECK, None, "DisplayLayout", callback=displayLayout)
-
+layoutDisplayCheck = LayoutElement(IDP_CHECK, True, "DisplayLayout", callback=displayLayout)
 
 def initModule(slave:Slave):
 	rgbSetting = slave.GetSettingByName("__RGB")
@@ -96,22 +152,37 @@ def buzzButton(slaveID:int):
 	global resetted
 	global buzzedSlave
 	global chan
+	global buzzerActivated
+	global punishBuzzBeforeDing
 
 	if slaveID not in blockedSlave:
 		blockedSlave[slaveID] = 0.0
 
 	if time.time() - blockedSlave[slaveID] > 2.5:
 
-		if buzzed and resetted:
+		if punishBuzzBeforeDing and not buzzed and not buzzerActivated:
 			global buzzedSlave
 			buzzedSlave = STR.GetSlave(slaveID)
 			if buzzedSlave:
+
+				if gunForTooEarlyBuzz:
+					gunSlave = STR.GetSlaveWithSetting("SHOOT_A")
+
+					if gunSlave != None:
+						if buzzedSlave.GetID() == shootAID:
+							gunSlave.SendSettingUpdateByName("SHOOT_A", None)
+
+						elif buzzedSlave.GetID() == shootBID:
+							gunSlave.SendSettingUpdateByName("SHOOT_B", None)
+							
 				blockedSlave[slaveID] = time.time()
 				buzzedSlave.SendSettingUpdateByName("__RGB", 0xFF0000)
+
 				global invalidateSound
 				chan.play(invalidateSound)
 			
-		if not buzzed:
+		elif not buzzed and buzzerActivated:
+			buzzerActivated = False
 			buzzed = True
 			resetted = False
 			buzzedSlave = STR.GetSlave(slaveID)
@@ -125,6 +196,13 @@ def resetBuzzerFunc(value):
 	resetted = True
 	global buzzed
 	buzzed = False
+	global buzzedSlave
+	buzzedSlave = None
+	global separateResetAndActivate
+	global buzzerActivated
+
+	if not separateResetAndActivate:
+		buzzerActivated = True
 
 	global playedSong
 
@@ -140,15 +218,21 @@ def resetBuzzerFunc(value):
 		for slaveID in slaves:
 			slave = STR.GetSlave(slaveID)
 
-			if slave:
+			if slave and slave.GetSettingByName("__RGB") != None:
 				slave.SendSettingUpdateByName("__RGB", 0x0000FF)
-				time.sleep(0.1)
+				# time.sleep(0.1)
 
 def activateBuzzerFunc(value):
 	global buzzed
 	buzzed = False
 	global resetted
 	resetted = False
+	global buzzerActivated
+	buzzerActivated = True
+
+	global separateResetAndActivate
+	if not separateResetAndActivate:
+		resetBuzzerFunc(None)
 
 	global chan
 	global activateSound
@@ -161,7 +245,23 @@ def validateQuestionFunc(value):
 
 		global chan
 		global validateSound
-		chan.play(validateSound)
+		global songSound
+
+		if gunForValidation:
+			gunSlave = STR.GetSlaveWithSetting("SHOOT_A")
+
+			if gunSlave != None:
+				if shootAID != 0 and buzzedSlave.GetID() != shootAID:
+					gunSlave.SendSettingUpdateByName("SHOOT_A", None)
+
+				if shootBID != 0 and buzzedSlave.GetID() != shootBID:
+					gunSlave.SendSettingUpdateByName("SHOOT_B", None)
+
+
+		if songQuizz:
+			chan.play(songSound)
+		else:
+			chan.play(validateSound)
 
 def invalidateQuestionFunc(value):
 	global buzzedSlave
@@ -172,19 +272,30 @@ def invalidateQuestionFunc(value):
 		chan.play(invalidateSound)
 		global resetted
 		global buzzed
-		resetted = True
+		resetted = False
 		buzzed = False
+		global buzzerActivated
+		buzzerActivated = True
 		global blockedSlave
 		blockedSlave[buzzedSlave.GetID()] = time.time()
 
+		if gunForInvalidation:
+			gunSlave = STR.GetSlaveWithSetting("SHOOT_A")
+
+			if gunSlave != None:
+				if buzzedSlave.GetID() == shootAID:
+					gunSlave.SendSettingUpdateByName("SHOOT_A", None)
+
+				elif buzzedSlave.GetID() == shootBID:
+					gunSlave.SendSettingUpdateByName("SHOOT_B", None)
+
 resetBuzzer = LayoutElement(IDP_BUTTON, None, "Reset Buzzer", callback=resetBuzzerFunc)
-activateBuzzer = LayoutElement(IDP_BUTTON, None, "Activate Buzzer", callback=resetBuzzerFunc)
+activateBuzzer = LayoutElement(IDP_BUTTON, None, "Activate Buzzer", callback=activateBuzzerFunc)
 validateQuestion = LayoutElement(IDP_BUTTON, None, "Validate", callback=validateQuestionFunc)
 invalidateQuestion = LayoutElement(IDP_BUTTON, None, "Invalidate", callback=invalidateQuestionFunc)
 
-def logTestFunc(value):
-	STR.SendInitRequest(None, 1)
-	
+
+
 def checkBlockedSlave() -> None:
 	global blockedSlave
 
@@ -202,6 +313,7 @@ def setSong(index):
 	global songName
 	global validateSound
 	global songNameLabel
+	global songSound
 
 	if (index >= 0):
 		songIndex = index
@@ -211,11 +323,11 @@ def setSong(index):
 		if name:
 			songName = name
 			songNameLabel.UpdateValue(songName)
-			validateSound = mx.Sound("../musik/" + songName)
+			songSound = mx.Sound("../musik/" + songName)
 		else:
 			songName = str(songIndex) + " Non trouvée"
 			songNameLabel.UpdateValue(songName)
-			validateSound = mx.Sound("../good.wav")
+			songSound = mx.Sound("../good.wav")
 
 		if songNameLabel.GetIElement():
 			if songIndex in playedSong:
@@ -247,6 +359,45 @@ selectSongInput = LayoutElement(IDP_INPUT, None, callback=selectSongIndex)
 
 songColumn.AppendElements([prevSongButton, selectSongInput, songNameLabel, nextSongButton])
 
+shootAID = 0
+shootBID = 0
+
+def updateShootAID(value):
+	global shootAID
+	shootAID = int(value)
+
+def updateShootBID(value):
+	global shootBID
+	shootBID = int(value)
+
+shootASlaveID = LayoutElement(
+		IDP_FRAME,
+		None,
+		children=[
+			LayoutElement(IDP_TEXT, "ShootA ID"),
+			LayoutElement(IDP_INPUT, None, callback=updateShootAID)
+		]
+	)
+
+shootBSlaveID = LayoutElement(
+		IDP_FRAME,
+		None,
+		children=[
+			LayoutElement(IDP_TEXT, "ShootB ID"),
+			LayoutElement(IDP_INPUT, None, callback=updateShootBID)
+		]
+	)
+
+gunColumn = LayoutElement(
+		IDP_COLUMN,
+		None,
+		"Gun Config",
+		children=[
+			shootASlaveID,
+			shootBSlaveID
+		]
+	)
+
 if __name__ == "__main__":
 
 	# com = ICTR()
@@ -258,6 +409,9 @@ if __name__ == "__main__":
 
 	global validateSound
 	validateSound = mx.Sound("../good.wav")
+
+	global songSound
+	songSound = mx.Sound("../good.wav")
 
 	global invalidateSound
 	invalidateSound = mx.Sound("../bad.wav")
@@ -272,17 +426,34 @@ if __name__ == "__main__":
 
 	STR = Settingator(com, display)
 
-
 	STR.AddNotifCallback(BUZZ_BUTTON, buzzButton)
 
 	STR.AddToLayout(LayoutElement(IDP_COLUMN, None, "Control", children=[
 		resetBuzzer,
-		# activateBuzzer,
+		activateBuzzer,
 		validateQuestion,
 		invalidateQuestion
 		]))
 
 	STR.AddToLayout(songColumn)
+
+	STR.AddToLayout(
+			LayoutElement(
+				IDP_COLUMN,
+				None,
+				"Rules",
+				children=[
+					punishBuzzBeforeDingCheck,
+					separateResetAndActivateCheck,
+					songQuizzCheck,
+					gunForValidationCheck,
+					gunForInvalidationCheck,
+					gunForTooEarlyBuzzCheck
+				]
+			)
+		)
+
+	STR.AddToLayout(gunColumn)
 
 	STR.AddToLayout(startBridgeInitButton)
 	STR.AddToLayout(stopBridgeInitButton)

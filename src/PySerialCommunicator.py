@@ -18,7 +18,7 @@ class PySerial(ISerial):
 	def __init__(self, port:str) -> None:
 		super().__init__()
 		self.__port = port
-		self.__serial:serial.Serial = serial.Serial()
+		self.__serial:serial.Serial = serial.Serial(write_timeout=None)
 		self.__serial.port=port
 		self.__serial.baudrate=115200
 		self.__serial.setDTR(False)

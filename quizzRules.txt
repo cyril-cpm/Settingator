@@ -1,0 +1,18 @@
+Song Quizz.
+
+lire une chanson: tout le monde peu buzzer.
+Une fois le buzz, personne ne peu buzzer.
+Si validé, personne ne peu buzzer jusqu'au reset.
+Si non validé, jouer ayant faut en bloquer 2 secondes et tout le monde peu buzzer
+
+
+Question Quizz.
+
+lire une question. Tout le monde peu buzzer à partir du ding.
+Une fois le buzz, personne ne peu buzzer.
+Si validé, passer à la prochaine question.
+Si non validé, joueur ayant faux est bloqué 2 secondes et tout le monde peu buzzer
+Si buzz avant ding, lumlière rouge et bloquage deux secondes.
+
+
+Pistolets: Pour une invalidation, pour un buzz trop tôt et pour une validation.
