@@ -197,7 +197,7 @@ class Settingator:
 
 		self.__initCallback = callbackFunction
 
-		type = MessageType.ESP_NOW_START_INIT_BROADCASTED_SLAVE
+		type = MessageType.LINK_START_INIT_BROADCASTED_SLAVE
 		buffer = bytearray()
 		buffer.append(MessageControlFrame.START.value)
 		buffer.append(0x00)
@@ -214,7 +214,7 @@ class Settingator:
 
 		self.__initCallback = None
 
-		type = MessageType.ESP_NOW_STOP_INIT_BROADCASTED_SLAVE
+		type = MessageType.LINK_STOP_INIT_BROADCASTED_SLAVE
 		buffer = bytearray()
 		buffer.append(MessageControlFrame.START.value)
 		buffer.append(0x00)
