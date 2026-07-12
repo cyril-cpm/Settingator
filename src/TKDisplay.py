@@ -75,7 +75,7 @@ class TKElement(IElement):
 		self._element.delete('1.0', END)
 
 class ListBoxTKElement(TKElement):
-	def __init__(self, display, element, type, variable:Variable, style = None, styleName = "", index = 0, columns:list=[], displaycolumns:list=[]):
+	def __init__(self, display, element, type, variable:Variable, style = None, styleName = "", index = 0, columns:list=[], displaycolumns:list=[], tree=False):
 		super().__init__(display, element, type, variable, style, styleName, index)
 		self.__index = 0
 
@@ -86,12 +86,45 @@ class ListBoxTKElement(TKElement):
 
 		self._element['displaycolumns'] = displaycolumns
 
-
-		self._element.column("#0", width=0)
-		self._element.column("#0", stretch=NO)
+		if tree:
+			# Mode arbre : la colonne #0 porte la hierarchie -> visible.
+			self._element.heading("#0", text="Nœud")
+			self._element.column("#0", width=200, stretch=YES)
+		else:
+			self._element.column("#0", width=0)
+			self._element.column("#0", stretch=NO)
 
 	def SetDisplayColumns(self, displaycolumns) -> None:
 		self._element.config(displaycolumns=displaycolumns)
+
+	# --- API arbre ---
+
+	def ClearAll(self) -> None:
+		for iid in self._element.get_children():
+			self._element.delete(iid)
+
+	def InsertNode(self, parent, iid, text, values, tags) -> None:
+		self._element.insert(parent, 'end', iid, text=text, values=values, tags=tags)
+
+	def SetNode(self, iid, values, tags) -> None:
+		if self._element.exists(iid):
+			self._element.item(iid, values=values, tags=tags)
+
+	def HasItem(self, iid) -> bool:
+		return bool(self._element.exists(iid))
+
+	def ConfigTag(self, tag, color) -> None:
+		self._element.tag_configure(tag, background=color)
+
+	def SetHeight(self, nbRows:int) -> None:
+		self._element.configure(height=max(1, nbRows))
+
+	def OpenAll(self) -> None:
+		def _open(item):
+			for child in self._element.get_children(item):
+				self._element.item(child, open=True)
+				_open(child)
+		_open('')
 
 	def AddEntry(self, entry:dict):
 		if self._element:
@@ -295,8 +328,12 @@ class TKDisplay(IDisplay):
 
 				elif type == IDP_LISTBOX:
 					newElement = ttk.Treeview(parent)
-					tkElement = ListBoxTKElement(self, newElement, type, elementVariable, self.__style, styleName, columns=element.GetColumns(), displaycolumns=element.GetDisplayColumns())
+					tkElement = ListBoxTKElement(self, newElement, type, elementVariable, self.__style, styleName, columns=element.GetColumns(), displaycolumns=element.GetDisplayColumns(), tree=element.IsTree())
 					newElement.tag_bind('message', '<Double-1>', lambda event, w=weakMethod: w() and w()(None))
+
+					if element.IsTree():
+						# Selection d'un noeud -> callback(iid du noeud focus)
+						newElement.bind('<<TreeviewSelect>>', lambda event, w=weakMethod, t=newElement: w() and w()(t.focus()))
 
 				elif type == IDP_POPUP:
 					newElement:Toplevel = Toplevel(parent)

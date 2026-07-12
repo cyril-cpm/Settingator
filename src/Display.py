@@ -252,11 +252,12 @@ class LogElement(LayoutElement):
 			self.GetIElement().Insert(None, "\n" + text)
 
 class ListBoxElement(LayoutElement):
-	def __init__(self, name="", callback=None, stick="nsew", columns=None) -> None:
+	def __init__(self, name="", callback=None, stick="nsew", columns=None, tree=False) -> None:
 		super().__init__(IDP_LISTBOX, None, name, [], callback, stick)
 
 		self._columns = columns
 		self._displaycolumns:list = columns
+		self._tree = tree                    # True -> colonne #0 (hierarchie) visible
 
 	def AddEntry(self, entry:dict) -> None:
 		if self.GetIElement():
@@ -269,12 +270,44 @@ class ListBoxElement(LayoutElement):
 	def SetDisplayColumns(self, displayColumns) -> None:
 		if self.GetIElement():
 			self.GetIElement().SetDisplayColumns(displayColumns)
-	
+
 	def GetColumns(self) -> list:
 		return self._columns
 
 	def GetDisplayColumns(self) -> list:
 		return self._displaycolumns
+
+	def IsTree(self) -> bool:
+		return self._tree
+
+	# --- API arbre (delegue a l'IElement une fois rendu) ---
+
+	def ClearAll(self) -> None:
+		if self.GetIElement():
+			self.GetIElement().ClearAll()
+
+	def InsertNode(self, parent, iid, text, values, tags) -> None:
+		if self.GetIElement():
+			self.GetIElement().InsertNode(parent, iid, text, values, tags)
+
+	def SetNode(self, iid, values, tags) -> None:
+		if self.GetIElement():
+			self.GetIElement().SetNode(iid, values, tags)
+
+	def HasItem(self, iid) -> bool:
+		return self.GetIElement().HasItem(iid) if self.GetIElement() else False
+
+	def ConfigTag(self, tag, color) -> None:
+		if self.GetIElement():
+			self.GetIElement().ConfigTag(tag, color)
+
+	def OpenAll(self) -> None:
+		if self.GetIElement():
+			self.GetIElement().OpenAll()
+
+	def SetHeight(self, nbRows:int) -> None:
+		if self.GetIElement():
+			self.GetIElement().SetHeight(nbRows)
 
 class PopupElement(LayoutElement):
 	def __init__(self, name:str = "", children:list|None = None):

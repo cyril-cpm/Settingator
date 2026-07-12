@@ -33,7 +33,38 @@ class Settingator:
 		self.__display = display
 		self.__display.SetSlaveSettingsRef(self.__slaveSettings)
 		self.__linkInfo = None
-		self.__linkInfoLayout = LayoutElement(IDP_COLUMN, stick="e")
+		self.__linkTopoSig = None                                       # signature de structure (rebuild si elle change)
+		self.__linkTreeDirty = False                                    # l'arbre (Layout A) doit etre reconstruit
+
+		# ===== Layout A : arbre de topologie + panneau de detail =========
+		# (maitre-detail : selectionner un noeud affiche sa carte a droite)
+		self.__linkTreeLayout = ListBoxElement(name="Topologie", stick="nw",
+				columns=["Mode", "SNR B", "SNR P", "Age"], tree=True,
+				callback=self.__onLinkTreeSelect)
+		self.__linkDetailLayout = LayoutElement(IDP_COLUMN, stick="nw")  # recoit la carte du noeud selectionne
+		self.__linkDetailCurrentMac = None
+		self.__linkDetailCurrentDict = None
+		self.__linkLayoutA = LayoutElement(IDP_FRAME)
+		self.__linkLayoutA.AppendElement(self.__linkTreeLayout)
+		self.__linkLayoutA.AppendElement(self.__linkDetailLayout)
+
+		# ===== Layout B : cartes imbriquees ==============================
+		self.__linkCardsLayout = LayoutElement(IDP_COLUMN, stick="nw")
+
+		# ===== Layout C : arbre genealogique (COLUMN/FRAME alternes) ======
+		# Parent en haut, enfants alignes horizontalement dessous. Checkbox
+		# globale : vue compacte (puces colorees) <-> details complets (cartes).
+		self.__linkCDetailed = False
+		self.__linkCTreeContainer = LayoutElement(IDP_FRAME)             # racines cote a cote
+		self.__linkCCheck = LayoutElement(IDP_CHECK, "0", "Afficher tous les détails",
+				callback=self.__onLinkCDetailToggle)
+		self.__linkLayoutC = LayoutElement(IDP_COLUMN)
+		self.__linkLayoutC.AppendElement(self.__linkCCheck)
+		self.__linkLayoutC.AppendElement(self.__linkCTreeContainer)
+
+		# --- Choix de la vue : (dé)commenter UNE des lignes plus bas
+		#     (cf. self.__slaveLayout.AppendElement(...) juste apres) -----
+
 		self.__layout = LayoutElement(IDP_FRAME)
 		self.__slaveLayout = LayoutElement(IDP_FRAME)
 
@@ -43,7 +74,10 @@ class Settingator:
 		self.__display.AddLayout(mainLayout)
 
 		mainLayout.AppendElement(leftLayout)
-		self.__slaveLayout.AppendElement(self.__linkInfoLayout)
+		# >>> VUE DES LIAISONS : (dé)commenter UNE des trois <<<
+		# self.__slaveLayout.AppendElement(self.__linkLayoutA)        # Layout A : arbre + detail sur selection
+		# self.__slaveLayout.AppendElement(self.__linkCardsLayout)  # Layout B : cartes imbriquees
+		self.__slaveLayout.AppendElement(self.__linkLayoutC)      # Layout C : arbre genealogique
 
 		leftLayout.AppendElement(self.__layout)
 		leftLayout.AppendElement(self.__slaveLayout)
@@ -429,23 +463,28 @@ class Settingator:
 			return "#00FF00"		# vert    : correct
 		return "#00FFFF"			# bleu    : excellent
 
-	def __setLabelBGColor(self, labelElement, colorHex):
-		# Le style n'existe qu'une fois l'element rendu par le display :
-		# on ignore silencieusement tant que l'IElement n'est pas construit.
+	def __setLabelBGColor(self, labelElement, colorHex) -> bool:
+		# Le style n'existe qu'une fois l'element rendu par le display : on ignore
+		# tant que l'IElement n'est pas construit (et on signale l'echec pour
+		# reessayer au cycle suivant plutot que de figer l'etat couleur).
 		iel = labelElement.GetIElement()
 		if iel:
 			iel.SetBGColor(colorHex)
+			return True
+		return False
 
-	def __buildPeerCard(self, bridgeMac:str, peerMac:str, slaveID:int, linkType:int) -> dict:
-		# Construit la "carte" d'un peer et memorise les references des widgets
-		# a rafraichir. Les donnees numeriques sont stockees dans le meme dict.
-		peerDict = dict(
-				color=None, bridgeColor=None, peerColor=None,
-				slaveID=slaveID, linkType=linkType,
-				bridgeRssi=0, bridgeNoiseFloor=0, bridgeDeltaMs=0,
-				peerRssi=0, peerNoiseFloor=0, peerDeltaMs=0)
+	def __buildPeerCard(self, peerDict:dict, bridgeMac:str, peerMac:str) -> LayoutElement:
+		# (Re)construit la "carte" d'un peer et memorise les references des
+		# widgets a rafraichir dans peerDict (les donnees numeriques y sont deja).
+		slaveID = peerDict["slaveID"]
+		linkType = peerDict["linkType"]
+		peerDict["bridgeColor"] = None   # force la re-application des couleurs
+		peerDict["peerColor"] = None
 
-		card = LayoutElement(IDP_COLUMN, None, "Slave " + str(slaveID))
+		# Ce slave embarque-t-il un bridge ? (son MAC == MAC d'un bridge) -> marqueur
+		isHost = peerMac in self.__linkInfo
+		card = LayoutElement(IDP_COLUMN, None,
+				"Slave " + str(slaveID) + ("  ⌂" if isHost else ""))
 
 		# --- En-tete : adresses MAC des deux extremites du lien ---
 		header = LayoutElement(IDP_COLUMN, None, "Liaison")
@@ -504,13 +543,24 @@ class Settingator:
 		modeRow.AppendElement(modeButton)
 		card.AppendElement(modeRow)
 
+		# Sous-boite (vide au depart) : recevra les cartes des sous-slaves si ce
+		# slave embarque un bridge (peerMac == bridgeMac d'un bridge enfant).
+		peerDict["subBox"] = LayoutElement(IDP_COLUMN)
+		card.AppendElement(peerDict["subBox"])
+
 		peerDict["card"] = card
-		return peerDict
+		return card
 
 	def __refreshPeerMetrics(self, peerDict:dict):
 		# Pousse les valeurs courantes dans les labels et renvoie les deux SNR.
 		bridgeSNR = peerDict["bridgeRssi"] - peerDict["bridgeNoiseFloor"]
 		peerSNR   = peerDict["peerRssi"] - peerDict["peerNoiseFloor"]
+
+		# La carte n'existe pas tant que la vue n'a pas ete (re)construite.
+		if "bridgeSnrLabel" not in peerDict:
+			return bridgeSNR, peerSNR
+
+		peerDict["modeLabel"].UpdateValue("Lien : " + self.__linkModeName(peerDict["linkType"]))
 
 		peerDict["bridgeRssiLabel"].UpdateValue("RSSI   " + str(peerDict["bridgeRssi"]) + " dBm")
 		peerDict["bridgeFloorLabel"].UpdateValue("Floor  " + str(peerDict["bridgeNoiseFloor"]) + " dBm")
@@ -527,6 +577,9 @@ class Settingator:
 	def __applyLinkColor(self, peerDict:dict, bridgeSNR:int, peerSNR:int):
 		# Coloration par extremite (on voit ainsi quel cote decroche).
 		# Lien fige (donnees trop vieilles) -> gris.
+		if "bridgeSnrLabel" not in peerDict:
+			return
+
 		stale = peerDict["bridgeDeltaMs"] > 12500 or peerDict["peerDeltaMs"] > 12500
 
 		if stale:
@@ -536,12 +589,12 @@ class Settingator:
 			peerColor   = self.__snrColor(peerSNR)
 
 		if peerDict.get("bridgeColor") != bridgeColor:
-			self.__setLabelBGColor(peerDict["bridgeSnrLabel"], bridgeColor)
-			peerDict["bridgeColor"] = bridgeColor
+			if self.__setLabelBGColor(peerDict["bridgeSnrLabel"], bridgeColor):
+				peerDict["bridgeColor"] = bridgeColor
 
 		if peerDict.get("peerColor") != peerColor:
-			self.__setLabelBGColor(peerDict["peerSnrLabel"], peerColor)
-			peerDict["peerColor"] = peerColor
+			if self.__setLabelBGColor(peerDict["peerSnrLabel"], peerColor):
+				peerDict["peerColor"] = peerColor
 
 	def __toggleLinkMode(self, bridgeMac:str, peerDict:dict):
 		# Bascule optimiste ESP-NOW <-> LoRa. L'affichage sera de toute facon
@@ -584,9 +637,377 @@ class Settingator:
 		# self.Write(Message(buffer))
 		pass
 
+	# ---- Topologie (arbre bridges/slaves derive des adresses MAC) --------
+
+	def __linkPeerMacs(self) -> set:
+		macs = set()
+		for bridgeMac, bridgeDict in self.__linkInfo.items():
+			if bridgeMac == "last_updated":
+				continue
+			for peerMac in bridgeDict:
+				if peerMac != "nbPeer":
+					macs.add(peerMac)
+		return macs
+
+	def __linkRootBridges(self) -> list:
+		# Un bridge est racine si son MAC n'apparait comme peer nulle part
+		# (il est relie directement au PC en UART).
+		peerMacs = self.__linkPeerMacs()
+		roots = []
+		for bridgeMac in self.__linkInfo:
+			if bridgeMac != "last_updated" and bridgeMac not in peerMacs:
+				roots.append(bridgeMac)
+		return roots
+
+	def __linkTopologySignature(self):
+		# Change des qu'un couple (bridge, peer) apparait/disparait -> declenche
+		# une reconstruction des vues (pas a chaque rafraichissement metrique).
+		pairs = set()
+		for bridgeMac, bridgeDict in self.__linkInfo.items():
+			if bridgeMac == "last_updated":
+				continue
+			for peerMac in bridgeDict:
+				if peerMac != "nbPeer":
+					pairs.add((bridgeMac, peerMac))
+		return frozenset(pairs)
+
+	def __ensurePeerData(self, bridgeMac:str, peerMac:str, slaveID:int, linkType:int) -> dict:
+		# Cree/retourne le dict DONNEES d'un peer (sans widgets : ceux-ci sont
+		# (re)construits par __rebuildLinkCards quand la structure change).
+		bridgeDict = self.__linkInfo[bridgeMac]
+		if peerMac not in bridgeDict:
+			bridgeDict[peerMac] = dict(
+					slaveID=slaveID, linkType=linkType,
+					bridgeColor=None, peerColor=None,
+					bridgeRssi=0, bridgeNoiseFloor=0, bridgeDeltaMs=0,
+					peerRssi=0, peerNoiseFloor=0, peerDeltaMs=0)
+		peerDict = bridgeDict[peerMac]
+		peerDict["slaveID"] = slaveID
+		peerDict["linkType"] = linkType
+		return peerDict
+
+	# ---- Layout B : cartes imbriquees ------------------------------------
+
+	def __destroyLinkCards(self):
+		# Detruit reellement les widgets des cartes racines (la destruction tk
+		# est recursive -> les cartes imbriquees partent avec) puis vide le layout.
+		for child in list(self.__linkCardsLayout.GetChildren() or []):
+			iel = child.GetIElement()
+			if iel is not None:
+				try:
+					iel.GetElement().destroy()
+				except Exception:
+					pass
+			self.__linkCardsLayout.RemoveElement(child)
+
+	def __appendBridgeCards(self, bridgeMac:str, container:LayoutElement, visited:set):
+		if bridgeMac in visited:
+			return
+		visited.add(bridgeMac)
+
+		bridgeDict = self.__linkInfo.get(bridgeMac)
+		if not bridgeDict:
+			return
+
+		peers = [(pm, bridgeDict[pm]) for pm in bridgeDict if pm != "nbPeer"]
+		peers.sort(key=lambda t: t[1].get("slaveID", 0))
+
+		for peerMac, peerDict in peers:
+			card = self.__buildPeerCard(peerDict, bridgeMac, peerMac)
+			container.AppendElement(card)
+
+			# Ce slave embarque-t-il un bridge ? (son MAC == MAC d'un bridge)
+			if peerMac in self.__linkInfo and peerMac not in visited:
+				self.__appendBridgeCards(peerMac, peerDict["subBox"], visited)
+
+	def __rebuildLinkCards(self):
+		# Reconstruit toute la hierarchie de cartes depuis __linkInfo.
+		# Ne fait rien si la Layout B n'est pas la vue active (evite de creer
+		# des cartes fantomes et de voler les references widgets a la Layout A).
+		if self.__linkCardsLayout.GetParent() is None:
+			return
+
+		self.__destroyLinkCards()
+		visited = set()
+		for bridgeMac in sorted(self.__linkRootBridges()):
+			box = LayoutElement(IDP_COLUMN, None, "Bridge racine  " + bridgeMac)
+			self.__linkCardsLayout.AppendElement(box)
+			self.__appendBridgeCards(bridgeMac, box, visited)
+
+	# ---- Layout A : arbre de topologie -----------------------------------
+
+	def __linkNodeValues(self, peerDict:dict) -> tuple:
+		bridgeSNR = peerDict["bridgeRssi"] - peerDict["bridgeNoiseFloor"]
+		peerSNR   = peerDict["peerRssi"] - peerDict["peerNoiseFloor"]
+		age = max(peerDict["bridgeDeltaMs"], peerDict["peerDeltaMs"]) / 1000.0
+		return (self.__linkModeName(peerDict["linkType"]),
+				str(bridgeSNR), str(peerSNR), f"{age:.1f}s")
+
+	def __linkNodeHealthTag(self, peerDict:dict) -> str:
+		if peerDict["bridgeDeltaMs"] > 12500 or peerDict["peerDeltaMs"] > 12500:
+			return "h_grey"
+		worst = min(peerDict["bridgeRssi"] - peerDict["bridgeNoiseFloor"],
+					peerDict["peerRssi"] - peerDict["peerNoiseFloor"])
+		if worst <= 10:
+			return "h_red"
+		elif worst <= 15:
+			return "h_orange"
+		elif worst <= 25:
+			return "h_green"
+		return "h_blue"
+
+	def __insertBridgeNodes(self, bridgeMac:str, parentIid:str, visited:set) -> int:
+		if bridgeMac in visited:
+			return 0
+		visited.add(bridgeMac)
+
+		bridgeDict = self.__linkInfo.get(bridgeMac)
+		if not bridgeDict:
+			return 0
+
+		count = 0
+		peers = [(pm, bridgeDict[pm]) for pm in bridgeDict if pm != "nbPeer"]
+		peers.sort(key=lambda t: t[1].get("slaveID", 0))
+
+		for peerMac, peerDict in peers:
+			isHost = peerMac in self.__linkInfo
+			text = "Slave " + str(peerDict["slaveID"]) + ("  ⌂" if isHost else "")
+			self.__linkTreeLayout.InsertNode(parentIid, peerMac, text,
+					self.__linkNodeValues(peerDict), (self.__linkNodeHealthTag(peerDict),))
+			peerDict["treeIid"] = peerMac
+			count += 1
+
+			if isHost and peerMac not in visited:
+				count += self.__insertBridgeNodes(peerMac, peerMac, visited)
+
+		return count
+
+	def __rebuildLinkTree(self):
+		# Reconstruit l'arbre depuis __linkInfo (differe tant que le Treeview
+		# n'est pas rendu : on reessaie au cycle suivant).
+		if self.__linkTreeLayout.GetIElement() is None:
+			return
+
+		self.__linkTreeLayout.ClearAll()
+		for tag, color in (("h_blue", "#00FFFF"), ("h_green", "#00FF00"),
+						   ("h_orange", "#FFD476"), ("h_red", "#FF5050"), ("h_grey", "#B9B9B9")):
+			self.__linkTreeLayout.ConfigTag(tag, color)
+
+		count = 0
+		visited = set()
+		for bridgeMac in sorted(self.__linkRootBridges()):
+			biid = "b:" + bridgeMac
+			self.__linkTreeLayout.InsertNode("", biid, "⌂ Bridge racine  " + bridgeMac,
+					("UART", "", "", ""), ())
+			count += 1
+			count += self.__insertBridgeNodes(bridgeMac, biid, visited)
+
+		self.__linkTreeLayout.OpenAll()
+		self.__linkTreeLayout.SetHeight(count)
+		self.__linkTreeDirty = False
+
+	def __refreshLinkTreeValues(self):
+		if self.__linkTreeLayout.GetIElement() is None:
+			return
+		for bridgeMac, bridgeDict in self.__linkInfo.items():
+			if bridgeMac == "last_updated":
+				continue
+			for peerMac in bridgeDict:
+				if peerMac == "nbPeer":
+					continue
+				peerDict = bridgeDict[peerMac]
+				iid = peerDict.get("treeIid")
+				if iid and self.__linkTreeLayout.HasItem(iid):
+					self.__linkTreeLayout.SetNode(iid,
+							self.__linkNodeValues(peerDict),
+							(self.__linkNodeHealthTag(peerDict),))
+
+	# ---- Layout A : panneau de detail (carte du noeud selectionne) -------
+
+	def __clearDetail(self):
+		# Detruit la carte de detail affichee et oublie ses references widgets
+		# (pour que le rafraichissement ne cible plus des widgets detruits).
+		for child in list(self.__linkDetailLayout.GetChildren() or []):
+			iel = child.GetIElement()
+			if iel is not None:
+				try:
+					iel.GetElement().destroy()
+				except Exception:
+					pass
+			self.__linkDetailLayout.RemoveElement(child)
+
+		if self.__linkDetailCurrentDict is not None:
+			for key in ("bridgeRssiLabel", "bridgeFloorLabel", "bridgeSnrLabel", "bridgeAgeLabel",
+						"peerRssiLabel", "peerFloorLabel", "peerSnrLabel", "peerAgeLabel",
+						"modeLabel", "card", "subBox"):
+				self.__linkDetailCurrentDict.pop(key, None)
+
+		self.__linkDetailCurrentMac = None
+		self.__linkDetailCurrentDict = None
+
+	def __setDetailNode(self, peerMac:str):
+		# Retrouve le peer par son MAC dans toute la topologie, construit sa carte
+		# et l'affiche dans le panneau de detail (une seule carte a la fois).
+		target = None
+		bridgeMac = None
+		for bMac, bridgeDict in self.__linkInfo.items():
+			if bMac == "last_updated":
+				continue
+			if peerMac in bridgeDict and peerMac != "nbPeer":
+				target = bridgeDict[peerMac]
+				bridgeMac = bMac
+				break
+
+		if target is None or peerMac == self.__linkDetailCurrentMac:
+			return
+
+		self.__clearDetail()
+		card = self.__buildPeerCard(target, bridgeMac, peerMac)
+		self.__linkDetailLayout.AppendElement(card)
+		self.__linkDetailCurrentMac = peerMac
+		self.__linkDetailCurrentDict = target
+
+	def __onLinkTreeSelect(self, iid):
+		# Callback de selection de l'arbre. iid == peerMac d'un slave, ou
+		# "b:<mac>" pour un noeud bridge (ignore : pas de carte de lien).
+		if not iid or iid.startswith("b:"):
+			return
+		self.__setDetailNode(iid)
+
+	# ---- Layout C : arbre genealogique (COLUMN/FRAME alternes) -----------
+
+	def __linkHealthHex(self, peerDict:dict) -> str:
+		if peerDict["bridgeDeltaMs"] > 12500 or peerDict["peerDeltaMs"] > 12500:
+			return "#B9B9B9"
+		worst = min(peerDict["bridgeRssi"] - peerDict["bridgeNoiseFloor"],
+					peerDict["peerRssi"] - peerDict["peerNoiseFloor"])
+		return self.__snrColor(worst)
+
+	def __chipTextC(self, peerDict:dict, isHost:bool) -> str:
+		bridgeSNR = peerDict["bridgeRssi"] - peerDict["bridgeNoiseFloor"]
+		peerSNR   = peerDict["peerRssi"] - peerDict["peerNoiseFloor"]
+		age = max(peerDict["bridgeDeltaMs"], peerDict["peerDeltaMs"]) / 1000.0
+		return (" Slave " + str(peerDict["slaveID"]) + ("  ⌂" if isHost else "") +
+				"   " + self.__linkModeName(peerDict["linkType"]) +
+				"   " + str(bridgeSNR) + "/" + str(peerSNR) + " dB" +
+				"   " + f"{age:.1f}s ")
+
+	def __stripAllPeerWidgetRefs(self):
+		# Oublie toutes les references widgets memorisees dans les peerDict
+		# (appele avant une reconstruction complete d'une vue).
+		keys = ("bridgeRssiLabel", "bridgeFloorLabel", "bridgeSnrLabel", "bridgeAgeLabel",
+				"peerRssiLabel", "peerFloorLabel", "peerSnrLabel", "peerAgeLabel",
+				"modeLabel", "card", "subBox", "chipCLabel", "chipCColor")
+		for bridgeMac, bridgeDict in self.__linkInfo.items():
+			if bridgeMac == "last_updated":
+				continue
+			for peerMac in bridgeDict:
+				if peerMac != "nbPeer":
+					for key in keys:
+						bridgeDict[peerMac].pop(key, None)
+
+	def __slaveNodeC(self, bridgeMac:str, peerMac:str, peerDict:dict) -> LayoutElement:
+		# Un slave : carte complete (mode detaille) ou puce coloree (mode compact).
+		if self.__linkCDetailed:
+			return self.__buildPeerCard(peerDict, bridgeMac, peerMac)
+
+		isHost = peerMac in self.__linkInfo
+		chip = LayoutElement(IDP_TEXT, self.__chipTextC(peerDict, isHost), stick="nsew")
+		peerDict["chipCLabel"] = chip
+		peerDict["chipCColor"] = None
+		return chip
+
+	def __buildSlaveSubtreeC(self, bridgeMac:str, peerMac:str, peerDict:dict, visited:set) -> LayoutElement:
+		# COLUMN = [ noeud slave, (si hote) FRAME des sous-slaves cote a cote ]
+		col = LayoutElement(IDP_COLUMN)
+		col.AppendElement(self.__slaveNodeC(bridgeMac, peerMac, peerDict))
+
+		if peerMac in self.__linkInfo and peerMac not in visited:
+			visited.add(peerMac)                          # ce slave embarque un bridge
+			embeddedDict = self.__linkInfo[peerMac]
+			subpeers = [(pm, embeddedDict[pm]) for pm in embeddedDict if pm != "nbPeer"]
+			subpeers.sort(key=lambda t: t[1].get("slaveID", 0))
+			if subpeers:
+				childrenFrame = LayoutElement(IDP_FRAME)
+				for spm, spd in subpeers:
+					childrenFrame.AppendElement(self.__buildSlaveSubtreeC(peerMac, spm, spd, visited))
+				col.AppendElement(childrenFrame)
+
+		return col
+
+	def __buildBridgeSubtreeC(self, bridgeMac:str, visited:set) -> LayoutElement:
+		# COLUMN = [ boite bridge racine, FRAME des slaves cote a cote ]
+		visited.add(bridgeMac)
+		col = LayoutElement(IDP_COLUMN)
+
+		bridgeBox = LayoutElement(IDP_COLUMN, None, "⌂ Bridge racine")
+		bridgeBox.AppendElement(LayoutElement(IDP_TEXT, bridgeMac, stick="w"))
+		col.AppendElement(bridgeBox)
+
+		bridgeDict = self.__linkInfo.get(bridgeMac)
+		peers = [(pm, bridgeDict[pm]) for pm in bridgeDict if pm != "nbPeer"] if bridgeDict else []
+		peers.sort(key=lambda t: t[1].get("slaveID", 0))
+		if peers:
+			childrenFrame = LayoutElement(IDP_FRAME)
+			for pm, pd in peers:
+				childrenFrame.AppendElement(self.__buildSlaveSubtreeC(bridgeMac, pm, pd, visited))
+			col.AppendElement(childrenFrame)
+
+		return col
+
+	def __destroyLinkTreeC(self):
+		for child in list(self.__linkCTreeContainer.GetChildren() or []):
+			iel = child.GetIElement()
+			if iel is not None:
+				try:
+					iel.GetElement().destroy()
+				except Exception:
+					pass
+			self.__linkCTreeContainer.RemoveElement(child)
+
+	def __rebuildLinkTreeC(self):
+		# Ne fait rien si la Layout C n'est pas la vue active.
+		if self.__linkLayoutC.GetParent() is None:
+			return
+
+		self.__destroyLinkTreeC()
+		self.__stripAllPeerWidgetRefs()
+		visited = set()
+		for bridgeMac in sorted(self.__linkRootBridges()):
+			self.__linkCTreeContainer.AppendElement(self.__buildBridgeSubtreeC(bridgeMac, visited))
+
+	def __refreshLinkCChips(self):
+		# Rafraichit les puces (mode compact uniquement).
+		if self.__linkLayoutC.GetParent() is None or self.__linkCDetailed:
+			return
+		for bridgeMac, bridgeDict in self.__linkInfo.items():
+			if bridgeMac == "last_updated":
+				continue
+			for peerMac in bridgeDict:
+				if peerMac == "nbPeer":
+					continue
+				peerDict = bridgeDict[peerMac]
+				chip = peerDict.get("chipCLabel")
+				if chip is None:
+					continue
+				isHost = peerMac in self.__linkInfo
+				chip.UpdateValue(self.__chipTextC(peerDict, isHost))
+				color = self.__linkHealthHex(peerDict)
+				if peerDict.get("chipCColor") != color:
+					if self.__setLabelBGColor(chip, color):
+						peerDict["chipCColor"] = color
+
+	def __onLinkCDetailToggle(self, value):
+		# Checkbox globale : bascule compact <-> details complets, puis rebuild.
+		self.__linkCDetailed = str(value) not in ("", "0", "False", "false", "None")
+		self.__rebuildLinkTreeC()
+
 	def __updateLinkInfo(self):
 		if not self.__linkInfo:
 			return
+
+		if self.__linkTreeDirty:
+			self.__rebuildLinkTree()
 
 		currentTimeStamp = int(time.time() * 1000)
 
@@ -610,6 +1031,9 @@ class Settingator:
 
 							bridgeSNR, peerSNR = self.__refreshPeerMetrics(peerDict)
 							self.__applyLinkColor(peerDict, bridgeSNR, peerSNR)
+
+			self.__refreshLinkTreeValues()
+			self.__refreshLinkCChips()
 
 	def __treatLinkInfoMsg(self, buffer:bytearray):
 		nbPeer = buffer[6]
@@ -635,16 +1059,7 @@ class Settingator:
 				match linkType:
 					case LinkType.ESP_NOW.value | LinkType.LORA.value:
 
-						if not peerMac in self.__linkInfo[bridgeMac]:
-							peerDict = self.__buildPeerCard(bridgeMac, peerMac, slaveID, linkType)
-							self.__linkInfo[bridgeMac][peerMac] = peerDict
-							self.__linkInfoLayout.AppendElement(peerDict["card"])
-
-						peerDict = self.__linkInfo[bridgeMac][peerMac]
-
-						peerDict["slaveID"] = slaveID
-						peerDict["linkType"] = linkType
-						peerDict["modeLabel"].UpdateValue("Lien : " + self.__linkModeName(linkType))
+						peerDict = self.__ensurePeerData(bridgeMac, peerMac, slaveID, linkType)
 
 						peerDict["bridgeRssi"], _ = GetInt8ValueFromBuffer(buffer[index + 9:])
 						peerDict["bridgeNoiseFloor"], _ = GetInt8ValueFromBuffer(buffer[index + 10:])
@@ -660,6 +1075,14 @@ class Settingator:
 						pass
 
 			index += peerInfoSize
+
+		# Reconstruit les vues uniquement si la structure (topologie) a change.
+		sig = self.__linkTopologySignature()
+		if sig != self.__linkTopoSig:
+			self.__linkTopoSig = sig
+			self.__rebuildLinkCards()
+			self.__linkTreeDirty = True
+			self.__rebuildLinkTreeC()
 
 
 
