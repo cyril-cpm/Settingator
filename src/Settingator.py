@@ -6,6 +6,7 @@ from Display import *
 import queue
 import time
 import threading
+import traceback
 from Log import Logger
 
 def mac_to_str(mac: bytearray | bytes) -> str:
@@ -123,13 +124,23 @@ class Settingator:
 				print("Slave request recved")
 
 			elif msg.GetType() == MessageType.LINK_INFO:
-				print("Link Info received")				
-				self.__treatLinkInfoMsg(msg.GetByteArray())
+				print("Link Info received")
+				# Garde-fou : une trame LinkInfo malformee ne doit pas tuer
+				# toute la GUI (la boucle principale n'a pas de try/except).
+				try:
+					self.__treatLinkInfoMsg(msg.GetByteArray())
+				except Exception:
+					Logger.Log("Exception dans __treatLinkInfoMsg", "LINK", "ERROR")
+					traceback.print_exc()
 
 
 			self.__communicator.Flush()
 
-		self.__updateLinkInfo()
+		try:
+			self.__updateLinkInfo()
+		except Exception:
+			Logger.Log("Exception dans __updateLinkInfo", "LINK", "ERROR")
+			traceback.print_exc()
 
 		self.__display.Update()
 		
@@ -395,10 +406,188 @@ class Settingator:
 
 		return msgIndex
 
+	# ------------------------------------------------------------------ #
+	#  Affichage des liaisons (LinkInfo)                                  #
+	# ------------------------------------------------------------------ #
+
+	def __linkModeName(self, linkType:int) -> str:
+		if linkType == LinkType.ESP_NOW.value:
+			return "ESP-NOW"
+		elif linkType == LinkType.LORA.value:
+			return "LoRa"
+		elif linkType == LinkType.UART.value:
+			return "UART"
+		return "?"
+
+	def __snrColor(self, snr:int) -> str:
+		# Code couleur selon la qualité du lien (SNR = RSSI - noise floor)
+		if snr <= 10:
+			return "#FF5050"		# rouge   : critique
+		elif snr <= 15:
+			return "#FFD476"		# orange  : faible
+		elif snr <= 25:
+			return "#00FF00"		# vert    : correct
+		return "#00FFFF"			# bleu    : excellent
+
+	def __setLabelBGColor(self, labelElement, colorHex):
+		# Le style n'existe qu'une fois l'element rendu par le display :
+		# on ignore silencieusement tant que l'IElement n'est pas construit.
+		iel = labelElement.GetIElement()
+		if iel:
+			iel.SetBGColor(colorHex)
+
+	def __buildPeerCard(self, bridgeMac:str, peerMac:str, slaveID:int, linkType:int) -> dict:
+		# Construit la "carte" d'un peer et memorise les references des widgets
+		# a rafraichir. Les donnees numeriques sont stockees dans le meme dict.
+		peerDict = dict(
+				color=None, bridgeColor=None, peerColor=None,
+				slaveID=slaveID, linkType=linkType,
+				bridgeRssi=0, bridgeNoiseFloor=0, bridgeDeltaMs=0,
+				peerRssi=0, peerNoiseFloor=0, peerDeltaMs=0)
+
+		card = LayoutElement(IDP_COLUMN, None, "Slave " + str(slaveID))
+
+		# --- En-tete : adresses MAC des deux extremites du lien ---
+		header = LayoutElement(IDP_COLUMN, None, "Liaison")
+
+		bridgeRow = LayoutElement(IDP_FRAME)
+		bridgeRow.AppendElement(LayoutElement(IDP_TEXT, "Bridge", stick="w"))
+		bridgeRow.AppendElement(LayoutElement(IDP_TEXT, bridgeMac, stick="w"))
+
+		peerRow = LayoutElement(IDP_FRAME)
+		peerRow.AppendElement(LayoutElement(IDP_TEXT, "Peer", stick="w"))
+		peerRow.AppendElement(LayoutElement(IDP_TEXT, peerMac + "  (id " + str(slaveID) + ")", stick="w"))
+
+		header.AppendElement(bridgeRow)
+		header.AppendElement(peerRow)
+		card.AppendElement(header)
+
+		# --- Metriques radio : une colonne par extremite du lien ---
+		metrics = LayoutElement(IDP_FRAME)
+
+		bridgeBox = LayoutElement(IDP_COLUMN, None, "Cote Bridge")
+		peerDict["bridgeRssiLabel"]  = LayoutElement(IDP_TEXT, "", stick="w")
+		peerDict["bridgeFloorLabel"] = LayoutElement(IDP_TEXT, "", stick="w")
+		peerDict["bridgeSnrLabel"]   = LayoutElement(IDP_TEXT, "", stick="w")
+		peerDict["bridgeAgeLabel"]   = LayoutElement(IDP_TEXT, "", stick="w")
+		for key in ("bridgeRssiLabel", "bridgeFloorLabel", "bridgeSnrLabel", "bridgeAgeLabel"):
+			bridgeBox.AppendElement(peerDict[key])
+
+		peerBox = LayoutElement(IDP_COLUMN, None, "Cote Peer")
+		peerDict["peerRssiLabel"]  = LayoutElement(IDP_TEXT, "", stick="w")
+		peerDict["peerFloorLabel"] = LayoutElement(IDP_TEXT, "", stick="w")
+		peerDict["peerSnrLabel"]   = LayoutElement(IDP_TEXT, "", stick="w")
+		peerDict["peerAgeLabel"]   = LayoutElement(IDP_TEXT, "", stick="w")
+		for key in ("peerRssiLabel", "peerFloorLabel", "peerSnrLabel", "peerAgeLabel"):
+			peerBox.AppendElement(peerDict[key])
+
+		metrics.AppendElement(bridgeBox)
+		metrics.AppendElement(peerBox)
+		card.AppendElement(metrics)
+
+		# --- Barre "mode de communication" : etat courant + action ---
+		modeRow = LayoutElement(IDP_FRAME)
+		peerDict["modeLabel"] = LayoutElement(IDP_TEXT, "Lien : " + self.__linkModeName(linkType), stick="w")
+		modeRow.AppendElement(peerDict["modeLabel"])
+
+		# Espace cliquable pour basculer le mode de communication a la volee.
+		# IDP_BUTTON convient. Son libelle (text=name) est statique : l'etat
+		# courant est donc affiche dans "modeLabel" ci-dessus (mis a jour
+		# dynamiquement a chaque trame LinkInfo et a chaque bascule).
+		modeButton = LayoutElement(
+				IDP_BUTTON,
+				None,
+				"\u21C4 Changer de mode",
+				callback=lambda value, bm=bridgeMac, pd=peerDict:
+					self.__toggleLinkMode(bm, pd)
+			)
+		modeRow.AppendElement(modeButton)
+		card.AppendElement(modeRow)
+
+		peerDict["card"] = card
+		return peerDict
+
+	def __refreshPeerMetrics(self, peerDict:dict):
+		# Pousse les valeurs courantes dans les labels et renvoie les deux SNR.
+		bridgeSNR = peerDict["bridgeRssi"] - peerDict["bridgeNoiseFloor"]
+		peerSNR   = peerDict["peerRssi"] - peerDict["peerNoiseFloor"]
+
+		peerDict["bridgeRssiLabel"].UpdateValue("RSSI   " + str(peerDict["bridgeRssi"]) + " dBm")
+		peerDict["bridgeFloorLabel"].UpdateValue("Floor  " + str(peerDict["bridgeNoiseFloor"]) + " dBm")
+		peerDict["bridgeSnrLabel"].UpdateValue("SNR    " + str(bridgeSNR) + " dB")
+		peerDict["bridgeAgeLabel"].UpdateValue("Age    " + str(peerDict["bridgeDeltaMs"]) + " ms")
+
+		peerDict["peerRssiLabel"].UpdateValue("RSSI   " + str(peerDict["peerRssi"]) + " dBm")
+		peerDict["peerFloorLabel"].UpdateValue("Floor  " + str(peerDict["peerNoiseFloor"]) + " dBm")
+		peerDict["peerSnrLabel"].UpdateValue("SNR    " + str(peerSNR) + " dB")
+		peerDict["peerAgeLabel"].UpdateValue("Age    " + str(peerDict["peerDeltaMs"]) + " ms")
+
+		return bridgeSNR, peerSNR
+
+	def __applyLinkColor(self, peerDict:dict, bridgeSNR:int, peerSNR:int):
+		# Coloration par extremite (on voit ainsi quel cote decroche).
+		# Lien fige (donnees trop vieilles) -> gris.
+		stale = peerDict["bridgeDeltaMs"] > 12500 or peerDict["peerDeltaMs"] > 12500
+
+		if stale:
+			bridgeColor = peerColor = "#B9B9B9"
+		else:
+			bridgeColor = self.__snrColor(bridgeSNR)
+			peerColor   = self.__snrColor(peerSNR)
+
+		if peerDict.get("bridgeColor") != bridgeColor:
+			self.__setLabelBGColor(peerDict["bridgeSnrLabel"], bridgeColor)
+			peerDict["bridgeColor"] = bridgeColor
+
+		if peerDict.get("peerColor") != peerColor:
+			self.__setLabelBGColor(peerDict["peerSnrLabel"], peerColor)
+			peerDict["peerColor"] = peerColor
+
+	def __toggleLinkMode(self, bridgeMac:str, peerDict:dict):
+		# Bascule optimiste ESP-NOW <-> LoRa. L'affichage sera de toute facon
+		# recale sur le mode reellement rapporte par le bridge a la prochaine
+		# trame LinkInfo (cf. __treatLinkInfoMsg).
+		current = peerDict.get("linkType", LinkType.ESP_NOW.value)
+		if current == LinkType.ESP_NOW.value:
+			newLinkType = LinkType.LORA.value
+		else:
+			newLinkType = LinkType.ESP_NOW.value
+
+		peerDict["linkType"] = newLinkType
+		peerDict["modeLabel"].UpdateValue("Lien : " + self.__linkModeName(newLinkType))
+
+		Logger.Log("Changement de mode demande pour slave " + str(peerDict.get("slaveID")) +
+				" -> " + self.__linkModeName(newLinkType), "LINK", "INFO")
+
+		self.__sendLinkModeChange(bridgeMac, peerDict.get("slaveID"), newLinkType)
+
+	def __sendLinkModeChange(self, bridgeMac:str, slaveID:int, newLinkType:int):
+		# SUGGESTION / TODO protocole :
+		# Il n'existe pas encore de MessageType pour le changement de mode de lien.
+		# Proposition : ajouter dans Message.py -> class MessageType :
+		#     LINK_MODE_CHANGE = 0x60
+		# puis emettre la trame :
+		#     [START, sizeHi, sizeLo, slaveID, LINK_MODE_CHANGE, newLinkType, END]
+		# Implementation prete a activer une fois l'opcode defini cote firmware :
+		#
+		# buffer = bytearray()
+		# buffer.append(MessageControlFrame.START.value)
+		# buffer.append(0x00)
+		# buffer.append(0x00)
+		# buffer.append(slaveID)
+		# buffer.append(MessageType.LINK_MODE_CHANGE.value)
+		# buffer.append(newLinkType)
+		# buffer.append(MessageControlFrame.END.value)
+		# size = len(buffer)
+		# buffer[1] = size >> 8
+		# buffer[2] = size & 0xFF
+		# self.Write(Message(buffer))
+		pass
+
 	def __updateLinkInfo(self):
 		if not self.__linkInfo:
 			return
-		
+
 		currentTimeStamp = int(time.time() * 1000)
 
 		if not "last_updated" in self.__linkInfo:
@@ -419,46 +608,8 @@ class Settingator:
 							peerDict["bridgeDeltaMs"] = peerDict["bridgeDeltaMs"] + diffTimeStamp
 							peerDict["peerDeltaMs"] = peerDict["peerDeltaMs"] + diffTimeStamp
 
-							peerDict["layout"].UpdateValue(bridgeMac + "	<->    " + peerMac + "\n" +
-											   str(peerDict["bridgeRssi"]) + "\t" +
-											   str(peerDict["bridgeNoiseFloor"]) + "\t" +
-											   str(peerDict["bridgeDeltaMs"]) + "\t" +
-											   str(peerDict["peerRssi"]) + "\t" +
-											   str(peerDict["peerNoiseFloor"]) + "\t" +
-											   str(peerDict["peerDeltaMs"]))
-
-
-							bridgeSNR = peerDict["bridgeRssi"] - peerDict["bridgeNoiseFloor"]
-							peerSNR = peerDict["peerRssi"] - peerDict["peerNoiseFloor"]
-
-							if	(peerDict["bridgeDeltaMs"] > 12500 or peerDict["peerDeltaMs"] > 12500):
-								if peerDict["color"] != "grey":
-									peerDict["layout"].GetIElement().SetBGColor("#B9B9B9")
-									peerDict["color"] = "greu"
-
-							elif (bridgeSNR <= 10 or peerSNR <= 10) :
-								if peerDict["color"] != "red":
-									peerDict["layout"].GetIElement().SetBGColor("#FF5050")
-									peerDict["color"] = "red"
-
-							elif (bridgeSNR <= 15 or peerSNR <= 15):
-								if peerDict["color"] != "orange":
-									peerDict["layout"].GetIElement().SetBGColor("#FFD476")
-									peerDict["color"] = "orange"
-
-							elif (bridgeSNR <= 25 or peerSNR <= 25):
-								if peerDict["color"] != "green":
-									peerDict["layout"].GetIElement().SetBGColor("#00FF00")
-									peerDict["color"] = "green"
-
-							elif (bridgeSNR > 25 or peerSNR > 25):
-								if peerDict["color"] != "blue":
-									peerDict["layout"].GetIElement().SetBGColor("#00FFFF")
-									peerDict["color"] = "blue"
-
-
-
-
+							bridgeSNR, peerSNR = self.__refreshPeerMetrics(peerDict)
+							self.__applyLinkColor(peerDict, bridgeSNR, peerSNR)
 
 	def __treatLinkInfoMsg(self, buffer:bytearray):
 		nbPeer = buffer[6]
@@ -484,28 +635,26 @@ class Settingator:
 				match linkType:
 					case LinkType.ESP_NOW.value | LinkType.LORA.value:
 
-
 						if not peerMac in self.__linkInfo[bridgeMac]:
-							self.__linkInfo[bridgeMac][peerMac] = dict(layout=LayoutElement(IDP_TEXT, "no_data"), color=None)
-							self.__linkInfoLayout.AppendElement(self.__linkInfo[bridgeMac][peerMac]["layout"])
+							peerDict = self.__buildPeerCard(bridgeMac, peerMac, slaveID, linkType)
+							self.__linkInfo[bridgeMac][peerMac] = peerDict
+							self.__linkInfoLayout.AppendElement(peerDict["card"])
 
 						peerDict = self.__linkInfo[bridgeMac][peerMac]
 
-						peerDict["bridgeRssi"], len = GetInt8ValueFromBuffer(buffer[index + 9:])
-						peerDict["bridgeNoiseFloor"], len = GetInt8ValueFromBuffer(buffer[index + 10:])
-						peerDict["bridgeDeltaMs"], len = GetUInt32ValueFromBuffer(buffer[index + 11:])
+						peerDict["slaveID"] = slaveID
+						peerDict["linkType"] = linkType
+						peerDict["modeLabel"].UpdateValue("Lien : " + self.__linkModeName(linkType))
 
-						peerDict["peerRssi"], len = GetInt8ValueFromBuffer(buffer[index + 15:])
-						peerDict["peerNoiseFloor"], len = GetInt8ValueFromBuffer(buffer[index + 16:])
-						peerDict["peerDeltaMs"], len = GetUInt32ValueFromBuffer(buffer[index + 17:])
+						peerDict["bridgeRssi"], _ = GetInt8ValueFromBuffer(buffer[index + 9:])
+						peerDict["bridgeNoiseFloor"], _ = GetInt8ValueFromBuffer(buffer[index + 10:])
+						peerDict["bridgeDeltaMs"], _ = GetUInt32ValueFromBuffer(buffer[index + 11:])
 
-						peerDict["layout"].UpdateValue(bridgeMac + "	<->    " + peerMac + "\n" +
-											   str(peerDict["bridgeRssi"]) + "\t" +
-											   str(peerDict["bridgeNoiseFloor"]) + "\t" +
-											   str(peerDict["bridgeDeltaMs"]) + "\t" +
-											   str(peerDict["peerRssi"]) + "\t" +
-											   str(peerDict["peerNoiseFloor"]) + "\t" +
-											   str(peerDict["peerDeltaMs"]))
+						peerDict["peerRssi"], _ = GetInt8ValueFromBuffer(buffer[index + 15:])
+						peerDict["peerNoiseFloor"], _ = GetInt8ValueFromBuffer(buffer[index + 16:])
+						peerDict["peerDeltaMs"], _ = GetUInt32ValueFromBuffer(buffer[index + 17:])
+
+						self.__refreshPeerMetrics(peerDict)
 
 					case _:
 						pass
