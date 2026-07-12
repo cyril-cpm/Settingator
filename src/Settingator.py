@@ -13,6 +13,8 @@ def mac_to_str(mac: bytearray | bytes) -> str:
 
 class LinkType(Enum):
 	ESP_NOW = 0x00
+	UART = 0x01
+	LORA = 0x02
 	UNKNOWN = 0xFF
 
 class Settingator:
@@ -127,7 +129,7 @@ class Settingator:
 
 			self.__communicator.Flush()
 
-		self.__updateEspNowLinkInf()
+		self.__updateLinkInfo()
 
 		self.__display.Update()
 		
@@ -393,7 +395,7 @@ class Settingator:
 
 		return msgIndex
 
-	def __updateEspNowLinkInf(self):
+	def __updateLinkInfo(self):
 		if not self.__linkInfo:
 			return
 		
@@ -476,12 +478,12 @@ class Settingator:
 
 			if peerInfoSize >= 3:
 				slaveID = buffer[index + 1]
-				linkType = buffer[index + 2]
+				peerMac = mac_to_str(buffer[index + 2: index + 8])
+				linkType = buffer[index + 8]
 
 				match linkType:
-					case LinkType.ESP_NOW.value:
+					case LinkType.ESP_NOW.value | LinkType.LORA.value:
 
-						peerMac = mac_to_str(buffer[index + 3: index + 9])
 
 						if not peerMac in self.__linkInfo[bridgeMac]:
 							self.__linkInfo[bridgeMac][peerMac] = dict(layout=LayoutElement(IDP_TEXT, "no_data"), color=None)
@@ -504,6 +506,7 @@ class Settingator:
 											   str(peerDict["peerRssi"]) + "\t" +
 											   str(peerDict["peerNoiseFloor"]) + "\t" +
 											   str(peerDict["peerDeltaMs"]))
+
 					case _:
 						pass
 
