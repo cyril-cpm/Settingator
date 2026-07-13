@@ -623,18 +623,19 @@ class Settingator:
 		#     [START, sizeHi, sizeLo, slaveID, LINK_MODE_CHANGE, newLinkType, END]
 		# Implementation prete a activer une fois l'opcode defini cote firmware :
 		#
-		# buffer = bytearray()
-		# buffer.append(MessageControlFrame.START.value)
-		# buffer.append(0x00)
-		# buffer.append(0x00)
-		# buffer.append(slaveID)
-		# buffer.append(MessageType.LINK_MODE_CHANGE.value)
-		# buffer.append(newLinkType)
-		# buffer.append(MessageControlFrame.END.value)
-		# size = len(buffer)
-		# buffer[1] = size >> 8
-		# buffer[2] = size & 0xFF
-		# self.Write(Message(buffer))
+		buffer = bytearray()
+		buffer.append(MessageControlFrame.START.value)
+		buffer.append(0x00)
+		buffer.append(0x00)
+		buffer.append(0x00)
+		buffer.append(slaveID)
+		buffer.append(MessageType.SWITCH_LINK_TYPE.value)
+		buffer.append(newLinkType)
+		buffer.append(MessageControlFrame.END.value)
+		size = len(buffer)
+		buffer[1] = size >> 8
+		buffer[2] = size & 0xFF
+		self.Write(Message(buffer))
 		pass
 
 	# ---- Topologie (arbre bridges/slaves derive des adresses MAC) --------
