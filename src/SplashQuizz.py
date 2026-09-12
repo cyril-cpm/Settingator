@@ -127,8 +127,29 @@ def startBridgeInitFunc(value):
 def stopBridgeInitFunc(value):
 	STR.BridgeStopInitBroadcasted()
 
-startBridgeInitButton = LayoutElement(IDP_BUTTON, None, "StartBridgeInit", callback=startBridgeInitFunc)
-stopBridgeInitButton = LayoutElement(IDP_BUTTON, None, "StopBridgeInit", callback=stopBridgeInitFunc)
+def sendInitRequestFunc(value):
+	STR.SendInitRequest(initModule)
+
+startBridgeInitButton = LayoutElement(
+		IDP_BUTTON,
+		None,
+		"StartBridgeInit",
+		callback=startBridgeInitFunc
+	)
+
+stopBridgeInitButton = LayoutElement(
+		IDP_BUTTON,
+		None,
+		"StopBridgeInit",
+		callback=stopBridgeInitFunc
+	)
+
+sendInitRequestButton = LayoutElement(
+		IDP_BUTTON,
+		None,
+		"SendInitRequest",
+		callback=sendInitRequestFunc
+	)
 
 def displayLayout(value):
 	if int(value):
@@ -398,6 +419,46 @@ gunColumn = LayoutElement(
 		]
 	)
 
+def all0(value):
+	slaves = STR.GetSlaves()
+	if slaves:
+		for slaveID in slaves:
+			slave = STR.GetSlave(slaveID)
+
+			if slave and slave.GetSettingByName("POS") != None:
+				slave.SendSettingUpdatesByName([("0_POS", 0.0),
+									("1_POS", 0.0), ("2_POS", 0.0)])
+
+def all180(value):
+	slaves = STR.GetSlaves()
+	if slaves:
+		for slaveID in slaves:
+			slave = STR.GetSlave(slaveID)
+
+			if slave and slave.GetSettingByName("POS") != None:
+				slave.SendSettingUpdatesByName([("0_POS", 180.0),
+									("1_POS", 180.0), ("2_POS", 180.0)])
+
+testServoColumn = LayoutElement(
+		IDP_COLUMN,
+		None,
+		"Test Servo",
+		children=[
+			LayoutElement(
+				IDP_BUTTON,
+				None,
+				"ALL 0",
+				callback=all0
+			),
+			LayoutElement(
+				IDP_BUTTON,
+				None,
+				"ALL 180",
+				callback=all180
+			)
+		]
+	)
+
 if __name__ == "__main__":
 
 	# com = ICTR()
@@ -455,8 +516,11 @@ if __name__ == "__main__":
 
 	STR.AddToLayout(gunColumn)
 
+	STR.AddToLayout(testServoColumn)
+
 	STR.AddToLayout(startBridgeInitButton)
 	STR.AddToLayout(stopBridgeInitButton)
+	STR.AddToLayout(sendInitRequestButton)
 
 	STR.AddToLayout(layoutDisplayCheck)
 

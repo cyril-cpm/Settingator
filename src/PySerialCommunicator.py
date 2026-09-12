@@ -24,6 +24,8 @@ class PySerial(ISerial):
 		self.__serial.setDTR(False)
 		self.__serial.setRTS(False)
 		self.__serial.open()
+		self.__serial.reset_input_buffer()
+		self.__serial.flush()
 		
 		self.__readBuffer = bytearray()
 		self.logString = ""
