@@ -161,6 +161,18 @@ class PopupTKElement(TKElement):
 			element.withdraw()
 			element.grab_release()
 
+class ComboTKElement(TKElement):
+	def __init__(
+			self,
+			display,
+			element,
+			type,
+			variable:StringVar,
+			style=None,
+			styleName="",
+			index=0
+		):
+		super().__init__(display, element, type, variable, style, styleName, index)
 
 
 class TKDisplay(IDisplay):
@@ -320,20 +332,59 @@ class TKDisplay(IDisplay):
 						self.__style.configure(styleName)
 						newElement = ttk.Labelframe(parent, text=name, style=styleName)
 					
-					tkElement = TKElement(self, newElement, type, elementVariable, self.__style, styleName)
+					tkElement = TKElement(
+							self,
+							newElement,
+							type,
+							elementVariable,
+							self.__style,
+							styleName
+						)
 
 				elif type == IDP_MULTILINE:
-					newElement = Text(parent, width=element.GetWidth(), font=element.GetFont(), wrap='word')
-					tkElement = TKElement(self, newElement, type, elementVariable, self.__style, styleName)
+					newElement = Text(
+							parent,
+							width=element.GetWidth(),
+							font=element.GetFont(),
+							wrap='word'
+						)
+					tkElement = TKElement(
+							self,
+							newElement,
+							type,
+							elementVariable,
+							self.__style,
+							styleName
+						)
 
 				elif type == IDP_LISTBOX:
 					newElement = ttk.Treeview(parent)
-					tkElement = ListBoxTKElement(self, newElement, type, elementVariable, self.__style, styleName, columns=element.GetColumns(), displaycolumns=element.GetDisplayColumns(), tree=element.IsTree())
-					newElement.tag_bind('message', '<Double-1>', lambda event, w=weakMethod: w() and w()(None))
+					tkElement = ListBoxTKElement(
+							self,
+							newElement,
+							type,
+							elementVariable,
+							self.__style,
+							styleName,
+							columns=element.GetColumns(),
+							displaycolumns=element.GetDisplayColumns(),
+							tree=element.IsTree()
+						)
+					newElement.tag_bind(
+							'message',
+							'<Double-1>',
+							lambda event,
+							w=weakMethod: w() and w()(None)
+						)
 
 					if element.IsTree():
 						# Selection d'un noeud -> callback(iid du noeud focus)
-						newElement.bind('<<TreeviewSelect>>', lambda event, w=weakMethod, t=newElement: w() and w()(t.focus()))
+						newElement.bind(
+								'<<TreeviewSelect>>',
+								lambda event,
+								w=weakMethod,
+								t=newElement: w() and w()(t.focus())
+							)
 
 				elif type == IDP_POPUP:
 					newElement:Toplevel = Toplevel(parent)
@@ -341,11 +392,45 @@ class TKDisplay(IDisplay):
 					newElement.bind("<Escape>", lambda e: tkElement.SetVisible(False))
 					newElement.withdraw()
 
-					tkElement = PopupTKElement(self, newElement, type, elementVariable, self.__style, styleName)
+					tkElement = PopupTKElement(
+							self,
+							newElement,
+							type,
+							elementVariable,
+							self.__style,
+							styleName
+						)
 
+				elif isinstance(element, ComboElement) and type == IDP_COMBO:
+					newElement:ttk.Combobox = ttk.Combobox(
+							parent,
+							values=element.GetOptions(),
+							state='readonly',
+							postcommand=element.OnClick
+						)
+
+					tkElement = ComboTKElement(
+							self,
+							newElement,
+							type,
+							elementVariable,
+							self.__style,
+							styleName
+						)
+
+					newElement.bind(
+							"<<ComboboxSelected>>",
+							lambda event, w=weakMethod: w() and w()()
+						)
  
 				if type != IDP_POPUP:
-					newElement.grid(column=column, row=row, sticky=element.GetStick(), padx=5, pady=5)
+					newElement.grid(
+							column=column,
+							row=row,
+							sticky=element.GetStick(),
+							padx=5,
+							pady=5
+						)
 
 				element.SetIElement(tkElement)
 				self.__UpdateChildLayout(element, newElement)

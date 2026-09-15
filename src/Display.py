@@ -1,3 +1,4 @@
+from subprocess import call
 from Log import Logger
 from abc import ABC, abstractmethod
 from typing import Callable, Type
@@ -17,6 +18,7 @@ IDP_WRAPPER = 0x08
 IDP_MULTILINE = 0x09
 IDP_LISTBOX = 0xA
 IDP_POPUP = 0xB
+IDP_COMBO = 0XC
 
 def IDPTypeToStr(IDPType:int = IDP_NONE):
 	if IDPType == IDP_NONE:
@@ -39,6 +41,8 @@ def IDPTypeToStr(IDPType:int = IDP_NONE):
 		return "IDP_LISTBOX"
 	elif IDPType == IDP_POPUP:
 		return "IDP_POPUP"
+	elif  IDPType == IDP_COMBO:
+		return "IDP_COMBO"
 	else:
 		return "IDP_UNKNOWN"
 		
@@ -315,6 +319,33 @@ class PopupElement(LayoutElement):
 
 	def SetVisible(self, value):
 		self.GetIElement().SetVisible(value)
+
+class ComboElement(LayoutElement):
+	def __init__(
+			self,
+			options:list[str] = [],
+			name:str = "",
+			children:list|None = None,
+			callback:Callable|None = None,
+			stick='nsew',
+			onClick:Callable|None = None
+		):
+		super().__init__(IDP_COMBO, None, name, children, callback=callback, stick=stick)
+		self.__options = options
+		self.__onClick = onClick
+
+	def SetOptions(self, options:list[str]) -> None:
+		self.__options = options
+
+	def GetOptions(self) -> list[str]:
+		return self.__options
+
+	def GetOnClick(self) -> Callable|None:
+		return self.__onClick
+
+	def OnClick(self) -> None:
+		if self.__onClick:
+			self.__onClick()
 
 class IDisplay(ABC):
 	def __init__(self) -> None:

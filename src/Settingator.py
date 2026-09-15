@@ -1,3 +1,5 @@
+import Log
+from PySerialCommunicator import GetPortList, SerialCTR
 from STRLog import STRMessgeLog
 from Setting import *
 from Communicator import ICTR
@@ -19,8 +21,8 @@ class LinkType(Enum):
 	UNKNOWN = 0xFF
 
 class Settingator:
-	def __init__(self, ctr:ICTR, display:IDisplay) -> None:
-		self.__communicator = ctr
+	def __init__(self, display:IDisplay) -> None:
+		self.__communicator = None
 		self.__slaveSettings = dict()
 		self.__slaves = dict()
 		self.__shouldUpdateDisplayLayout = False
@@ -33,15 +35,19 @@ class Settingator:
 		self.__display = display
 		self.__display.SetSlaveSettingsRef(self.__slaveSettings)
 		self.__linkInfo = None
-		self.__linkTopoSig = None                                       # signature de structure (rebuild si elle change)
-		self.__linkTreeDirty = False                                    # l'arbre (Layout A) doit etre reconstruit
+
+		# signature de structure (rebuild si elle change)
+		self.__linkTopoSig = None
+        # l'arbre (Layout A) doit etre reconstruit
+		self.__linkTreeDirty = False
 
 		# ===== Layout A : arbre de topologie + panneau de detail =========
 		# (maitre-detail : selectionner un noeud affiche sa carte a droite)
 		self.__linkTreeLayout = ListBoxElement(name="Topologie", stick="nw",
 				columns=["Mode", "SNR B", "SNR P", "Age"], tree=True,
 				callback=self.__onLinkTreeSelect)
-		self.__linkDetailLayout = LayoutElement(IDP_COLUMN, stick="nw")  # recoit la carte du noeud selectionne
+		# recoit la carte du noeud selectionne	
+		self.__linkDetailLayout = LayoutElement(IDP_COLUMN, stick="nw")
 		self.__linkDetailCurrentMac = None
 		self.__linkDetailCurrentDict = None
 		self.__linkLayoutA = LayoutElement(IDP_FRAME)
@@ -55,7 +61,8 @@ class Settingator:
 		# Parent en haut, enfants alignes horizontalement dessous. Checkbox
 		# globale : vue compacte (puces colorees) <-> details complets (cartes).
 		self.__linkCDetailed = False
-		self.__linkCTreeContainer = LayoutElement(IDP_FRAME)             # racines cote a cote
+		# racines cote a cote
+		self.__linkCTreeContainer = LayoutElement(IDP_FRAME)
 		self.__linkCCheck = LayoutElement(IDP_CHECK, "0", "Afficher tous les détails",
 				callback=self.__onLinkCDetailToggle)
 		self.__linkLayoutC = LayoutElement(IDP_COLUMN)
@@ -65,7 +72,41 @@ class Settingator:
 		# --- Choix de la vue : (dé)commenter UNE des lignes plus bas
 		#     (cf. self.__slaveLayout.AppendElement(...) juste apres) -----
 
+		# STR Global Setting Layout
+		self.__portSelectCombo = ComboElement(
+							name="PortSelectCombo",
+							options=GetPortList(),
+							callback=self.__SetComboPort,
+							stick="e",
+							onClick=self.__UpdateComboPortList
+							)
+
+		self.__settingLayout = LayoutElement(
+				IDP_FRAME,
+				name="Global Settings",
+				children=[
+						LayoutElement(
+							IDP_BUTTON,
+							name="SendInitRequest",
+							stick='w',
+							callback=lambda e : self.SendInitRequest()
+							),
+						LayoutElement(
+							IDP_CHECK,
+							True,
+							"DisplaySlaveLayout",
+							callback=self.HandleDisplaySlaveLayout,
+							stick="e"
+							),
+						self.__portSelectCombo
+					],
+					stick="e"
+				)
+
+		# User Element Layout
 		self.__layout = LayoutElement(IDP_FRAME)
+
+		# Slave Elements Layout
 		self.__slaveLayout = LayoutElement(IDP_FRAME)
 
 		leftLayout = LayoutElement(IDP_COLUMN)
@@ -79,6 +120,7 @@ class Settingator:
 		# self.__slaveLayout.AppendElement(self.__linkCardsLayout)  # Layout B : cartes imbriquees
 		self.__slaveLayout.AppendElement(self.__linkLayoutC)      # Layout C : arbre genealogique
 
+		leftLayout.AppendElement(self.__settingLayout)
 		leftLayout.AppendElement(self.__layout)
 		leftLayout.AppendElement(self.__slaveLayout)
 
@@ -113,6 +155,12 @@ class Settingator:
 	def DisplaySlaveLayout(self) -> None:
 		self.__slaveLayout.SetVisible(True)
 	
+	def HandleDisplaySlaveLayout(self, value):
+		if int(value):
+			self.DisplaySlaveLayout()
+		else:
+			self.RemoveSlaveLayout()
+
 	def GetSlaves(self):
 		return self.__slaves
 	
@@ -127,48 +175,52 @@ class Settingator:
 
 	def Update(self) -> None:
 
-		if self.__communicator.Available():
-			rawText = self.__communicator.GetRawText()
+		if self.__communicator:
 
-			# if rawText:
-			# 	Logger.Log(rawText, "CTR", "CTR_RAW_TEXT")
+			available:int = 0
+			try:
+				available = self.__communicator.Available()
+			except Exception as e:
+				Logger.Log(str(e), "COM", "ERROR")
+				self.__communicator = None
 
-			msg:Message = self.Read()
+			if available:
+				msg:Message = self.Read()
 
-			if msg.GetType() == MessageType.SETTING_INIT:
-				self.__ParseSettingInit(msg.GetByteArray())
+				if msg.GetType() == MessageType.SETTING_INIT:
+					self.__ParseSettingInit(msg.GetByteArray())
 
-			elif msg.GetType() == MessageType.SETTING_UPDATE:
-				ref, value, slaveID = msg.ExtractSettingUpdate()
+				elif msg.GetType() == MessageType.SETTING_UPDATE:
+					ref, value, slaveID = msg.ExtractSettingUpdate()
 
-				if slaveID in self.__slaveSettings:
-					if ref in self.__slaveSettings[slaveID]:
-						setting = self.__slaveSettings[slaveID][ref]
-						setting.SetBinaryValue(value)
-						self.__shouldUpdateSetting = setting
+					if slaveID in self.__slaveSettings:
+						if ref in self.__slaveSettings[slaveID]:
+							setting = self.__slaveSettings[slaveID][ref]
+							setting.SetBinaryValue(value)
+							self.__shouldUpdateSetting = setting
 
-			elif msg.GetType() == MessageType.NOTIF:
-				notifByte, slaveID = msg.ExtractNotif()
+				elif msg.GetType() == MessageType.NOTIF:
+					notifByte, slaveID = msg.ExtractNotif()
 
-				if notifByte in self.__notifCallback:
-					self.__notifCallback[notifByte](slaveID)
+					if notifByte in self.__notifCallback:
+						self.__notifCallback[notifByte](slaveID)
 
-			elif msg.GetType() == MessageType.SLAVE_ID_REQUEST:
-				self.SendInitRequest(self.__initCallback)
-				print("Slave request recved")
+				elif msg.GetType() == MessageType.SLAVE_ID_REQUEST:
+					self.SendInitRequest(self.__initCallback)
+					print("Slave request recved")
 
-			elif msg.GetType() == MessageType.LINK_INFO:
-				print("Link Info received")
-				# Garde-fou : une trame LinkInfo malformee ne doit pas tuer
-				# toute la GUI (la boucle principale n'a pas de try/except).
-				try:
-					self.__treatLinkInfoMsg(msg.GetByteArray())
-				except Exception:
-					Logger.Log("Exception dans __treatLinkInfoMsg", "LINK", "ERROR")
-					traceback.print_exc()
+				elif msg.GetType() == MessageType.LINK_INFO:
+					print("Link Info received")
+					# Garde-fou : une trame LinkInfo malformee ne doit pas tuer
+					# toute la GUI (la boucle principale n'a pas de try/except).
+					try:
+						self.__treatLinkInfoMsg(msg.GetByteArray())
+					except Exception:
+						Logger.Log("Exception dans __treatLinkInfoMsg", "LINK", "ERROR")
+						traceback.print_exc()
 
 
-			self.__communicator.Flush()
+				self.__communicator.Flush()
 
 		try:
 			self.__updateLinkInfo()
@@ -1240,6 +1292,15 @@ class Settingator:
 			return message
 		
 		return Message()
+
+	def __SetComboPort(self, cbValue=None):
+		selectedPort = self.__portSelectCombo.GetIElement().GetElement().get()
+
+		Logger.Log("Selecting Port:" + selectedPort, "GOB", "INFO")
+		self.__communicator = SerialCTR(selectedPort)
+
+	def __UpdateComboPortList(self):
+		self.__portSelectCombo.GetIElement().GetElement()['values'] = GetPortList()
 
 class Slave:
 	def __init__(self, str:Settingator, slaveID:int, settings:dict) -> None:

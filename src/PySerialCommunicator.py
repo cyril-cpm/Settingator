@@ -1,18 +1,16 @@
+from typing import Text
 from numpy import byte
 from Log import Logger
 from Communicator import *
 from Setting import *
 import serial
-# import serial.tools.list_ports
+import subprocess
 
+def GetPortList() -> list:
+	ports = subprocess.run(['fd', 'ttyUSB*', '/dev/'], capture_output=True, text=True).stdout
+	portList = ports.split(sep='\n')
 
-# def GetCOMPortList() -> list:
-#	  ports = list(serial.tools.list_ports.comports())
-	# portList = []
-	# for port in ports:
-		# portList.append(port.device)
-		#
-	# return portList
+	return portList
 
 class PySerial(ISerial):
 	def __init__(self, port:str) -> None:
@@ -21,8 +19,8 @@ class PySerial(ISerial):
 		self.__serial:serial.Serial = serial.Serial(write_timeout=None)
 		self.__serial.port=port
 		self.__serial.baudrate=115200
-		self.__serial.setDTR(False)
-		self.__serial.setRTS(False)
+		# self.__serial.setDTR(False)
+		# self.__serial.setRTS(False)
 		self.__serial.open()
 		self.__serial.reset_input_buffer()
 		self.__serial.flush()
@@ -50,7 +48,7 @@ class PySerial(ISerial):
 				Logger.Log(self.logString[:returnPos], "SERIAL_CTR", "CTR_RAW_TEXT")
 				self.logString = self.logString[returnPos+1:]
 				returnPos = self.logString.find('\n')
-
+			
 		return self.__readBuffer.__len__()
 
 class SerialCTR(ICTR):
@@ -94,6 +92,9 @@ class SerialCTR(ICTR):
 						self.__serialBuffer = self.__serialBuffer[startFrameIndex+1:]
 		return
 	
-	def GetCOMPortList() -> list:
-		return GetCOMPortList()
+	def GetPortList() -> list:
+		return GetPortList()
+
+	def GetPort(self) -> str:
+		return self.__port
 	
