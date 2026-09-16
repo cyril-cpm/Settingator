@@ -87,6 +87,18 @@ class Settingator:
 				children=[
 						LayoutElement(
 							IDP_BUTTON,
+							name="StartBridgeInitBroadcasted",
+							stick='w',
+							callback=lambda e : self.BridgeStartInitBroadcasted()
+							),
+						LayoutElement(
+							IDP_BUTTON,
+							name="StopBridgeInitBroadcasted",
+							stick='w',
+							callback=lambda e : self.BridgeStopInitBroadcasted()
+							),
+						LayoutElement(
+							IDP_BUTTON,
 							name="SendInitRequest",
 							stick='w',
 							callback=lambda e : self.SendInitRequest()
@@ -100,7 +112,7 @@ class Settingator:
 							),
 						self.__portSelectCombo
 					],
-					stick="e"
+					stick="we"
 				)
 
 		# User Element Layout

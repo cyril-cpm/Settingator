@@ -462,7 +462,7 @@ testServoColumn = LayoutElement(
 if __name__ == "__main__":
 
 	# com = ICTR()
-	com = SerialCTR("/dev/ttyUSB0")
+	# com = SerialCTR("/dev/ttyUSB0")
 
 	mx.init(channels=1)
 	global chan
@@ -485,7 +485,7 @@ if __name__ == "__main__":
 
 	display = TKDisplay()
 
-	STR = Settingator(com, display)
+	STR = Settingator(display)
 
 	STR.AddNotifCallback(BUZZ_BUTTON, buzzButton)
 

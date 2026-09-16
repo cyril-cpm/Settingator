@@ -5,6 +5,7 @@ from Communicator import *
 from Setting import *
 import serial
 import subprocess
+import time
 
 def GetPortList() -> list:
 	ports = subprocess.run(['fd', 'ttyUSB*', '/dev/'], capture_output=True, text=True).stdout
@@ -27,6 +28,11 @@ class PySerial(ISerial):
 		
 		self.__readBuffer = bytearray()
 		self.logString = ""
+
+		self.__serial.setDTR(False)
+		time.sleep(1)
+		self.__serial.flush()
+		self.__serial.setDTR(True)
 
 	def read(self) -> bytearray:
 		ret = self.__readBuffer
