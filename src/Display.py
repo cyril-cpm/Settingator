@@ -144,7 +144,7 @@ class LayoutElement(ABC):
 			if self.__iElement != None:
 				self.__iElement.UpdateValue(value)
 	
-	def GetChildren(self):
+	def GetChildren(self) -> list|None:
 		return self._children
 	
 	def GetIElement(self) -> IElement|None:
