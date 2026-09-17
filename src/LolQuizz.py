@@ -5,26 +5,35 @@ from pygame import display, mixer as mx
 
 BUZZ_BUTTON = 5
 
-gameRules = {
-		"gunForInvalidation" : False,
-		"gunForTooEarlyBuzz" : False,
-		"gunForValidation" : False,
-		"separateResetAndActivate" : True,
-		"punishBuzzBeforeDing" : False
-	}
+class GameRules:
+	def __init__(self):
+		self.gunForInvalidation = False
+		self.gunForTooEarlyBuzz = False
+		self.gunForValidation = False
+		self.separateResetAndActivate = True
+		self.punishBuzzBeforeDing = False
 
-gameState = {
-		"buzzed" : False,
-		"resetted" : False,
-		"buzzedSlave" : None,
-		"blockedSlave" : {}
-	}
+gameRules = GameRules()
 
-sound = {}
-# chan:mx.Channel|None = None
+class GameState:
+	def __init__(self):
+		self.buzzed = False
+		self.resetted = False
+		self.buzzedSlave:Slave|None = None
+		self.buzzerActivated = False
+		self.blockedSlave:dict = {}
+
+gameState = GameState()
+
+class GameSound:
+	def __init__(self):
+		self.validate = mx.Sound("../good.wav")
+		self.invalidate = mx.Sound("../bad.wav")
+		self.activate = mx.Sound("../endWait.wav")
+		self.buzz = mx.Sound("../stw.wav")
 
 def punishBuzzBeforeDingFunc(value):
-	gameRules["punishBuzzBeforeDing"] = bool(int(value))
+	gameRules.punishBuzzBeforeDing = bool(int(value))
 
 punishBuzzBeforeDingCheck = LayoutElement(
 		IDP_CHECK,
@@ -34,17 +43,17 @@ punishBuzzBeforeDingCheck = LayoutElement(
 	)
 
 def separateResetAndActivateFunc(value):
-	gameRules["separateResetAndActivate"] = bool(int(value))
+	gameRules.separateResetAndActivate = bool(int(value))
 
 separateResetAndActivateCheck = LayoutElement(
 		IDP_CHECK,
-		gameRules["separateResetAndActivate"],
+		gameRules.separateResetAndActivate,
 		"Separate reset and activate",
 		callback=separateResetAndActivateFunc
 	)
 
 def gunForValidationFunc(value):
-	gameRules["gunForValidation"] = bool(int(value))
+	gameRules.gunForValidation = bool(int(value))
 
 gunForValidationCheck = LayoutElement(
 		IDP_CHECK,
@@ -54,7 +63,7 @@ gunForValidationCheck = LayoutElement(
 		)
 
 def gunForTooEarlyBuzzFunc(value):
-	gameRules["gunForTooEarlyBuzz"] = bool(int(value))
+	gameRules.gunForTooEarlyBuzz = bool(int(value))
 
 gunForTooEarlyBuzzCheck = LayoutElement(
 		IDP_CHECK,
@@ -64,7 +73,7 @@ gunForTooEarlyBuzzCheck = LayoutElement(
 	)
 
 def gunForInvalidationFunc(value):
-	gameRules["gunForInvalidation"] = bool(int(value))
+	gameRules.gunForInvalidation = bool(int(value))
 
 gunForInvalidationCheck = LayoutElement(
 		IDP_CHECK,
@@ -73,32 +82,39 @@ gunForInvalidationCheck = LayoutElement(
 		callback = gunForInvalidationFunc
 	)
 
+class PlayerConfig:
+	def __init__(self):
+		self.activated = True
+		self.buzzerID = 0
+		self.motorID = 0
+		self.pwmID = 0
+
 playerConfigs = {}
 
-def activatePlayer(playerID:int, value:bool):
+def activatePlayer(playerID:int, value:int):
 	if playerID not in playerConfigs:
-		playerConfigs[playerID] = {}
+		playerConfigs[playerID] = PlayerConfig()
 
-	playerConfigs[playerID]["activated"] = value
+	playerConfigs[playerID].activated = int(value)
 
 def setPlayerBuzID(playerID:int, value:int):
 	if playerID not in playerConfigs:
-		playerConfigs[playerID] = {}
+		playerConfigs[playerID] = PlayerConfig()
 
-	playerConfigs[playerID]["buzzerID"] = value
+	playerConfigs[playerID].buzzerID = value
 
 def setPlayerMotID(playerID:int, value:int):
 	if playerID not in playerConfigs:
-		playerConfigs[playerID] = {}
+		playerConfigs[playerID] = PlayerConfig()
 
-	playerConfigs[playerID]["motorID"] = value
+	playerConfigs[playerID].motorID = value
 
 
 def setPlayerPWMID(playerID:int, value:int):
 	if playerID not in playerConfigs:
-		playerConfigs[playerID] = {}
+		playerConfigs[playerID] = PlayerConfig()
 
-	playerConfigs[playerID]["PWMID"] = value
+	playerConfigs[playerID].pwmID = value
 
 
 def resetPlayerCount(value):
@@ -123,7 +139,7 @@ def resetPlayerCount(value):
 								IDP_CHECK,
 								True,
 								"Activated",
-								callback=lambda v, id=i : activatePlayer(id, bool(v))
+								callback=lambda v, id=i : activatePlayer(id, v)
 								),
 							LayoutElement(
 								IDP_FRAME,
@@ -206,54 +222,59 @@ playerLayout = LayoutElement(IDP_FRAME, None, "")
 
 def buzzButton(slaveID:int):
 
-	if slaveID not in gameState["blockedSlave"]:
-		gameState["blockedSlave"][slaveID] = 0.0
+	if slaveID not in gameState.blockedSlave:
+		gameState.blockedSlave[slaveID] = 0.0
 
-	if time.time() - gameState["blockedSlave"][slaveID] > 2.5:
+	if time.time() - gameState.blockedSlave[slaveID] > 2.5:
 
-		if gameRules['punishBuzzBeforeDing'] \
-			and not gameState["buzzed"] \
-			and not gameState["buzzerActivated"]:
+		thePlayer = None
 
-			gameState["buzzedSlave"] = STR.GetSlave(slaveID)
-			if gameState["buzzedSlave"]:
+		for player in playerConfigs:
+			if playerConfigs[player].buzzerID == slaveID:
+				thePlayer = playerConfigs[player]
+				break
 
-				if gameRules['gunForTooEarlyBuzz']:
-					for player in playerConfigs:
-						if playerConfigs[player]["buzzerID"] == slaveID:
-							gunSlave = STR.GetSlave(playerConfigs[player]["motorID"])
+		if thePlayer and thePlayer.activated \
+			and gameRules.punishBuzzBeforeDing \
+			and not gameState.buzzed \
+			and not gameState.buzzerActivated:
 
-							if (gunSlave and playerConfigs[player]["activated"]):
-								pwmID = playerConfigs[player]["PWMID"]
-								gunSlave.SendSettingUpdateByName("SHOOT", 1 << pwmID)
+			gameState.buzzedSlave = STR.GetSlave(slaveID)
+			if gameState.buzzedSlave:
 
-							break;
+				if gameRules.gunForTooEarlyBuzz:
+					gunSlave = STR.GetSlave(thePlayer.motorID)
 
-				gameState["blockedSlave"][slaveID] = time.time()
-				gameState["buzzedSlave"].SendSettingUpdateByName("__RGB", 0xFF0000)
+					if gunSlave:
+						pwmID = thePlayer.pwmID
+						gunSlave.SendSettingUpdateByName("SHOOT", 1 << pwmID)
+
+				gameState.blockedSlave[slaveID] = time.time()
+				gameState.buzzedSlave.SendSettingUpdateByName("__RGB", 0xFF0000)
 
 				if chan:
-					chan.play(sound["invalidate"])
+					chan.play(sound.invalidate)
 			
-		elif not gameState["buzzed"] and gameState["buzzerActivated"]:
-			gameState["buzzerActivated"] = False
-			gameState["buzzed"] = True
-			gameState["resetted"] = False
-			gameState["buzzedSlave"] = STR.GetSlave(slaveID)
+		elif thePlayer and thePlayer.activated \
+			and not gameState.buzzed and gameState.buzzerActivated:
+			gameState.buzzerActivated = False
+			gameState.buzzed = True
+			gameState.resetted = False
+			gameState.buzzedSlave = STR.GetSlave(slaveID)
 
-			if gameState["buzzedSlave"]:
-				gameState["buzzedSlave"].SendSettingUpdateByName("__RGB", 0XFFFFFF)
+			if gameState.buzzedSlave:
+				gameState.buzzedSlave.SendSettingUpdateByName("__RGB", 0XFFFFFF)
 
 				if chan:
-					chan.play(sound["buzz"])
+					chan.play(sound.buzz)
 
 def resetBuzzerFunc(value):
-	gameState["resetted"] = True
-	gameState["buzzed"] = False
-	gameState["buzzedSlave"] = None
+	gameState.resetted = True
+	gameState.buzzed = False
+	gameState.buzzedSlave = None
 
-	if not gameRules["separateResetAndActivate"]:
-		gameState["buzzerActivated"] = True
+	if not gameRules.separateResetAndActivate:
+		gameState.buzzerActivated = True
 
 	slaves = STR.GetSlaves()
 
@@ -266,33 +287,33 @@ def resetBuzzerFunc(value):
 				# time.sleep(0.1)
 
 def activateBuzzerFunc(value):
-	gameState["buzzed"] = False
-	gameState["resetted"] = False
-	gameState["buzzerActivated"] = True
+	gameState.buzzed = False
+	gameState.resetted = False
+	gameState.buzzerActivated = True
 
-	if not gameRules["separateResetAndActivate"]:
+	if not gameRules.separateResetAndActivate:
 		resetBuzzerFunc(None)
 
 	if chan:
-		chan.play(sound["activated"])
+		chan.play(sound.activate)
 
 def validateQuestionFunc(value):
-	if gameState["buzzedSlave"]:
-		gameState["buzzedSlave"].SendSettingUpdateByName("__RGB", 0x00FF00)
+	if gameState.buzzedSlave:
+		gameState.buzzedSlave.SendSettingUpdateByName("__RGB", 0x00FF00)
 
-		buzzerSlaveID = gameState["buzzedSlave"].GetID()
+		buzzerSlaveID = gameState.buzzedSlave.GetID()
 
-		if gameRules["gunForValidation"]:
+		if gameRules.gunForValidation:
 			shootList = {}
 
 			for key in playerConfigs:
 				player = playerConfigs[key]
 
-				if player["buzzerID"] != buzzerSlaveID and player["activated"]:
-					if player["motorID"] not in shootList:
-						shootList[player["motorID"]] = 0
+				if player.buzzerID != buzzerSlaveID and player.activated:
+					if player.motorID not in shootList:
+						shootList[player.motorID] = 0
 
-					shootList += 1 << player["PWMID"]
+					shootList[player.motorID] += 1 << player.pwmID
 
 			for motorID in shootList:
 				shootSlave = STR.GetSlave(motorID)
@@ -301,40 +322,40 @@ def validateQuestionFunc(value):
 					shootSlave.SendSettingUpdateByName("SHOOT", shootList[motorID])
 
 		if chan:
-			chan.play(sound["validate"])
+			chan.play(sound.validate)
 
 def invalidateQuestionFunc(value):
-	if gameState["buzzedSlave"]:
-		gameState["buzzedSlave"].SendSettingUpdateByName("__RGB", 0xFF0000)
-		gameState["resetted"] = False
-		gameState["buzzed"] = False
-		gameState["buzzerActivated"] = True
+	if gameState.buzzedSlave:
+		gameState.buzzedSlave.SendSettingUpdateByName("__RGB", 0xFF0000)
+		gameState.resetted = False
+		gameState.buzzed = False
+		gameState.buzzerActivated = True
 	
-		slaveID = gameState["buzzedSlave"].GetID()
+		slaveID = gameState.buzzedSlave.GetID()
 
 		if chan:
-			chan.play(sound["invalidate"])
+			chan.play(sound.invalidate)
 
-		gameState["blockedSlave"][slaveID] = time.time()
+		gameState.blockedSlave[slaveID] = time.time()
 
-		if gameRules["gunForInvalidation"]:
+		if gameRules.gunForInvalidation:
 			for player in playerConfigs:
-				if playerConfigs[player]["buzzerID"] == slaveID:
-					if playerConfigs[player]["activated"]:
-						gunSlave = STR.GetSlave(playerConfigs[player]["motorID"])
+				if playerConfigs[player].buzzerID == slaveID:
+					if playerConfigs[player].activated:
+						gunSlave = STR.GetSlave(playerConfigs[player].motorID)
 
 						if (gunSlave):
-							pwmID = playerConfigs[player]["PWMID"]
+							pwmID = playerConfigs[player].pwmID
 							gunSlave.SendSettingUpdateByName("SHOOT", 1 << pwmID)
 
 					break;
 
 def checkBlockedSlave() -> None:
 
-	for slaveID in gameState["blockedSlave"]:
-		if gameState["blockedSlave"][slaveID] != 0.0 \
-				and time.time() - gameState["blockedSlave"][slaveID] > 2.5:
-			gameState["blockedSlave"][slaveID] = 0.0
+	for slaveID in gameState.blockedSlave:
+		if gameState.blockedSlave[slaveID] != 0.0 \
+				and time.time() - gameState.blockedSlave[slaveID] > 2.5:
+			gameState.blockedSlave[slaveID] = 0.0
 			slave: Slave | None = STR.GetSlave(slaveID)
 			if slave:
 				slave.SendSettingUpdateByName("__RGB", 0x0000FF)
@@ -350,10 +371,8 @@ if __name__ == "__main__":
 	global chan
 	chan = mx.Channel(0)
 
-	sound["validate"] = mx.Sound("../good.wav")
-	sound["invalidate"] = mx.Sound("../bad.wav")
-	sound["activate"] = mx.Sound("../endWait.wav")
-	sound["buzz"] = mx.Sound("../stw.wav")
+	global sound
+	sound = GameSound()
 
 	display = TKDisplay()
 

@@ -409,6 +409,8 @@ class TKDisplay(IDisplay):
 							postcommand=element.OnClick
 						)
 
+					newElement.set(element.GetDefault())
+
 					tkElement = ComboTKElement(
 							self,
 							newElement,

@@ -324,6 +324,7 @@ class ComboElement(LayoutElement):
 	def __init__(
 			self,
 			options:list[str] = [],
+			default:str = "",
 			name:str = "",
 			children:list|None = None,
 			callback:Callable|None = None,
@@ -333,6 +334,7 @@ class ComboElement(LayoutElement):
 		super().__init__(IDP_COMBO, None, name, children, callback=callback, stick=stick)
 		self.__options = options
 		self.__onClick = onClick
+		self.__default = default
 
 	def SetOptions(self, options:list[str]) -> None:
 		self.__options = options
@@ -342,6 +344,9 @@ class ComboElement(LayoutElement):
 
 	def GetOnClick(self) -> Callable|None:
 		return self.__onClick
+
+	def GetDefault(self) -> str:
+		return self.__default
 
 	def OnClick(self) -> None:
 		if self.__onClick:

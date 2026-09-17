@@ -22,7 +22,6 @@ class LinkType(Enum):
 
 class Settingator:
 	def __init__(self, display:IDisplay) -> None:
-		self.__communicator = None
 		self.__slaveSettings = dict()
 		self.__slaves = dict()
 		self.__shouldUpdateDisplayLayout = False
@@ -62,7 +61,7 @@ class Settingator:
 		# globale : vue compacte (puces colorees) <-> details complets (cartes).
 		self.__linkCDetailed = False
 		# racines cote a cote
-		self.__linkCTreeContainer = LayoutElement(IDP_FRAME)
+		self.__linkCTreeContainer = LayoutElement(IDP_COLUMN)
 		self.__linkCCheck = LayoutElement(IDP_CHECK, "0", "Afficher tous les détails",
 				callback=self.__onLinkCDetailToggle)
 		self.__linkLayoutC = LayoutElement(IDP_COLUMN)
@@ -73,9 +72,15 @@ class Settingator:
 		#     (cf. self.__slaveLayout.AppendElement(...) juste apres) -----
 
 		# STR Global Setting Layout
+
+		defaultPort = GetPortList()[0]
+
+		self.__communicator = SerialCTR(defaultPort)
+
 		self.__portSelectCombo = ComboElement(
 							name="PortSelectCombo",
 							options=GetPortList(),
+							default=defaultPort,
 							callback=self.__SetComboPort,
 							stick="e",
 							onClick=self.__UpdateComboPortList
@@ -109,6 +114,12 @@ class Settingator:
 							"DisplaySlaveLayout",
 							callback=self.HandleDisplaySlaveLayout,
 							stick="e"
+							),
+						LayoutElement(
+							IDP_BUTTON,
+							name="Reload Serial",
+							stick="e",
+							callback=self.ReloadSerialCTR
 							),
 						self.__portSelectCombo
 					],
@@ -1313,6 +1324,10 @@ class Settingator:
 
 	def __UpdateComboPortList(self):
 		self.__portSelectCombo.GetIElement().GetElement()['values'] = GetPortList()
+
+	def ReloadSerialCTR(self, v):
+		if self.__communicator:
+			self.__communicator.Reload()
 
 class Slave:
 	def __init__(self, str:Settingator, slaveID:int, settings:dict) -> None:

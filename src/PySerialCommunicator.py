@@ -30,7 +30,7 @@ class PySerial(ISerial):
 		self.logString = ""
 
 		self.__serial.setDTR(False)
-		time.sleep(1)
+		time.sleep(0.25)
 		self.__serial.flush()
 		self.__serial.setDTR(True)
 
@@ -56,6 +56,14 @@ class PySerial(ISerial):
 				returnPos = self.logString.find('\n')
 			
 		return self.__readBuffer.__len__()
+
+	def reload(self) -> None:
+		if self.__serial:
+			self.__serial.setDTR(False)
+			time.sleep(0.25)
+			self.__serial.flush()
+			self.__serial.setDTR(True)
+
 
 class SerialCTR(ICTR):
 	def __init__(self, port:str="NULL") -> None:
@@ -103,4 +111,8 @@ class SerialCTR(ICTR):
 
 	def GetPort(self) -> str:
 		return self.__port
+
+	def Reload(self) -> None:
+		if self.__serial:
+			self.__serial.reload()
 	
